@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	runningServers map[string]*Server
-	mutex          sync.RWMutex
+	runningServers = make(map[string]*Server)
+	mutex          = &sync.RWMutex{}
 )
 
 func CreateServer(virtualNodeName, address string, logger logr.Logger, kubeClient client.Client) *Server {
