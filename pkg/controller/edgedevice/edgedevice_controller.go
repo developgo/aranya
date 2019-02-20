@@ -132,7 +132,12 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		newVirtualNode.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
 
 		// start kubelet server
-		srv := server.CreateServer(newVirtualNode.Name, fmt.Sprintf(":%d", port), log, r.client)
+		srv, err := server.CreateServer(newVirtualNode.Name, fmt.Sprintf(":%d", port))
+		if err != nil {
+			reqLogger.Error(err, "CreateServer for node failed")
+			return reconcile.Result{}, err
+		}
+
 		if err = srv.StartListenAndServe(); err != nil {
 			reqLogger.Error(err, "StartListenAndServe node failed")
 			return reconcile.Result{}, err
