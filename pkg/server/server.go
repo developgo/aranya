@@ -18,12 +18,37 @@ var (
 )
 
 func CreateServer(virtualNodeName, address string, logger logr.Logger, kubeClient client.Client) *Server {
-	return &Server{
+	rootLogger := logger.WithName("node." + virtualNodeName)
+	httpLogger := rootLogger.WithName("http")
+	m := &mux.Router{NotFoundHandler: http.HandlerFunc(NotFoundHandler)}
+	m.Use(LogMiddleware(httpLogger),
+		PanicRecoverMiddleware(httpLogger))
+	m.StrictSlash(true)
+
+	srv := &Server{
 		name:       virtualNodeName,
 		address:    address,
-		log:        logger.WithName("node." + virtualNodeName),
+		log:        rootLogger,
+		httpLogger: httpLogger,
 		kubeClient: kubeClient,
+		httpSrv: &http.Server{
+			// listen on the host network
+			Addr:    address,
+			Handler: m,
+		},
 	}
+
+	// register http path
+	{
+		// routes for pod
+		m.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", srv.HandleFuncPodLog).Methods(http.MethodGet)
+		m.HandleFunc("/exec/{namespace}/{pod}/{container}", srv.HandleFuncPodExec).Methods(http.MethodPost)
+
+		// routes for metrics
+		m.HandleFunc("/stats/summary", srv.HandleFuncMetricsSummary).Methods(http.MethodGet)
+	}
+
+	return srv
 }
 
 func GetRunningServer(name string) *Server {
@@ -60,6 +85,7 @@ type Server struct {
 
 	kubeClient client.Client
 	log        logr.Logger
+	httpLogger logr.Logger
 	httpSrv    *http.Server
 }
 
@@ -67,30 +93,18 @@ func (s *Server) StartListenAndServe() error {
 	if s.isStarted() {
 		return errors.New("server already started")
 	}
-	s.markStarted()
 
+	s.markStarted()
 	if err := AddRunningServer(s); err != nil {
 		return err
-	}
-
-	m := &mux.Router{NotFoundHandler: http.HandlerFunc(NotFoundHandler)}
-	{
-		m.StrictSlash(true)
-		AddRoutesForPod(m)
-		AddRoutesForMetrics(m)
-	}
-
-	s.httpSrv = &http.Server{
-		// listen on the host network
-		Addr:    s.address,
-		Handler: m,
 	}
 
 	go wait.Until(func() {
 		defer DeleteRunningServer(s.name)
 
+		s.log.Info("Start ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
 		if err := s.httpSrv.ListenAndServe(); err != nil {
-			s.log.Error(err, "Could not ListenAndServe", "Listen.Address", s.httpSrv.Addr, "Node.Name", s.name)
+			s.log.Error(err, "Could not ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
 			return
 		}
 	}, 0, wait.NeverStop)
@@ -101,10 +115,6 @@ func (s *Server) StartListenAndServe() error {
 func (s *Server) ForceClose() {
 	if s.isStarted() {
 		_ = s.httpSrv.Close()
-
-		s.log = nil
-		s.kubeClient = nil
-		s.httpSrv = nil
 	}
 }
 

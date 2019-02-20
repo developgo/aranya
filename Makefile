@@ -6,7 +6,7 @@ PROJECT_GOPATH := $(GOPATH)/src/arhat.dev/aranya
 
 .PHONY: aranya
 aranya:
-	GO111MODULE=on go build -mod=vendor -o build/aranya cmd/manager/*.go
+	CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -o build/aranya cmd/manager/*.go
 
 .PHONY: build-image
 build-image:

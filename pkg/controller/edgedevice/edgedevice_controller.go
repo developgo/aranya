@@ -3,7 +3,7 @@ package edgedevice
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -182,7 +182,7 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 		ObjectMeta: metav1.ObjectMeta{
 			// TODO: use GenerateName
 			Name:      "aranya-node-for-" + device.Name,
-			Namespace: device.Namespace,
+			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelType: constant.LabelTypeValueVirtualNode,
 			},
