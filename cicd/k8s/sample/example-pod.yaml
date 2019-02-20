@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-edge-pod
+  namespace: iot-edge
+spec:
+  tolerations:
+    # taint toleration required
+    - key: aranya.arhat.dev/dedicated
+      value: edge-device
+  nodeSelector:
+    kubernetes.io/hostname: aranya-node-for-example-edge-device-grpc
+    aranya.arhat.dev/type: virtual-node
+  containers:
+  - name: pty-client
+    image: arhatdev/pty-client:latest
+    command:
+    - /app
+    - --log=fatal
+    # `stdin` and `tty` must be true to get client running properly
+    stdin: true
+    tty: true
+    resources:
+      limits:
+        # pty-device-plugin won't allocate more than one pty to any pod
+        # always set to 1
+        arhat.dev/pty: 1
+  restartPolicy: Never

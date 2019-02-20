@@ -1,0 +1,72 @@
+# An example edge device accessing via gRPC
+apiVersion: aranya.arhat.dev/v1alpha1
+kind: EdgeDevice
+metadata:
+  name: example-edge-device-grpc
+  namespace: iot-edge
+spec:
+  unschedulable: false
+  connectivity:
+    method: grpc
+    config:
+      grpc:
+        # configuration here is to annotate how to configure edge device to access
+        forDevice:
+          # public aranya address for edge device to access
+          server: grpc.example.com:8080
+          tlsSecretRef:
+            name: my-grpc-secret
+            namespace: iot-edge
+---
+# An example edge device accessing via mqtt
+apiVersion: aranya.arhat.dev/v1alpha1
+kind: EdgeDevice
+metadata:
+  name: example-edge-device-mqtt
+  namespace: iot-edge
+spec:
+  unschedulable: false
+  connectivity:
+    method: mqtt
+    config:
+      mqtt:
+        # mqtt message namespace for kubernetes communication
+        namespace: /k8s/aranya
+        # tell aranya how to connect mqtt broker
+        forServer:
+          # in cluster mqtt broker address
+          server: mqtt-broker:1883
+          # mqtt version, currently only 3.1.1 supported
+          version: "3.1.1"
+          # mqtt transport protocol, one of [tcp, websocket]
+          transport: tcp
+          # set secret ref to use tls when connecting to broker
+          tlsSecretRef:
+            # secret name
+            name: my-mqtt-secret
+            # namespace in which to find the secret
+            namespace: iot-edge
+          # MQTT CONNECT packet
+          connectPacket:
+            cleanSession: true
+            will: true
+            willQos: 2
+            willRetain: false
+            willTopic: /will/go-away
+            willMessage: "I'm leaving now."
+            username: "foo"
+            password:
+              # secret name for password
+              name: secret-name-for-mqtt-password
+              # namespace in which to find the secret
+              namespace: secret-stored-in-this-namespace
+            clientID: foo
+            # time in seconds
+            keepalive: 30
+        # configuration here is to annotate how to configure edge device to access
+        forDevice:
+          # public mqtt broker address for edge device to access
+          server: mqtt.example.com:8080
+          tlsSecretRef:
+            name: my-secret
+            namespace: iot-edge
