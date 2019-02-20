@@ -15,7 +15,7 @@ action "login @docker_hub" {
 
 action "build aranya" {
   uses = "actions/docker/cli@master"
-  args = "build -t arhatdev/aranya:latest -f docker/aranya.dockerfile ."
+  args = "build -t arhatdev/aranya:latest -f cicd/docker/aranya.dockerfile ."
 }
 
 action "push aranya" {
