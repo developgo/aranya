@@ -219,8 +219,9 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 			Name:       virtualNodeName,
 			Namespace:  corev1.NamespaceAll,
 			Labels: map[string]string{
-				constant.LabelType:   constant.LabelTypeValueVirtualNode,
-				corev1.LabelHostname: virtualNodeName,
+				constant.LabelType: constant.LabelTypeValueVirtualNode,
+				// TODO: use corev1.LabelHostname in future when controller-runtime updated
+				"kubernetes.io/hostname": virtualNodeName,
 			},
 			ClusterName: controllerName,
 		},

@@ -15,6 +15,6 @@ spec:
   - name: test
     image: alpine:latest
     command:
-    - sleep
+    - /bin/sleep
     - "3600"
   restartPolicy: Never

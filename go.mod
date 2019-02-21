@@ -20,7 +20,6 @@ require (
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gorilla/mux v1.7.0
-	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
@@ -48,11 +47,11 @@ require (
 	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20190219093303-35c66765f3ca
+	k8s.io/api v0.0.0-20190202010724-74b699b93c15
 	k8s.io/apiextensions-apiserver v0.0.0-20181213153335-0fe22c71c476 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/apiserver v0.0.0-20190221013902-8a41519758b4 // indirect
-	k8s.io/client-go v0.0.0-20181213151034-8d9ed539ba31
+	k8s.io/client-go v2.0.0-alpha.0.0.20190202011228-6e4752048fde+incompatible
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	k8s.io/kubernetes v1.13.3
