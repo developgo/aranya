@@ -51,6 +51,7 @@ type Server struct {
 
 	kubeClient *kubeClient.Clientset
 	httpSrv    *http.Server
+	wq         workqueue.RateLimitingInterface
 
 	podInformerFactory    kubeInformers.SharedInformerFactory
 	commonInformerFactory kubeInformers.SharedInformerFactory
@@ -63,7 +64,7 @@ type Server struct {
 	configMapManager *configmap.Manager
 
 	// status
-	started uint32
+	status uint32
 }
 
 func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*Server, error) {
@@ -94,6 +95,7 @@ func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*S
 		podInformerFactory:    podInformerFactory,
 		commonInformerFactory: commonInformerFactory,
 		podInformer:           podInformerFactory.Core().V1().Pods(),
+		wq:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), virtualNodeName+"wq"),
 	}
 
 	// create a context for node
@@ -176,11 +178,11 @@ func DeleteRunningServer(name string) {
 }
 
 func (s *Server) StartListenAndServe() error {
-	if s.isStarted() {
+	if s.isRunning() || s.isStopped() {
 		return errors.New("node already started")
 	}
 
-	s.markStarted()
+	s.markRunning()
 	if err := AddRunningServer(s); err != nil {
 		return err
 	}
@@ -199,13 +201,12 @@ func (s *Server) StartListenAndServe() error {
 	go s.podInformerFactory.Start(s.ctx.Done())
 	go s.commonInformerFactory.Start(s.ctx.Done())
 
-	wq := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pods")
 	s.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.Error(err, "")
 			} else {
-				wq.AddRateLimited(key)
+				s.wq.AddRateLimited(key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -220,20 +221,23 @@ func (s *Server) StartListenAndServe() error {
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.Error(err, "")
 			} else {
-				wq.AddRateLimited(key)
+				s.wq.AddRateLimited(key)
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.Error(err, "")
 			} else {
-				wq.AddRateLimited(key)
+				s.wq.AddRateLimited(key)
 			}
 		},
 	})
 
 	go wait.Until(func() {
-		defer wq.ShutDown()
+		defer func() {
+			s.wq.ShutDown()
+			s.exit()
+		}()
 
 		if ok := cache.WaitForCacheSync(s.ctx.Done(), s.podInformer.Informer().HasSynced); !ok {
 			log.V(2).Info("failed to wait for caches to sync")
@@ -248,24 +252,27 @@ func (s *Server) StartListenAndServe() error {
 		log.Info("Start workers")
 
 		// start a worker
-		go wait.Until(func() {
-			for s.work(wq) {
-			}
-		}, time.Second, s.ctx.Done())
+		// go wait.Until(func() {
+		//
+		// }, time.Second, s.ctx.Done())
 
+		for s.work(s.wq) {
+		}
 	}, 0, s.ctx.Done())
 	return nil
 }
 
 func (s *Server) ForceClose() {
-	if s.isStarted() {
+	defer s.markStopped()
+	if s.isRunning() {
 		log.V(3).Info("ForceClose node", "Node.Name", s.name)
 		_ = s.httpSrv.Close()
 	}
 }
 
 func (s *Server) Shutdown(grace time.Duration) {
-	if s.isStarted() {
+	defer s.markStopped()
+	if s.isRunning() {
 		log.V(3).Info("Shutdown node", "Node.Name", s.name)
 		ctx, _ := context.WithTimeout(s.ctx, grace)
 		_ = s.httpSrv.Shutdown(ctx)
@@ -339,12 +346,20 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 	return true
 }
 
-func (s *Server) isStarted() bool {
-	return atomic.LoadUint32(&s.started) == 1
+func (s *Server) isRunning() bool {
+	return atomic.LoadUint32(&s.status) == 1
 }
 
-func (s *Server) markStarted() {
-	atomic.StoreUint32(&s.started, 1)
+func (s *Server) markRunning() {
+	atomic.StoreUint32(&s.status, 1)
+}
+
+func (s *Server) markStopped() {
+	atomic.StoreUint32(&s.status, 2)
+}
+
+func (s *Server) isStopped() bool {
+	return atomic.LoadUint32(&s.status) == 2
 }
 
 func (s *Server) CreateOrUpdateEdgePod(pod *corev1.Pod) error {
