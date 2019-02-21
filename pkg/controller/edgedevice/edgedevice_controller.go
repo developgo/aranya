@@ -161,7 +161,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		newVirtualNode.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
 
 		// create and start a new kubelet instance
-		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, fmt.Sprintf(":%d", port))
+		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, fmt.Sprintf("%s:%d", nodeAddress, port))
 		if err != nil {
 			reqLogger.Error(err, "CreateVirtualNode failed")
 			return reconcile.Result{}, err
@@ -193,7 +193,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 func (r *ReconcileEdgeDevice) getHostIP(reqLogger logr.Logger) (addr string, err error) {
 	reqLogger.Info("Get Node InternalIP")
 	currentPod := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: constant.CurrentPodName(), Namespace: constant.CurrentNamespace()}, currentPod)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, currentPod)
 	if err != nil {
 		reqLogger.Error(err, "Could not get current Pod", "Pod.Name", constant.CurrentPodName(), "Pod.Namespace", constant.CurrentNamespace())
 		return "", err
@@ -203,7 +203,21 @@ func (r *ReconcileEdgeDevice) getHostIP(reqLogger logr.Logger) (addr string, err
 }
 
 func (r *ReconcileEdgeDevice) deleteRelatedVirtualNode(device *aranyav1alpha1.EdgeDevice) error {
-	node.DeleteRunningServer(util.GetVirtualNodeName(device.Name))
+	nodeName := util.GetVirtualNodeName(device.Name)
+
+	virtualNode := &corev1.Node{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, virtualNode)
+	if err != nil {
+		return err
+	}
+
+	err = r.client.Delete(context.TODO(), virtualNode)
+	if err != nil {
+		return err
+	}
+
+	node.DeleteRunningServer(nodeName)
+
 	return nil
 }
 
@@ -213,9 +227,8 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Finalizers: []string{constant.FinalizerName},
-			Name:       virtualNodeName,
-			Namespace:  corev1.NamespaceAll,
+			Name:      virtualNodeName,
+			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelType: constant.LabelTypeValueVirtualNode,
 				// TODO: use corev1.LabelHostname in future when controller-runtime updated
