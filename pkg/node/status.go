@@ -5,9 +5,8 @@ import (
 )
 
 const (
-	statusFree = iota
-	statusRunning
-	statusStopped
+	statusRunning = 1
+	statusStopped = 2
 )
 
 func (s *Server) isRunning() bool {

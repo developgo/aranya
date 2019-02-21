@@ -14,7 +14,6 @@ import (
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
 	kubeInformers "k8s.io/client-go/informers"
 	kubeInformersCoreV1 "k8s.io/client-go/informers/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
@@ -169,13 +168,13 @@ func (s *Server) StartListenAndServe() error {
 	}()
 
 	// serve kubelet node
-	go wait.Until(func() {
-		log.Info("Start ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
-		if err := s.httpSrv.ListenAndServe(); err != nil {
-			log.Error(err, "Could not ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
+	go func() {
+		log.Info("start ListenAndServe", "node.name", s.name, "listen.address", s.httpSrv.Addr)
+		if err := s.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error(err, "Could not ListenAndServe", "node.name", s.name, "listen.address", s.httpSrv.Addr)
 			return
 		}
-	}, 0, s.ctx.Done())
+	}()
 
 	go s.podInformerFactory.Start(s.ctx.Done())
 	go s.commonInformerFactory.Start(s.ctx.Done())
