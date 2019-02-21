@@ -135,10 +135,6 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	}
 
 	newVirtualNode := newNodeForEdgeDevice(device)
-	if newVirtualNode == nil {
-		return reconcile.Result{}, errors.NewInternalError(fmt.Errorf("could not find a free port on host"))
-	}
-
 	err = controllerutil.SetControllerReference(device, newVirtualNode, r.scheme)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -213,6 +209,8 @@ func (r *ReconcileEdgeDevice) deleteRelatedVirtualNode(device *aranyav1alpha1.Ed
 
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 	virtualNodeName := util.GetVirtualNodeName(device.Name)
+	createdAt := metav1.Now()
+
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Finalizers: []string{constant.FinalizerName},
@@ -237,12 +235,12 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 
 			Phase: corev1.NodePending,
 			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionUnknown},
-				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionUnknown},
-				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionUnknown},
-				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionUnknown},
-				{Type: corev1.NodePIDPressure, Status: corev1.ConditionUnknown},
-				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionUnknown},
+				{Type: corev1.NodeReady, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
+				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
+				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
+				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
+				{Type: corev1.NodePIDPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
+				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
 			},
 		},
 	}

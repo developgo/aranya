@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -37,9 +36,7 @@ const (
 )
 
 var (
-	log            = logf.Log.WithName("aranya.node")
-	runningServers = make(map[string]*Server)
-	mutex          = &sync.RWMutex{}
+	log = logf.Log.WithName("aranya.node")
 )
 
 type Server struct {
@@ -65,6 +62,7 @@ type Server struct {
 
 	// status
 	status uint32
+	mutex  sync.Mutex
 }
 
 func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*Server, error) {
@@ -149,48 +147,29 @@ func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*S
 	return srv, nil
 }
 
-func GetRunningServer(name string) *Server {
-	mutex.RLock()
-	defer mutex.RUnlock()
-
-	return runningServers[name]
-}
-
-func AddRunningServer(server *Server) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	if _, ok := runningServers[server.name]; ok {
-		return errors.New("node already running")
-	}
-	runningServers[server.name] = server
-	return nil
-}
-
-func DeleteRunningServer(name string) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	if srv, ok := runningServers[name]; ok {
-		srv.ForceClose()
-		delete(runningServers, name)
-	}
-}
-
 func (s *Server) StartListenAndServe() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.isRunning() || s.isStopped() {
 		return errors.New("node already started")
 	}
-
 	s.markRunning()
-	if err := AddRunningServer(s); err != nil {
+
+	if err := addRunningServer(s); err != nil {
 		return err
 	}
 
+	go func() {
+		<-s.ctx.Done()
+
+		s.ForceClose()
+		s.markStopped()
+		DeleteRunningServer(s.name)
+	}()
+
 	// serve kubelet node
 	go wait.Until(func() {
-		defer DeleteRunningServer(s.name)
-
 		log.Info("Start ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
 		if err := s.httpSrv.ListenAndServe(); err != nil {
 			log.Error(err, "Could not ListenAndServe", "Node.Name", s.name, "Listen.Address", s.httpSrv.Addr)
@@ -233,11 +212,8 @@ func (s *Server) StartListenAndServe() error {
 		},
 	})
 
-	go wait.Until(func() {
-		defer func() {
-			s.wq.ShutDown()
-			s.exit()
-		}()
+	go func() {
+		defer s.wq.ShutDown()
 
 		if ok := cache.WaitForCacheSync(s.ctx.Done(), s.podInformer.Informer().HasSynced); !ok {
 			log.V(2).Info("failed to wait for caches to sync")
@@ -251,31 +227,34 @@ func (s *Server) StartListenAndServe() error {
 
 		log.Info("Start workers")
 
-		// start a worker
-		// go wait.Until(func() {
-		//
-		// }, time.Second, s.ctx.Done())
-
 		for s.work(s.wq) {
 		}
-	}, 0, s.ctx.Done())
+	}()
 	return nil
 }
 
 func (s *Server) ForceClose() {
-	defer s.markStopped()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.isRunning() {
 		log.V(3).Info("ForceClose node", "Node.Name", s.name)
+		s.exit()
 		_ = s.httpSrv.Close()
 	}
 }
 
 func (s *Server) Shutdown(grace time.Duration) {
-	defer s.markStopped()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if s.isRunning() {
 		log.V(3).Info("Shutdown node", "Node.Name", s.name)
+
 		ctx, _ := context.WithTimeout(s.ctx, grace)
 		_ = s.httpSrv.Shutdown(ctx)
+
+		s.exit()
 	}
 }
 
@@ -344,22 +323,6 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 	}
 
 	return true
-}
-
-func (s *Server) isRunning() bool {
-	return atomic.LoadUint32(&s.status) == 1
-}
-
-func (s *Server) markRunning() {
-	atomic.StoreUint32(&s.status, 1)
-}
-
-func (s *Server) markStopped() {
-	atomic.StoreUint32(&s.status, 2)
-}
-
-func (s *Server) isStopped() bool {
-	return atomic.LoadUint32(&s.status) == 2
 }
 
 func (s *Server) CreateOrUpdateEdgePod(pod *corev1.Pod) error {

@@ -21,7 +21,7 @@ setup:
 	kubectl apply -f cicd/k8s/aranya.yaml
 
 .PHONY: cleanup
-cleanup: delete-sample
+cleanup:
 	kubectl delete -f cicd/k8s/aranya.yaml
 	kubectl delete -f cicd/k8s/crds/aranya_v1alpha1_edgedevice_crd.yaml
 
