@@ -1,7 +1,6 @@
 package node
 
 import (
-	"arhat.dev/aranya/pkg/node/stats"
 	"context"
 	"errors"
 	"fmt"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/configmap"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/secret"

@@ -1,12 +1,9 @@
 package edgedevice
 
 import (
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node"
-	"arhat.dev/aranya/pkg/node/util"
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/node"
+	"arhat.dev/aranya/pkg/node/util"
 )
 
 const (
@@ -188,16 +190,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, err
 	}
 
-	if nodeNeedsUpdate(found, newVirtualNode) {
-		reqLogger.Info("Updating Node")
-		err = r.client.Update(context.TODO(), newVirtualNode)
-		if err != nil {
-			reqLogger.Error(err, "Could not update Node")
-			return reconcile.Result{}, err
-		}
-		return reconcile.Result{}, nil
-	}
-
+	// let node do update job itself
 	return reconcile.Result{}, nil
 }
 
@@ -249,10 +242,6 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 			},
 		},
 	}
-}
-
-func nodeNeedsUpdate(found, newOne *corev1.Node) bool {
-	return true
 }
 
 func containsString(slice []string, s string) bool {

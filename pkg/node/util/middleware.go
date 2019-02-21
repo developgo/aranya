@@ -1,10 +1,10 @@
 package util
 
 import (
-	"github.com/go-logr/logr"
 	"net/http"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 )
 
