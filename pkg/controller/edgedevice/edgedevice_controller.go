@@ -1,10 +1,14 @@
 package edgedevice
 
 import (
+	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/node"
+	"arhat.dev/aranya/pkg/node/util"
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
+	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,11 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/server"
-	"arhat.dev/aranya/pkg/util"
 )
 
 const (
@@ -101,6 +100,38 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, err
 	}
 
+	{
+		// tag with finalizer's name and do related job when necessary
+		if device.DeletionTimestamp.IsZero() {
+			// The object is not being deleted, so if it does not have our finalizer,
+			// then lets add the finalizer and update the object.
+			if !containsString(device.Finalizers, constant.FinalizerName) {
+				device.ObjectMeta.Finalizers = append(device.ObjectMeta.Finalizers, constant.FinalizerName)
+				if err := r.client.Update(context.TODO(), device); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
+		} else {
+			// The object is being deleted
+			if containsString(device.ObjectMeta.Finalizers, constant.FinalizerName) {
+				// our finalizer is present, so lets handle our external dependency
+				if err := r.deleteRelatedVirtualNode(device); err != nil {
+					// if fail to delete the external dependency here, return with error
+					// so that it can be retried
+					return reconcile.Result{}, err
+				}
+
+				// remove our finalizer from the list and update it.
+				device.ObjectMeta.Finalizers = removeString(device.ObjectMeta.Finalizers, constant.FinalizerName)
+				if err := r.client.Update(context.Background(), device); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
+
+			return reconcile.Result{}, nil
+		}
+	}
+
 	newVirtualNode := newNodeForEdgeDevice(device)
 	if newVirtualNode == nil {
 		return reconcile.Result{}, errors.NewInternalError(fmt.Errorf("could not find a free port on host"))
@@ -125,16 +156,16 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		newVirtualNode.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: nodeAddress}}
 
 		// get free port on this node
-		port := util.GetFreePort()
+		port := getFreePort()
 		if port < 1 {
 			return reconcile.Result{}, errors.NewInternalError(fmt.Errorf("could not allocat port"))
 		}
 		newVirtualNode.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
 
-		// start kubelet server
-		srv, err := server.CreateServer(newVirtualNode.Name, fmt.Sprintf(":%d", port))
+		// create and start a new kubelet instance
+		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, fmt.Sprintf(":%d", port))
 		if err != nil {
-			reqLogger.Error(err, "CreateServer for node failed")
+			reqLogger.Error(err, "CreateVirtualNode failed")
 			return reconcile.Result{}, err
 		}
 
@@ -182,11 +213,15 @@ func (r *ReconcileEdgeDevice) getHostIP(reqLogger logr.Logger) (addr string, err
 	return currentPod.Status.HostIP, nil
 }
 
+func (r *ReconcileEdgeDevice) deleteRelatedVirtualNode(device *aranyav1alpha1.EdgeDevice) error {
+	node.DeleteRunningServer(util.GetVirtualNodeName(device.Name))
+	return nil
+}
+
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			// TODO: use GenerateName
-			Name:      "aranya-node-for-" + device.Name,
+			Name:      util.GetVirtualNodeName(device.Name),
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelType: constant.LabelTypeValueVirtualNode,
@@ -218,4 +253,31 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
 
 func nodeNeedsUpdate(found, newOne *corev1.Node) bool {
 	return true
+}
+
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+func removeString(slice []string, s string) (result []string) {
+	for _, item := range slice {
+		if item == s {
+			continue
+		}
+		result = append(result, item)
+	}
+	return
+}
+
+func getFreePort() int32 {
+	port, err := freeport.GetFreePort()
+	if err != nil {
+		return 0
+	}
+	return int32(port)
 }

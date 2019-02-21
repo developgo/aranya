@@ -5,6 +5,8 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
+	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
+	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/emicklei/go-restful v2.9.0+incompatible // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.0 // indirect
@@ -49,9 +51,12 @@ require (
 	k8s.io/api v0.0.0-20181213150558-05914d821849
 	k8s.io/apiextensions-apiserver v0.0.0-20181213153335-0fe22c71c476 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
+	k8s.io/apiserver v0.0.0-20190221013902-8a41519758b4 // indirect
 	k8s.io/client-go v0.0.0-20181213151034-8d9ed539ba31
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
+	k8s.io/kubernetes v1.13.3
+	k8s.io/utils v0.0.0-20190221042446-c2654d5206da // indirect
 	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
