@@ -48,7 +48,7 @@ require (
 	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20181213150558-05914d821849
+	k8s.io/api v0.0.0-20190219093303-35c66765f3ca
 	k8s.io/apiextensions-apiserver v0.0.0-20181213153335-0fe22c71c476 // indirect
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/apiserver v0.0.0-20190221013902-8a41519758b4 // indirect

@@ -24,10 +24,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/configmap"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/secret"
+	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
 )
 
@@ -169,9 +169,10 @@ func DeleteRunningServer(name string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	srv := runningServers[name]
-	srv.ForceClose()
-	delete(runningServers, name)
+	if srv, ok := runningServers[name]; ok {
+		srv.ForceClose()
+		delete(runningServers, name)
+	}
 }
 
 func (s *Server) StartListenAndServe() error {

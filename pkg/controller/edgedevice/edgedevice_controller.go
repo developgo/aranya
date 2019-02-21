@@ -212,12 +212,15 @@ func (r *ReconcileEdgeDevice) deleteRelatedVirtualNode(device *aranyav1alpha1.Ed
 }
 
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
+	virtualNodeName := util.GetVirtualNodeName(device.Name)
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      util.GetVirtualNodeName(device.Name),
-			Namespace: corev1.NamespaceAll,
+			Finalizers: []string{constant.FinalizerName},
+			Name:       virtualNodeName,
+			Namespace:  corev1.NamespaceAll,
 			Labels: map[string]string{
-				constant.LabelType: constant.LabelTypeValueVirtualNode,
+				constant.LabelType:   constant.LabelTypeValueVirtualNode,
+				corev1.LabelHostname: virtualNodeName,
 			},
 			ClusterName: controllerName,
 		},
