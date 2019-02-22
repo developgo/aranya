@@ -1,5 +1,5 @@
 package constant
 
 const (
-	FinalizerName = "finalizer.aranya.arhat.dev"
+	FinalizerName = "arhat.dev/finalizer"
 )

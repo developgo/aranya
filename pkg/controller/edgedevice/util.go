@@ -13,7 +13,6 @@ import (
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
-	"arhat.dev/aranya/pkg/node/util"
 )
 
 var (
@@ -52,11 +51,8 @@ func (r *ReconcileEdgeDevice) getHostIP() (string, error) {
 }
 
 func (r *ReconcileEdgeDevice) deleteRelatedResourceObjects(device *aranyav1alpha1.EdgeDevice) (err error) {
-	nodeName := util.GetVirtualNodeName(device.Name)
-	svcName := util.GetServiceName(device.Name)
-
 	nodeObj := &corev1.Node{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Name: nodeName}, nodeObj)
+	err = r.client.Get(r.ctx, types.NamespacedName{Name: device.Name}, nodeObj)
 	if err != nil {
 		return err
 	}
@@ -69,7 +65,7 @@ func (r *ReconcileEdgeDevice) deleteRelatedResourceObjects(device *aranyav1alpha
 	switch device.Spec.Connectivity.Method {
 	case aranyav1alpha1.DeviceConnectViaGRPC:
 		svcObj := &corev1.Service{}
-		err = r.client.Get(r.ctx, types.NamespacedName{Name: svcName, Namespace: device.Namespace}, svcObj)
+		err = r.client.Get(r.ctx, types.NamespacedName{Name: device.Name, Namespace: device.Namespace}, svcObj)
 		if err != nil {
 			return err
 		}
@@ -80,7 +76,7 @@ func (r *ReconcileEdgeDevice) deleteRelatedResourceObjects(device *aranyav1alpha
 		}
 	}
 
-	node.DeleteRunningServer(nodeName)
+	node.DeleteRunningServer(device.Name)
 
 	return nil
 }

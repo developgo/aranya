@@ -11,7 +11,6 @@ import (
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node/util"
 )
 
 func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObject *corev1.Node, l net.Listener, err error) {
@@ -58,17 +57,16 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kubeletPort int32) *corev1.Node {
-	virtualNodeName := util.GetVirtualNodeName(device.Name)
 	createdAt := metav1.Now()
 
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      virtualNodeName,
+			Name:      device.Name,
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelType: constant.LabelTypeValueVirtualNode,
 				// TODO: use corev1.LabelHostname in future when controller-runtime updated
-				"kubernetes.io/hostname": virtualNodeName,
+				"kubernetes.io/hostname": device.Name,
 			},
 			ClusterName: device.ClusterName,
 		},

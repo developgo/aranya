@@ -12,7 +12,6 @@ import (
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node/util"
 )
 
 func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
@@ -53,11 +52,9 @@ func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.Edge
 }
 
 func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort int32) *corev1.Service {
-	svcName := util.GetServiceName(device.Name)
-
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            svcName,
+			Name:            device.Name,
 			Namespace:       device.Namespace,
 			Labels:          map[string]string{constant.LabelType: constant.LabelTypeValueService},
 			ClusterName:     device.ClusterName,
