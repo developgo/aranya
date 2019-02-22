@@ -21,16 +21,17 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pods
       - services
       - endpoints
       - persistentvolumeclaims
       - events
       - configmaps
       - secrets
-      # aranya needs to create and manage virtual nodes for edge deivces
+      # aranya needs to create and manage virtual nodes and its pods for edge deivces
       - nodes
       - nodes/status
+      - pods
+      - pods/status
     verbs:
       - '*'
   - apiGroups:
@@ -48,13 +49,6 @@ rules:
       - statefulsets
     verbs:
       - '*'
-  - apiGroups:
-      - monitoring.coreos.com
-    resources:
-      - servicemonitors
-    verbs:
-      - get
-      - create
   - apiGroups:
       - aranya.arhat.dev
     resources:

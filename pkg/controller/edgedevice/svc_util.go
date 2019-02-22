@@ -15,7 +15,7 @@ import (
 	"arhat.dev/aranya/pkg/node/util"
 )
 
-func (r *ReconcileEdgeDevice) createGrpcSvcIfUsed(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
+func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
 	switch device.Spec.Connectivity.Method {
 	case aranyav1alpha1.DeviceConnectViaGRPC:
 		grpcListenPort := getFreePort()

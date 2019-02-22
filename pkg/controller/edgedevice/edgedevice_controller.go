@@ -97,6 +97,9 @@ type ReconcileEdgeDevice struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result reconcile.Result, err error) {
+	request.Namespace = constant.CurrentNamespace()
+	request.NamespacedName = types.NamespacedName{Namespace: request.Namespace, Name: request.Name}
+
 	reqLogger := log.WithValues("request.namespace", request.Namespace, "request.name", request.Name)
 	reqLogger.Info("Reconciling EdgeDevice")
 
@@ -155,7 +158,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			return
 		}
 
-		svcObj, grpcListener, err = r.createGrpcSvcIfUsed(device)
+		svcObj, grpcListener, err = r.createSvcForGrpcIfUsed(device)
 		if err != nil {
 			return
 		}
