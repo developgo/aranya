@@ -265,9 +265,6 @@ func (s *Node) Start() error {
 			return
 		}
 
-		// Perform a reconciliation step that deletes any dangling pods from the provider.
-		// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
-		// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
 		s.SetupDevice()
 
 		log.Info("start node work queue workers")
