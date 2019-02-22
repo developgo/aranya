@@ -7,3 +7,7 @@ func GetFullPodName(namespace, name string) string {
 func GetVirtualNodeName(deviceName string) string {
 	return "aranya-node-for-" + deviceName
 }
+
+func GetServiceName(deviceName string) string {
+	return "aranya-svc-for-" + deviceName
+}

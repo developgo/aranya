@@ -1,7 +1,7 @@
 package constant
 
 const (
-	TaintKeyDedicated = "aranya.arhat.dev/dedicated"
+	TaintKeyDedicated = "arhat.dev/dedicated"
 )
 
 const (

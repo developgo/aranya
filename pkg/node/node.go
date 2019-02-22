@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/node/configmap"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/secret"
@@ -43,8 +44,8 @@ type Node struct {
 	ctx  context.Context
 	exit context.CancelFunc
 
-	name    string
-	address string
+	name              string
+	grpcListenAddress string
 
 	kubeClient *kubeClient.Clientset
 	nodeClient kubeClientTypedCoreV1.NodeInterface
@@ -66,7 +67,14 @@ type Node struct {
 	mutex  sync.RWMutex
 }
 
-func CreateVirtualNode(ctx context.Context, virtualNodeName, address string, config *rest.Config) (*Node, error) {
+func CreateVirtualNode(
+	ctx context.Context,
+	virtualNodeName string,
+	kubeletListenAddress, grpcListenAddress string,
+	config *rest.Config,
+	device *aranyav1alpha1.EdgeDevice,
+	node *corev1.Node,
+	svc *corev1.Service) (*Node, error) {
 	// create a new kubernetes client with provided config
 	client, err := kubeClient.NewForConfig(config)
 	if err != nil {
@@ -80,13 +88,16 @@ func CreateVirtualNode(ctx context.Context, virtualNodeName, address string, con
 			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", virtualNodeName).String()
 		}))
 
+	if device.Spec.Connectivity.Method == aranyav1alpha1.DeviceConnectViaGRPC {
+		// TODO: prepare grpc server
+	}
+
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
 	srv := &Node{
 		name:                  virtualNodeName,
-		address:               address,
 		kubeClient:            client,
 		nodeClient:            client.CoreV1().Nodes(),
-		httpSrv:               &http.Server{Addr: address, Handler: m},
+		httpSrv:               &http.Server{Addr: kubeletListenAddress, Handler: m},
 		podInformerFactory:    podInformerFactory,
 		commonInformerFactory: commonInformerFactory,
 		podInformer:           podInformerFactory.Core().V1().Pods(),
@@ -191,9 +202,9 @@ func (s *Node) StartListenAndServe() error {
 
 	// serve a subset of kubelet server
 	go func() {
-		log.Info("start ListenAndServe", "node.name", s.name, "listen.address", s.httpSrv.Addr)
+		log.Info("start ListenAndServe", "node.name", s.name, "listen.kubeletServerAddress", s.httpSrv.Addr)
 		if err := s.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error(err, "Could not ListenAndServe", "node.name", s.name, "listen.address", s.httpSrv.Addr)
+			log.Error(err, "Could not ListenAndServe", "node.name", s.name, "listen.kubeletServerAddress", s.httpSrv.Addr)
 			return
 		}
 	}()

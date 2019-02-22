@@ -1,9 +1,11 @@
 package constant
 
 const (
-	LabelType = "aranya.arhat.dev/type"
+	LabelType = "arhat.dev/type"
 )
 
 const (
 	LabelTypeValueVirtualNode = "virtual-node"
+	LabelTypeValueService     = "service"
+	LabelTypeValueController  = "controller"
 )

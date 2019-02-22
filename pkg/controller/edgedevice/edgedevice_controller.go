@@ -29,6 +29,10 @@ const (
 	controllerName = "aranya"
 )
 
+var (
+	errNoFreePort = errors.NewInternalError(fmt.Errorf("could not allocat port"))
+)
+
 var log = logf.Log.WithName(controllerName)
 
 // Add creates a new EdgeDevice Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -133,9 +137,35 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, nil
 	}
 
-	newVirtualNode := newNodeForEdgeDevice(device)
+	// get node ip address
+	hostIP, err := r.getHostIP(reqLogger)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// get free port on this node
+	kubeletListenPort := getFreePort()
+	if kubeletListenPort < 1 {
+		return reconcile.Result{}, errNoFreePort
+	}
+
+	// TODO: add configuration option to disable allocation for grpc port
+	grpcListenPort := getFreePort()
+	if grpcListenPort < 1 {
+		return reconcile.Result{}, errNoFreePort
+	}
+
+	newSvc := newServiceForEdgeDevice(device, grpcListenPort)
+	err = controllerutil.SetControllerReference(device, newSvc, r.scheme)
+	if err != nil {
+		log.Error(err, "set svc controller reference failed")
+		return reconcile.Result{}, err
+	}
+
+	newVirtualNode := newNodeForEdgeDevice(device, hostIP, kubeletListenPort)
 	err = controllerutil.SetControllerReference(device, newVirtualNode, r.scheme)
 	if err != nil {
+		log.Error(err, "set node controller reference failed")
 		return reconcile.Result{}, err
 	}
 
@@ -143,25 +173,13 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	found := &corev1.Node{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newVirtualNode.Name, Namespace: newVirtualNode.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Node", "Node.Name", newVirtualNode.Name)
-
-		// get node ip address
-		nodeAddress, err := r.getHostIP(reqLogger)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		newVirtualNode.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: nodeAddress}}
-
-		// get free port on this node
-		port := getFreePort()
-		if port < 1 {
-			return reconcile.Result{}, errors.NewInternalError(fmt.Errorf("could not allocat port"))
-		}
-		newVirtualNode.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
+		reqLogger.Info("Creating a new Node", "node.name", newVirtualNode.Name)
 
 		// create and start a new kubelet instance
-		listenAddress := fmt.Sprintf("%s:%d", nodeAddress, port)
-		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, listenAddress, r.config)
+		kubeletListenAddress := fmt.Sprintf("%s:%d", hostIP, kubeletListenPort)
+		grpcListenAddress := fmt.Sprintf(":%d", grpcListenPort)
+		srv, err := node.CreateVirtualNode(context.TODO(),
+			newVirtualNode.Name, kubeletListenAddress, grpcListenAddress, r.config, device, newVirtualNode, newSvc)
 		if err != nil {
 			reqLogger.Error(err, "CreateVirtualNode failed")
 			return reconcile.Result{}, err

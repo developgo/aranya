@@ -6,10 +6,10 @@ metadata:
 spec:
   tolerations:
     # taint toleration required
-    - key: aranya.arhat.dev/dedicated
+    - key: arhat.dev/dedicated
       value: edge-device
   nodeSelector:
-    aranya.arhat.dev/type: virtual-node
+    arhat.dev/type: virtual-node
     kubernetes.io/hostname: aranya-node-for-example-edge-device-mqtt
   containers:
   - name: test
