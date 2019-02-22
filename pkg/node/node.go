@@ -157,8 +157,7 @@ func (s *Node) Start() error {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 
-		if s.isRunning() || s.isStopped() {
-			s.mu.RUnlock()
+		if s.status == statusRunning || s.status == statusStopped {
 			return errors.New("node already started or stopped, do not reuse")
 		}
 		return nil
@@ -184,6 +183,8 @@ func (s *Node) Start() error {
 	go func() {
 		<-s.ctx.Done()
 
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		// force close to ensure node closed
 		s.wq.ShutDown()
 		s.status = statusStopped
@@ -275,7 +276,7 @@ func (s *Node) ForceClose() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.isRunning() {
+	if s.status == statusRunning {
 		log.Info("force close virtual node", "node.name", s.name)
 		_ = s.httpSrv.Close()
 		s.grpcSrv.Stop()
@@ -288,13 +289,13 @@ func (s *Node) Shutdown(grace time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.isRunning() {
+	if s.status == statusRunning {
 		log.Info("shutting down virtual node", "node.name", s.name)
 
 		ctx, _ := context.WithTimeout(s.ctx, grace)
 
+		go s.grpcSrv.GracefulStop()
 		go func() {
-			go s.grpcSrv.GracefulStop()
 
 			time.Sleep(grace)
 			s.grpcSrv.Stop()
