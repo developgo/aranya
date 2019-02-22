@@ -184,14 +184,8 @@ func (s *Node) Start() error {
 	go func() {
 		<-s.ctx.Done()
 
-		// we need to get the lock to change this virtual node's status
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
 		// force close to ensure node closed
-		s.ForceClose()
 		s.wq.ShutDown()
-
 		s.status = statusStopped
 		DeleteRunningServer(s.name)
 	}()
@@ -282,8 +276,7 @@ func (s *Node) ForceClose() {
 	defer s.mu.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("force close virtual node", "node.name", s.name)
-
+		log.Info("force close virtual node", "node.name", s.name)
 		_ = s.httpSrv.Close()
 		s.grpcSrv.Stop()
 
@@ -296,7 +289,7 @@ func (s *Node) Shutdown(grace time.Duration) {
 	defer s.mu.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("shutting down virtual node", "node.name", s.name)
+		log.Info("shutting down virtual node", "node.name", s.name)
 
 		ctx, _ := context.WithTimeout(s.ctx, grace)
 
