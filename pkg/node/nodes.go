@@ -6,14 +6,13 @@ import (
 )
 
 var (
-	runningServers = make(map[string]*Server)
+	runningServers = make(map[string]*Node)
 	mutex          = &sync.RWMutex{}
 )
 
-func addRunningServer(server *Server) error {
+func AddRunningServer(server *Node) error {
 	mutex.Lock()
 	defer mutex.Unlock()
-
 	if _, ok := runningServers[server.name]; ok {
 		return errors.New("node already running")
 	}

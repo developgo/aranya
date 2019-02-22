@@ -19,48 +19,48 @@ metadata:
   name: aranya
   namespace: iot-edge
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - services
-  - endpoints
-  - persistentvolumeclaims
-  - events
-  - configmaps
-  - secrets
-  # aranya needs to create and manage virtual nodes for edge deivces
-  - nodes
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - get
-  - create
-- apiGroups:
-  - aranya.arhat.dev
-  resources:
-  - '*'
-  verbs:
-  - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+      # aranya needs to create and manage virtual nodes for edge deivces
+      - nodes
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - '*'
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
+  - apiGroups:
+      - aranya.arhat.dev
+    resources:
+      - '*'
+    verbs:
+      - '*'
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -68,9 +68,9 @@ metadata:
   name: aranya
   namespace: iot-edge
 subjects:
-- kind: ServiceAccount
-  name: aranya
-  namespace: iot-edge
+  - kind: ServiceAccount
+    name: aranya
+    namespace: iot-edge
 roleRef:
   kind: ClusterRole
   name: aranya
@@ -98,9 +98,10 @@ spec:
         - name: aranya
           image: arhatdev/aranya:latest
           command:
-          - /app
+            - /app
           imagePullPolicy: Always
           env:
+            # namespace to watch (also deployed to this namespace)
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:

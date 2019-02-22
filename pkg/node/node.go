@@ -17,6 +17,7 @@ import (
 	kubeInformers "k8s.io/client-go/informers"
 	kubeInformersCoreV1 "k8s.io/client-go/informers/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
+	kubeClientTypedCoreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -38,7 +39,7 @@ var (
 	log = logf.Log.WithName("aranya.node")
 )
 
-type Server struct {
+type Node struct {
 	ctx  context.Context
 	exit context.CancelFunc
 
@@ -46,6 +47,7 @@ type Server struct {
 	address string
 
 	kubeClient *kubeClient.Clientset
+	nodeClient kubeClientTypedCoreV1.NodeInterface
 	httpSrv    *http.Server
 	wq         workqueue.RateLimitingInterface
 
@@ -61,16 +63,11 @@ type Server struct {
 
 	// status
 	status uint32
-	mutex  sync.Mutex
+	mutex  sync.RWMutex
 }
 
-func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*Server, error) {
-	// create a new kubernetes client using service account
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
+func CreateVirtualNode(ctx context.Context, virtualNodeName, address string, config *rest.Config) (*Node, error) {
+	// create a new kubernetes client with provided config
 	client, err := kubeClient.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -84,15 +81,17 @@ func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*S
 		}))
 
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
-	srv := &Server{
+	srv := &Node{
 		name:                  virtualNodeName,
 		address:               address,
 		kubeClient:            client,
+		nodeClient:            client.CoreV1().Nodes(),
 		httpSrv:               &http.Server{Addr: address, Handler: m},
 		podInformerFactory:    podInformerFactory,
 		commonInformerFactory: commonInformerFactory,
 		podInformer:           podInformerFactory.Core().V1().Pods(),
 		wq:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), virtualNodeName+"wq"),
+		status:                statusReady,
 	}
 
 	// create a context for node
@@ -146,28 +145,51 @@ func CreateVirtualNode(ctx context.Context, virtualNodeName, address string) (*S
 	return srv, nil
 }
 
-func (s *Server) StartListenAndServe() error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *Node) StartListenAndServe() error {
+	err := func() error {
+		s.mutex.RLock()
+		defer s.mutex.RUnlock()
 
-	if s.isRunning() || s.isStopped() {
-		return errors.New("node already started")
-	}
-	s.markRunning()
+		if s.isRunning() || s.isStopped() {
+			s.mutex.RUnlock()
+			return errors.New("node already started or stopped, do not reuse")
+		}
+		return nil
+	}()
 
-	if err := addRunningServer(s); err != nil {
+	if err != nil {
 		return err
 	}
 
+	// we need to get the lock to change this virtual node's status
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// add to the pool of running server
+	if err := AddRunningServer(s); err != nil {
+		return err
+	}
+
+	// added, expected to run
+	s.status = statusRunning
+
+	// handle final status change
 	go func() {
 		<-s.ctx.Done()
 
+		// we need to get the lock to change this virtual node's status
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
+
+		// force close to ensure node closed
 		s.ForceClose()
-		s.markStopped()
+		s.wq.ShutDown()
+
+		s.status = statusStopped
 		DeleteRunningServer(s.name)
 	}()
 
-	// serve kubelet node
+	// serve a subset of kubelet server
 	go func() {
 		log.Info("start ListenAndServe", "node.name", s.name, "listen.address", s.httpSrv.Addr)
 		if err := s.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -176,44 +198,51 @@ func (s *Server) StartListenAndServe() error {
 		}
 	}()
 
+	// informer routine
 	go s.podInformerFactory.Start(s.ctx.Done())
 	go s.commonInformerFactory.Start(s.ctx.Done())
 
+	// handle node change
 	s.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
+			// a new pod need to be created in this virtual node
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.Error(err, "")
 			} else {
+				// enqueue the create work for workers
 				s.wq.AddRateLimited(key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			// pod in this virtual node need to update
 			oldPod := oldObj.(*corev1.Pod).DeepCopy()
 			newPod := newObj.(*corev1.Pod).DeepCopy()
 
 			newPod.ResourceVersion = oldPod.ResourceVersion
 			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				log.Info("new pod is same with the old one, no action")
 				return
 			}
 
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.Error(err, "")
 			} else {
+				// enqueue the update work for workers
 				s.wq.AddRateLimited(key)
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
+			// pod in this virtual node got deleted
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.Error(err, "")
 			} else {
+				// enqueue the delete work for workers
 				s.wq.AddRateLimited(key)
 			}
 		},
 	})
 
 	go func() {
-		defer s.wq.ShutDown()
-
 		if ok := cache.WaitForCacheSync(s.ctx.Done(), s.podInformer.Informer().HasSynced); !ok {
 			log.V(2).Info("failed to wait for caches to sync")
 			return
@@ -222,33 +251,35 @@ func (s *Server) StartListenAndServe() error {
 		// Perform a reconciliation step that deletes any dangling pods from the provider.
 		// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 		// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
-		s.deleteDanglingPods()
+		s.SetupDevice()
 
-		log.Info("Start workers")
-
-		for s.work(s.wq) {
-		}
+		log.Info("start node work queue workers")
+		go func() {
+			for s.work(s.wq) {
+			}
+		}()
 	}()
 	return nil
 }
 
-func (s *Server) ForceClose() {
+// ForceClose close this node immediately
+func (s *Node) ForceClose() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("ForceClose node", "Node.Name", s.name)
+		log.V(3).Info("ForceClose node", "node.name", s.name)
 		s.exit()
 		_ = s.httpSrv.Close()
 	}
 }
 
-func (s *Server) Shutdown(grace time.Duration) {
+func (s *Node) Shutdown(grace time.Duration) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("Shutdown node", "Node.Name", s.name)
+		log.V(3).Info("Shutdown node", "node.name", s.name)
 
 		ctx, _ := context.WithTimeout(s.ctx, grace)
 		_ = s.httpSrv.Shutdown(ctx)
@@ -257,11 +288,7 @@ func (s *Server) Shutdown(grace time.Duration) {
 	}
 }
 
-func (s *Server) deleteDanglingPods() {
-
-}
-
-func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
+func (s *Node) work(wq workqueue.RateLimitingInterface) bool {
 	obj, shutdown := wq.Get()
 	if shutdown {
 		return false
@@ -269,10 +296,12 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 
 	err := func(obj interface{}) error {
 		defer wq.Done(obj)
+
 		var (
 			key string
 			ok  bool
 		)
+
 		if key, ok = obj.(string); !ok {
 			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
 			wq.Forget(obj)
@@ -290,21 +319,21 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 		podFound, err := s.podManager.GetPod(namespace, name)
 		if err != nil {
 			if !kubeErrors.IsNotFound(err) {
-				log.Error(err, "failed to fetch pod with key from lister", "Key", key)
+				log.Error(err, "failed to fetch pod with key from lister", "key", key)
 				return err
 			}
 
-			if err := s.DeleteEdgePod(namespace, name); err != nil {
-				log.Error(err, "failed to delete pod in the provider", "Pod.Namespace", namespace, "Pod.Name", name)
+			// pod has been deleted
+			if err := s.DeletePodInDevice(namespace, name); err != nil {
+				log.Error(err, "failed to delete pod in the provider", "pod.namespace", namespace, "pod.name", name)
 				return err
 			}
 		}
 
-		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := s.SyncEdgePod(podFound); err != nil {
+		if err := s.SyncPodInDevice(podFound); err != nil {
 			if wq.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.Error(err, "requeue due to failed sync", "Key", key)
+				log.Error(err, "requeue due to failed sync", "key", key)
 				wq.AddRateLimited(key)
 				return nil
 			}
@@ -316,6 +345,7 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 		wq.Forget(obj)
 		return nil
 	}(obj)
+
 	if err != nil {
 		log.Error(err, "")
 		return true
@@ -324,30 +354,22 @@ func (s *Server) work(wq workqueue.RateLimitingInterface) bool {
 	return true
 }
 
-func (s *Server) CreateOrUpdateEdgePod(pod *corev1.Pod) error {
-	return nil
-}
-
-func (s *Server) DeleteEdgePod(namespace, name string) error {
-	return nil
-}
-
-func (s *Server) SyncEdgePod(pod *corev1.Pod) error {
+func (s *Node) SyncPodInDevice(pod *corev1.Pod) error {
 	if pod.DeletionTimestamp != nil {
-		if err := s.DeleteEdgePod(pod.Namespace, pod.Name); err != nil {
-			log.Error(err, "failed to delete pod in edge device", "Pod.Name", pod.Name, "Pod.Namespace", pod.Namespace)
+		if err := s.DeletePodInDevice(pod.Namespace, pod.Name); err != nil {
+			log.Error(err, "failed to delete pod in edge device", "pod.name", pod.Name, "pod.namespace", pod.Namespace)
 			return err
 		}
 		return nil
 	}
 
 	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
-		log.Info("skipping sync of pod", "Pod.Phase", pod.Status.Phase, "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
+		log.Info("skipping sync of pod", "Pod.Phase", pod.Status.Phase, "pod.namespace", pod.Namespace, "pod.name", pod.Name)
 		return nil
 	}
 
-	if err := s.CreateOrUpdateEdgePod(pod); err != nil {
-		log.Error(err, "failed to sync edge pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
+	if err := s.CreateOrUpdatePodInDevice(pod); err != nil {
+		log.Error(err, "failed to sync edge pod", "pod.namespace", pod.Namespace, "pod.name", pod.Name)
 		return err
 	}
 

@@ -5,12 +5,11 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,7 +39,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileEdgeDevice{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileEdgeDevice{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: mgr.GetConfig(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -51,18 +54,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource EdgeDevice
-	err = c.Watch(&source.Kind{Type: &aranyav1alpha1.EdgeDevice{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
+	// Watch changes to EdgeDevice resources
+	if err = c.Watch(&source.Kind{Type: &aranyav1alpha1.EdgeDevice{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
-	// Watch fro virtual Node created by EdgeDevice object
-	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &aranyav1alpha1.EdgeDevice{},
-	})
-	if err != nil {
+	// Watch virtual Node created by EdgeDevice object
+	if err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForOwner{
+		IsController: true, OwnerType: &aranyav1alpha1.EdgeDevice{},
+	}); err != nil {
 		return err
 	}
 
@@ -77,6 +77,7 @@ type ReconcileEdgeDevice struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *rest.Config
 }
 
 // Reconcile reads that state of the cluster for a EdgeDevice object and makes changes based on the state read
@@ -102,36 +103,34 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, err
 	}
 
-	{
-		// tag with finalizer's name and do related job when necessary
-		if device.DeletionTimestamp.IsZero() {
-			// The object is not being deleted, so if it does not have our finalizer,
-			// then lets add the finalizer and update the object.
-			if !containsString(device.Finalizers, constant.FinalizerName) {
-				device.ObjectMeta.Finalizers = append(device.ObjectMeta.Finalizers, constant.FinalizerName)
-				if err := r.client.Update(context.TODO(), device); err != nil {
-					return reconcile.Result{}, err
-				}
+	// tag with finalizer's name and do related job when necessary
+	if device.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object.
+		if !containsString(device.Finalizers, constant.FinalizerName) {
+			device.ObjectMeta.Finalizers = append(device.ObjectMeta.Finalizers, constant.FinalizerName)
+			if err := r.client.Update(context.TODO(), device); err != nil {
+				return reconcile.Result{}, err
 			}
-		} else {
-			// The object is being deleted
-			if containsString(device.ObjectMeta.Finalizers, constant.FinalizerName) {
-				// our finalizer is present, so lets handle our external dependency
-				if err := r.deleteRelatedVirtualNode(device); err != nil {
-					// if fail to delete the external dependency here, return with error
-					// so that it can be retried
-					return reconcile.Result{}, err
-				}
-
-				// remove our finalizer from the list and update it.
-				device.ObjectMeta.Finalizers = removeString(device.ObjectMeta.Finalizers, constant.FinalizerName)
-				if err := r.client.Update(context.Background(), device); err != nil {
-					return reconcile.Result{}, err
-				}
-			}
-
-			return reconcile.Result{}, nil
 		}
+	} else {
+		// The object is being deleted
+		if containsString(device.ObjectMeta.Finalizers, constant.FinalizerName) {
+			// our finalizer is present, so lets handle our external dependency
+			if err := r.deleteRelatedVirtualNode(device); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried
+				return reconcile.Result{}, err
+			}
+
+			// remove our finalizer from the list and update it.
+			device.ObjectMeta.Finalizers = removeString(device.ObjectMeta.Finalizers, constant.FinalizerName)
+			if err := r.client.Update(context.Background(), device); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	newVirtualNode := newNodeForEdgeDevice(device)
@@ -161,7 +160,8 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		newVirtualNode.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
 
 		// create and start a new kubelet instance
-		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, fmt.Sprintf("%s:%d", nodeAddress, port))
+		listenAddress := fmt.Sprintf("%s:%d", nodeAddress, port)
+		srv, err := node.CreateVirtualNode(context.TODO(), newVirtualNode.Name, listenAddress, r.config)
 		if err != nil {
 			reqLogger.Error(err, "CreateVirtualNode failed")
 			return reconcile.Result{}, err
@@ -186,7 +186,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, err
 	}
 
-	// let node do update job itself
+	// let arhat.dev/aranya/pkg/node.Node do update job on its own
 	return reconcile.Result{}, nil
 }
 
@@ -219,69 +219,4 @@ func (r *ReconcileEdgeDevice) deleteRelatedVirtualNode(device *aranyav1alpha1.Ed
 	node.DeleteRunningServer(nodeName)
 
 	return nil
-}
-
-func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice) *corev1.Node {
-	virtualNodeName := util.GetVirtualNodeName(device.Name)
-	createdAt := metav1.Now()
-
-	return &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      virtualNodeName,
-			Namespace: corev1.NamespaceAll,
-			Labels: map[string]string{
-				constant.LabelType: constant.LabelTypeValueVirtualNode,
-				// TODO: use corev1.LabelHostname in future when controller-runtime updated
-				"kubernetes.io/hostname": virtualNodeName,
-			},
-			ClusterName: controllerName,
-		},
-		Spec: corev1.NodeSpec{
-			Taints: []corev1.Taint{
-				{Key: constant.TaintKeyDedicated, Value: constant.TaintValueDedicatedForEdgeDevice, Effect: corev1.TaintEffectNoSchedule},
-			},
-		},
-		Status: corev1.NodeStatus{
-			// fill address and port when actually create
-			// Addresses:       []corev1.NodeAddress{},
-			// DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{}},
-
-			Phase: corev1.NodePending,
-			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodePIDPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-			},
-		},
-	}
-}
-
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
-}
-
-func removeString(slice []string, s string) (result []string) {
-	for _, item := range slice {
-		if item == s {
-			continue
-		}
-		result = append(result, item)
-	}
-	return
-}
-
-func getFreePort() int32 {
-	port, err := freeport.GetFreePort()
-	if err != nil {
-		return 0
-	}
-	return int32(port)
 }
