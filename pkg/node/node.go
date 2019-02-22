@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	"reflect"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -206,12 +206,14 @@ func (s *Node) Start() error {
 	}()
 
 	// start a grpc server if used
-	go func() {
-		log.Info("trying to serve grpc services", "node.name", s.name)
-		if err := s.grpcSrv.Serve(s.grpcListener); err != nil && err != grpc.ErrServerStopped {
-			log.Error(err, "could not serve grpc services", "node.name", s.name)
-		}
-	}()
+	if s.grpcListener != nil {
+		go func() {
+			log.Info("trying to serve grpc services", "node.name", s.name)
+			if err := s.grpcSrv.Serve(s.grpcListener); err != nil && err != grpc.ErrServerStopped {
+				log.Error(err, "could not serve grpc services", "node.name", s.name)
+			}
+		}()
+	}
 
 	// informer routine
 	go s.podInformerFactory.Start(s.ctx.Done())
