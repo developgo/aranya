@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc"
+	"net"
 	"net/http"
 	"reflect"
 	"sync"
@@ -23,7 +25,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/node/configmap"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/secret"
@@ -44,13 +45,16 @@ type Node struct {
 	ctx  context.Context
 	exit context.CancelFunc
 
-	name              string
-	grpcListenAddress string
+	name string
 
 	kubeClient *kubeClient.Clientset
 	nodeClient kubeClientTypedCoreV1.NodeInterface
-	httpSrv    *http.Server
 	wq         workqueue.RateLimitingInterface
+
+	httpSrv         *http.Server
+	kubeletListener net.Listener
+	grpcSrv         *grpc.Server
+	grpcListener    net.Listener
 
 	podInformerFactory    kubeInformers.SharedInformerFactory
 	commonInformerFactory kubeInformers.SharedInformerFactory
@@ -64,19 +68,12 @@ type Node struct {
 
 	// status
 	status uint32
-	mutex  sync.RWMutex
+	mu     sync.RWMutex
 }
 
-func CreateVirtualNode(
-	ctx context.Context,
-	virtualNodeName string,
-	kubeletListenAddress, grpcListenAddress string,
-	config *rest.Config,
-	device *aranyav1alpha1.EdgeDevice,
-	node *corev1.Node,
-	svc *corev1.Service) (*Node, error) {
+func CreateVirtualNode(ctx context.Context, nodeObj corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
 	// create a new kubernetes client with provided config
-	client, err := kubeClient.NewForConfig(config)
+	client, err := kubeClient.NewForConfig(&config)
 	if err != nil {
 		return nil, err
 	}
@@ -85,23 +82,22 @@ func CreateVirtualNode(
 	podInformerFactory := kubeInformers.NewSharedInformerFactoryWithOptions(client, resyncInterval,
 		kubeInformers.WithNamespace(corev1.NamespaceAll),
 		kubeInformers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", virtualNodeName).String()
+			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeObj.Name).String()
 		}))
-
-	if device.Spec.Connectivity.Method == aranyav1alpha1.DeviceConnectViaGRPC {
-		// TODO: prepare grpc server
-	}
 
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
 	srv := &Node{
-		name:                  virtualNodeName,
+		name:                  nodeObj.Name,
 		kubeClient:            client,
 		nodeClient:            client.CoreV1().Nodes(),
-		httpSrv:               &http.Server{Addr: kubeletListenAddress, Handler: m},
+		kubeletListener:       kubeletListener,
+		grpcListener:          grpcListener,
+		httpSrv:               &http.Server{Handler: m},
+		grpcSrv:               grpc.NewServer(),
 		podInformerFactory:    podInformerFactory,
 		commonInformerFactory: commonInformerFactory,
 		podInformer:           podInformerFactory.Core().V1().Pods(),
-		wq:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), virtualNodeName+"wq"),
+		wq:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
 		status:                statusReady,
 	}
 
@@ -156,13 +152,13 @@ func CreateVirtualNode(
 	return srv, nil
 }
 
-func (s *Node) StartListenAndServe() error {
+func (s *Node) Start() error {
 	err := func() error {
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 
 		if s.isRunning() || s.isStopped() {
-			s.mutex.RUnlock()
+			s.mu.RUnlock()
 			return errors.New("node already started or stopped, do not reuse")
 		}
 		return nil
@@ -173,8 +169,8 @@ func (s *Node) StartListenAndServe() error {
 	}
 
 	// we need to get the lock to change this virtual node's status
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// add to the pool of running server
 	if err := AddRunningServer(s); err != nil {
@@ -189,8 +185,8 @@ func (s *Node) StartListenAndServe() error {
 		<-s.ctx.Done()
 
 		// we need to get the lock to change this virtual node's status
-		s.mutex.Lock()
-		defer s.mutex.Unlock()
+		s.mu.Lock()
+		defer s.mu.Unlock()
 
 		// force close to ensure node closed
 		s.ForceClose()
@@ -200,12 +196,20 @@ func (s *Node) StartListenAndServe() error {
 		DeleteRunningServer(s.name)
 	}()
 
-	// serve a subset of kubelet server
+	// start a kubelet server
 	go func() {
-		log.Info("start ListenAndServe", "node.name", s.name, "listen.kubeletServerAddress", s.httpSrv.Addr)
-		if err := s.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error(err, "Could not ListenAndServe", "node.name", s.name, "listen.kubeletServerAddress", s.httpSrv.Addr)
+		log.Info("trying to serve kubelet services", "node.name", s.name)
+		if err := s.httpSrv.Serve(s.kubeletListener); err != nil && err != http.ErrServerClosed {
+			log.Error(err, "could not serve kubelet services", "node.name", s.name)
 			return
+		}
+	}()
+
+	// start a grpc server if used
+	go func() {
+		log.Info("trying to serve grpc services", "node.name", s.name)
+		if err := s.grpcSrv.Serve(s.grpcListener); err != nil && err != grpc.ErrServerStopped {
+			log.Error(err, "could not serve grpc services", "node.name", s.name)
 		}
 	}()
 
@@ -275,24 +279,35 @@ func (s *Node) StartListenAndServe() error {
 
 // ForceClose close this node immediately
 func (s *Node) ForceClose() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("ForceClose node", "node.name", s.name)
-		s.exit()
+		log.V(3).Info("force close virtual node", "node.name", s.name)
+
 		_ = s.httpSrv.Close()
+		s.grpcSrv.Stop()
+
+		s.exit()
 	}
 }
 
 func (s *Node) Shutdown(grace time.Duration) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.isRunning() {
-		log.V(3).Info("Shutdown node", "node.name", s.name)
+		log.V(3).Info("shutting down virtual node", "node.name", s.name)
 
 		ctx, _ := context.WithTimeout(s.ctx, grace)
+
+		go func() {
+			go s.grpcSrv.GracefulStop()
+
+			time.Sleep(grace)
+			s.grpcSrv.Stop()
+		}()
+
 		_ = s.httpSrv.Shutdown(ctx)
 
 		s.exit()

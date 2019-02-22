@@ -1,13 +1,60 @@
 package edgedevice
 
 import (
+	"fmt"
+	"net"
+	"strconv"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/util"
 )
+
+func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObject *corev1.Node, l net.Listener, err error) {
+	var (
+		hostIP string
+	)
+	// get node ip address
+	hostIP, err = r.getHostIP()
+	if err != nil {
+		return
+	}
+
+	// get free port on this node
+	kubeletListenPort := getFreePort()
+	if kubeletListenPort < 1 {
+		return nil, nil, errNoFreePort
+	}
+
+	// claim this address immediately
+	l, err = net.Listen("tcp", fmt.Sprintf("%s:%s", hostIP, strconv.FormatInt(int64(kubeletListenPort), 10)))
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			_ = l.Close()
+		}
+	}()
+
+	nodeObject = newNodeForEdgeDevice(device, hostIP, kubeletListenPort)
+	err = controllerutil.SetControllerReference(device, nodeObject, r.scheme)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// create the virtual node object
+	err = r.client.Create(r.ctx, nodeObject)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return
+}
 
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kubeletPort int32) *corev1.Node {

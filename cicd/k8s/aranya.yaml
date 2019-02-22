@@ -1,7 +1,7 @@
 # 
 # This deployment script deploys aranya to a dedicated namespace (iot-edge)
 # 
-
+---
 apiVersion: v1
 kind: Namespace
 metadata:
