@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	errNoFreePort = errors.NewInternalError(fmt.Errorf("could not allocat port"))
+	errNoFreePort = errors.NewInternalError(fmt.Errorf("could not allocate free port"))
 )
 
 var log = logf.Log.WithName(controllerName)
