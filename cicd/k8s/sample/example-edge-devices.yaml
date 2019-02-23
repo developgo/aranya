@@ -11,12 +11,18 @@ spec:
     method: grpc
     config:
       grpc:
-        # configuration here is to annotate how to configure edge device to access
+        forServer:
+          tlsSecretRef:
+            name: my-grpc-server-secret
+            namespace: iot-edge
+        # configuration for device here is to annotate how to configure edge device to access
         forDevice:
           # public aranya address for edge device to access
+          # you may have to setup cluster edge proxy or loadbalancer to 
+          # make this accessible to edge devices
           server: grpc.example.com:8080
           tlsSecretRef:
-            name: my-grpc-secret
+            name: my-grpc-client-secret
             namespace: iot-edge
 ---
 # An example edge device accessing via mqtt
@@ -31,11 +37,11 @@ spec:
     method: mqtt
     config:
       mqtt:
-        # mqtt message namespace for kubernetes communication
+        # mqtt message namespace for aranya communication
         namespace: /k8s/aranya
         # tell aranya how to connect mqtt broker
         forServer:
-          # in cluster mqtt broker address
+          # mqtt broker address
           server: mqtt-broker:1883
           # mqtt version, currently only 3.1.1 supported
           version: "3.1.1"
@@ -43,9 +49,9 @@ spec:
           transport: tcp
           # set secret ref to use tls when connecting to broker
           tlsSecretRef:
-            # secret name
-            name: my-mqtt-secret
-            # namespace in which to find the secret
+            # kubernetes secret name
+            name: my-mqtt-client-secret
+            # kubenetes namespace in which to find the secret
             namespace: iot-edge
           # MQTT CONNECT packet
           connectPacket:
@@ -57,9 +63,9 @@ spec:
             willMessage: "I'm leaving now."
             username: "foo"
             password:
-              # secret name for password
+              # kubernetes secret name for password
               name: secret-name-for-mqtt-password
-              # namespace in which to find the secret
+              # kubernetes namespace in which to find the secret
               namespace: secret-stored-in-this-namespace
             clientID: foo
             # time in seconds
@@ -69,5 +75,7 @@ spec:
           # public mqtt broker address for edge device to access
           server: mqtt.example.com:8080
           tlsSecretRef:
+            # kubernetes secret name
             name: my-secret
+            # kubenetes namespace in which to find the secret
             namespace: iot-edge

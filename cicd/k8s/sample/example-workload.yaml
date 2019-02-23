@@ -9,10 +9,11 @@ spec:
     - key: arhat.dev/dedicated
       value: edge-device
   nodeSelector:
+    # select specific edge device(s) with labels
     arhat.dev/type: virtual-node
     kubernetes.io/hostname: aranya-node-for-example-edge-device-mqtt
   containers:
-  - name: test
+  - name: sleep
     image: alpine:latest
     command:
     - /bin/sleep
