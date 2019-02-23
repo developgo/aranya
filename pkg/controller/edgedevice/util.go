@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,6 +20,36 @@ var (
 	hostIP string
 	mutex  sync.RWMutex
 )
+
+func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (err error) {
+	if device.DeletionTimestamp.IsZero() {
+		if !containsString(device.Finalizers, constant.FinalizerName) {
+			device.Finalizers = append(device.Finalizers, constant.FinalizerName)
+			reqLog.Info("update edge device finalizer")
+			if err = r.client.Update(r.ctx, device); err != nil {
+				reqLog.Error(err, "update edge device finalizer failed")
+				return
+			}
+		}
+	} else {
+		if containsString(device.Finalizers, constant.FinalizerName) {
+			reqLog.Info("finalizer trying to delete related objects")
+			if err = r.deleteRelatedResourceObjects(device); err != nil {
+				reqLog.Error(err, "finalizer delete related objects failed")
+				return
+			}
+
+			reqLog.Info("finalizer trying to update device")
+			device.Finalizers = removeString(device.Finalizers, constant.FinalizerName)
+			if err = r.client.Update(r.ctx, device); err != nil {
+				reqLog.Error(err, "finalizer update device failed")
+				return
+			}
+		}
+	}
+
+	return
+}
 
 func (r *ReconcileEdgeDevice) getHostIP() (string, error) {
 	ip := func() string {

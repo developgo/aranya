@@ -3,12 +3,13 @@ package edgedevice
 import (
 	"context"
 	"fmt"
+	"net"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -99,8 +100,8 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	request.Namespace = constant.CurrentNamespace()
 	request.NamespacedName = types.NamespacedName{Namespace: request.Namespace, Name: request.Name}
 
-	reqLogger := log.WithValues("ns", request.Namespace, "name", request.Name)
-	reqLogger.Info("Reconciling EdgeDevice")
+	reqLog := log.WithValues("ns", request.Namespace, "name", request.Name)
+	reqLog.Info("Reconciling EdgeDevice")
 
 	// Fetch the EdgeDevice instance
 	device := &aranyav1alpha1.EdgeDevice{}
@@ -110,7 +111,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			reqLogger.Info("edge device already deleted")
+			reqLog.Info("edge device already deleted")
 			if err = r.deleteRelatedResourceObjects(device); err != nil {
 				return
 			}
@@ -118,37 +119,13 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		reqLogger.Error(err, "get edge device failed")
+		reqLog.Error(err, "get edge device failed")
 		return
 	}
 
 	// tag with finalizer's name and do related job when necessary
-	if device.DeletionTimestamp.IsZero() {
-		if !containsString(device.Finalizers, constant.FinalizerName) {
-			device.Finalizers = append(device.Finalizers, constant.FinalizerName)
-			reqLogger.Info("trying to update edge device finalizer")
-			if err = r.client.Update(r.ctx, device); err != nil {
-				reqLogger.Error(err, "update edge device finalizer failed")
-				return
-			}
-		}
-	} else {
-		if containsString(device.Finalizers, constant.FinalizerName) {
-			reqLogger.Info("finalizer trying to delete related objects")
-			if err = r.deleteRelatedResourceObjects(device); err != nil {
-				reqLogger.Error(err, "finalizer delete related objects failed")
-				return
-			}
-
-			reqLogger.Info("finalizer trying to update device")
-			device.Finalizers = removeString(device.Finalizers, constant.FinalizerName)
-			if err = r.client.Update(context.Background(), device); err != nil {
-				reqLogger.Error(err, "finalizer update device failed")
-				return
-			}
-		}
-
-		return
+	if err = r.runFinalizerLogic(reqLog, device); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// check virtual node exists
@@ -163,54 +140,63 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			grpcListener    net.Listener
 		)
 
-		reqLogger.Info("trying to create node object")
+		reqLog.Info("create node object")
 		nodeObj, kubeletListener, err = r.createNodeObject(device)
 		if err != nil {
-			reqLogger.Error(err, "create node object failed")
+			reqLog.Error(err, "create node object failed")
 			return
 		}
 
-		reqLogger.Info("trying to create grpc svc object")
+		reqLog.Info("create grpc svc object")
 		svcObj, grpcListener, err = r.createSvcForGrpcIfUsed(device)
 		if err != nil {
-			reqLogger.Error(err, "create svc object for grpc failed")
+			reqLog.Error(err, "create svc object for grpc failed")
 			return
 		}
 
 		defer func() {
+			// delete related objects with best effort if error happened
 			if err != nil {
-				// delete related objects with best effort
-				reqLogger.Info("trying to delete node object on error")
+				_ = kubeletListener.Close()
+
+				reqLog.Info("delete node object on error")
 				if e := r.client.Delete(r.ctx, nodeObj); e != nil {
 					log.Error(e, "delete node object failed")
 				}
 
-				reqLogger.Info("trying to delete grpc svc object on error")
-				if e := r.client.Delete(r.ctx, svcObj); e != nil {
-					log.Error(e, "delete svc object failed")
+				if grpcListener != nil {
+					_ = grpcListener.Close()
+
+					reqLog.Info("delete grpc svc object on error")
+					if e := r.client.Delete(r.ctx, svcObj); e != nil {
+						log.Error(e, "delete svc object failed")
+					}
 				}
 			}
 		}()
 
 		// create and start a new virtual node instance
-		reqLogger.Info("trying to create virtual node")
+		reqLog.Info("create virtual node")
 		virtualNode, err = node.CreateVirtualNode(r.ctx, *nodeObj, kubeletListener, grpcListener, *r.config)
 		if err != nil {
-			reqLogger.Error(err, "create virtual node failed")
+			reqLog.Error(err, "create virtual node failed")
 			return
 		}
 
-		reqLogger.Info("trying to start virtual node")
+		reqLog.Info("start virtual node")
 		if err = virtualNode.Start(); err != nil {
-			reqLogger.Error(err, "start virtual node failed")
+			reqLog.Error(err, "start virtual node failed")
 			return
 		}
 
+		reqLog.Info("reconcile edge device object success")
 		return reconcile.Result{}, nil
 	} else if err != nil {
+		reqLog.Error(err, "get node object failed")
 		return reconcile.Result{}, err
 	}
 
 	// let arhat.dev/aranya/pkg/node.Node do update job on its own
+	reqLog.Info("create")
 	return reconcile.Result{}, nil
 }

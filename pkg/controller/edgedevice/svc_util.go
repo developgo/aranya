@@ -30,6 +30,7 @@ func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.Edge
 		defer func() {
 			if err != nil {
 				_ = l.Close()
+				l = nil
 			}
 		}()
 
@@ -54,10 +55,10 @@ func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.Edge
 func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort int32) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            device.Name,
-			Namespace:       device.Namespace,
-			Labels:          map[string]string{constant.LabelType: constant.LabelTypeValueService},
-			ClusterName:     device.ClusterName,
+			Name:        device.Name,
+			Namespace:   device.Namespace,
+			Labels:      map[string]string{constant.LabelType: constant.LabelTypeValueService},
+			ClusterName: device.ClusterName,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{constant.LabelType: constant.LabelTypeValueController},
