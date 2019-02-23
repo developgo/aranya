@@ -11,8 +11,8 @@ spec:
       value: edge
   nodeSelector:
     # select specific edge device(s) with labels
-    arhat.dev/type: virtual-node
-    kubernetes.io/hostname: aranya-node-for-example-edge-device-mqtt
+    arhat.dev/type: node
+    kubernetes.io/hostname: example-edge-device-mqtt
   containers:
   - name: sleep
     image: alpine:latest
