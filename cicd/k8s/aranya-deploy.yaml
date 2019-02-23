@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aranya
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: aranya
+      arhat.dev/type: controller
+  template:
+    metadata:
+      labels:
+        name: aranya
+        # required label to get grpc services working
+        arhat.dev/type: controller
+    spec:
+      serviceAccountName: aranya
+      # required to work with host network to serve as virtual node
+      hostNetwork: true
+      containers:
+        - name: aranya
+          image: arhatdev/aranya:latest
+          command:
+            - /app
+          imagePullPolicy: Always
+          env:
+            # namespace to watch (also deployed to this namespace)
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "aranya"

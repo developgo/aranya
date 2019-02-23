@@ -64,7 +64,7 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kube
 			Name:      device.Name,
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
-				constant.LabelType: constant.LabelTypeValueVirtualNode,
+				constant.LabelType: constant.LabelTypeValueNode,
 				// TODO: use corev1.LabelHostname in future when controller-runtime updated
 				"kubernetes.io/hostname": device.Name,
 			},
@@ -72,8 +72,8 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kube
 		},
 		Spec: corev1.NodeSpec{
 			Taints: []corev1.Taint{{
-				Key:    constant.TaintKeyDedicated,
-				Value:  constant.TaintValueDedicatedForEdgeDevice,
+				Key:    constant.TaintKeyNamespace,
+				Value:  constant.CurrentNamespace(),
 				Effect: corev1.TaintEffectNoSchedule,
 			}},
 		},

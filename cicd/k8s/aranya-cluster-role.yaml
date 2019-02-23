@@ -1,0 +1,43 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aranya
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+      # aranya needs to create and manage virtual nodes and its pods for edge deivces
+      - nodes
+      - nodes/status
+      - pods
+      - pods/status
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - '*'
+  - apiGroups:
+      - aranya.arhat.dev
+    resources:
+      - '*'
+    verbs:
+      - '*'

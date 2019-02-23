@@ -5,7 +5,7 @@ const (
 )
 
 const (
-	LabelTypeValueVirtualNode = "virtual-node"
-	LabelTypeValueService     = "service"
-	LabelTypeValueController  = "controller"
+	LabelTypeValueNode       = "node"
+	LabelTypeValueService    = "service"
+	LabelTypeValueController = "controller"
 )

@@ -22,7 +22,7 @@ var (
 )
 
 func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (err error) {
-	if device.DeletionTimestamp.IsZero() {
+	if device.DeletionTimestamp == nil || device.DeletionTimestamp.IsZero() {
 		if !containsString(device.Finalizers, constant.FinalizerName) {
 			device.Finalizers = append(device.Finalizers, constant.FinalizerName)
 			reqLog.Info("update edge device finalizer")

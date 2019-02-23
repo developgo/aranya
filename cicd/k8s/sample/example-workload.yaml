@@ -2,12 +2,13 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: example-edge-pod
-  namespace: iot-edge
+  namespace: edge
 spec:
   tolerations:
-    # taint toleration required
-    - key: arhat.dev/dedicated
-      value: edge-device
+    # set deploy to which virtual cluster (kubernetes namespace)
+    # this toleration is requeired, because it's the taint set on every node in that virtual cluster
+    - key: arhat.dev/namespace
+      value: edge
   nodeSelector:
     # select specific edge device(s) with labels
     arhat.dev/type: virtual-node
