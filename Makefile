@@ -44,11 +44,11 @@ cleanup:
 
 .PHONY: deploy-sample
 deploy-sample:
-	kubectl apply -f cicd/k8s/sample/example-edge-devices.yaml
+	kubectl -n ${NS} apply -f cicd/k8s/sample/example-edge-devices.yaml
 
 .PHONY: delete-sample
 delete-sample:
-	kubectl delete -f cicd/k8s/sample/example-edge-devices.yaml
+	kubectl -n ${NS} delete -f cicd/k8s/sample/example-edge-devices.yaml
 
 .PHONY: codegen
 codegen:

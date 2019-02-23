@@ -4,7 +4,6 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: example-edge-device-grpc
-  namespace: iot-edge
 spec:
   unschedulable: false
   connectivity:
@@ -30,7 +29,6 @@ apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice
 metadata:
   name: example-edge-device-mqtt
-  namespace: iot-edge
 spec:
   unschedulable: false
   connectivity:
