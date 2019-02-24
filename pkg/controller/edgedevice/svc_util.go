@@ -74,7 +74,7 @@ func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort i
 					IntVal: grpcListenPort,
 				},
 			}},
-			ClusterIP: "",
+			ClusterIP: corev1.ClusterIPNone,
 			Type:      corev1.ServiceTypeClusterIP,
 		},
 	}

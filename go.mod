@@ -2,9 +2,11 @@ module arhat.dev/aranya
 
 require (
 	cloud.google.com/go v0.36.0 // indirect
+	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/emicklei/go-restful v2.9.0+incompatible // indirect
@@ -27,6 +29,7 @@ require (
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
+	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/operator-framework/operator-sdk v0.5.0
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -36,6 +39,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/prometheus/common v0.2.0 // indirect
 	github.com/prometheus/procfs v0.0.0-20190209105433-f8d8b3f739bd // indirect
+	github.com/spf13/afero v1.2.1 // indirect
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0 // indirect
 	go.uber.org/atomic v1.3.2 // indirect
@@ -53,6 +57,8 @@ require (
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/apiserver v0.0.0-20190221013902-8a41519758b4 // indirect
 	k8s.io/client-go v2.0.0-alpha.0.0.20190202011228-6e4752048fde+incompatible
+	k8s.io/cloud-provider v0.0.0-20190223141949-e954a34baf43 // indirect
+	k8s.io/csi-api v0.0.0-20190223140843-b4e64dae0b19 // indirect
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	k8s.io/kubernetes v1.13.3

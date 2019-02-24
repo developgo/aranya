@@ -101,7 +101,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	request.NamespacedName = types.NamespacedName{Namespace: request.Namespace, Name: request.Name}
 
 	reqLog := log.WithValues("ns", request.Namespace, "name", request.Name)
-	reqLog.Info("Reconciling EdgeDevice")
+	reqLog.Info("reconciling EdgeDevice")
 
 	// Fetch the EdgeDevice instance
 	device := &aranyav1alpha1.EdgeDevice{}

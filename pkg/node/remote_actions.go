@@ -5,8 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (s *Node) SetupDevice() {
-	me, err := s.nodeClient.Get(s.name, metav1.GetOptions{})
+func (n *Node) InitializeDevice() {
+	me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
 	if err != nil {
 		log.Error(err, "get own node info failed")
 		return
@@ -29,7 +29,7 @@ func (s *Node) SetupDevice() {
 		},
 	}
 
-	updatedMe, err := s.nodeClient.UpdateStatus(me)
+	updatedMe, err := n.nodeClient.UpdateStatus(me)
 	if err != nil {
 		log.Error(err, "update node status failed")
 		return
@@ -37,10 +37,10 @@ func (s *Node) SetupDevice() {
 	_ = updatedMe
 }
 
-func (s *Node) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
+func (n *Node) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
 	return nil
 }
 
-func (s *Node) DeletePodInDevice(namespace, name string) error {
+func (n *Node) DeletePodInDevice(namespace, name string) error {
 	return nil
 }
