@@ -182,7 +182,7 @@ func (n *Node) Start() error {
 	// added, expected to run
 	n.status = statusRunning
 
-	go wait.Until(n.syncNodeStatus, time.Second, wait.NeverStop)
+	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
 	// handle final status change
 	go func() {
 		<-n.ctx.Done()
