@@ -53,9 +53,9 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	k8s.io/api v0.0.0-20190202010724-74b699b93c15
-	k8s.io/apiextensions-apiserver v0.0.0-20181213153335-0fe22c71c476 // indirect
-	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
-	k8s.io/apiserver v0.0.0-20190221013902-8a41519758b4 // indirect
+	k8s.io/apiextensions-apiserver v0.0.0-20190202013456-d4288ab64945 // indirect
+	k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
+	k8s.io/apiserver v0.0.0-20190202011929-26bc712632e1 // indirect
 	k8s.io/client-go v2.0.0-alpha.0.0.20190202011228-6e4752048fde+incompatible
 	k8s.io/cloud-provider v0.0.0-20190223141949-e954a34baf43 // indirect
 	k8s.io/csi-api v0.0.0-20190223140843-b4e64dae0b19 // indirect
