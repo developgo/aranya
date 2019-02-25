@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -39,7 +40,9 @@ func (r *ReconcileEdgeDevice) createSvcForGrpc(device *aranyav1alpha1.EdgeDevice
 		return
 	}
 
-	err = r.client.Create(r.ctx, svcObject)
+	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObject, func(existing runtime.Object) error {
+		return nil
+	})
 	if err != nil {
 		return
 	}

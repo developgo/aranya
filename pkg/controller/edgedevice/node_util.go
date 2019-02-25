@@ -14,9 +14,10 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObject *corev1.Node, l net.Listener, err error) {
+func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObj *corev1.Node, l net.Listener, err error) {
 	var (
 		hostIP string
+		kubeletListenPort int32
 	)
 	// get node ip address
 	hostIP, err = r.getHostIP()
@@ -25,7 +26,7 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 	}
 
 	// get free port on this node
-	kubeletListenPort := getFreePort()
+	kubeletListenPort = getFreePort()
 	if kubeletListenPort < 1 {
 		return nil, nil, errNoFreePort
 	}
@@ -41,14 +42,14 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 		}
 	}()
 
-	nodeObject = newNodeForEdgeDevice(device, hostIP, kubeletListenPort)
-	err = controllerutil.SetControllerReference(device, nodeObject, r.scheme)
+	nodeObj = newNodeForEdgeDevice(device, hostIP, kubeletListenPort)
+	err = controllerutil.SetControllerReference(device, nodeObj, r.scheme)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// create the virtual node object
-	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, nodeObject, func(existing runtime.Object) error { return nil })
+	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, nodeObj, func(existing runtime.Object) error { return nil })
 	if err != nil {
 		return nil, nil, err
 	}

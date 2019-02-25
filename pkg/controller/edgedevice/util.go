@@ -11,9 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
-	"arhat.dev/aranya/pkg/node"
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
+	"arhat.dev/aranya/pkg/node"
 )
 
 var (
@@ -21,7 +21,9 @@ var (
 	mutex  sync.RWMutex
 )
 
-func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (err error) {
+func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (deleted bool, err error) {
+	deleted = false
+
 	if device.DeletionTimestamp == nil || device.DeletionTimestamp.IsZero() {
 		if !containsString(device.Finalizers, constant.FinalizerName) {
 			device.Finalizers = append(device.Finalizers, constant.FinalizerName)
@@ -33,18 +35,20 @@ func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aran
 		}
 	} else {
 		if containsString(device.Finalizers, constant.FinalizerName) {
-			reqLog.Info("finalizer trying to delete related objects")
-			if err = r.cleanupVirtualObjects(device); err != nil {
-				reqLog.Error(err, "finalizer delete related objects failed")
-				return
-			}
-
 			reqLog.Info("finalizer trying to update device")
 			device.Finalizers = removeString(device.Finalizers, constant.FinalizerName)
 			if err = r.client.Update(r.ctx, device); err != nil {
 				reqLog.Error(err, "finalizer update device failed")
 				return
 			}
+
+			reqLog.Info("finalizer trying to delete related objects")
+			if err = r.cleanupVirtualObjects(reqLog, device); err != nil {
+				reqLog.Error(err, "finalizer delete related objects failed")
+				return
+			}
+
+			deleted = true
 		}
 	}
 
@@ -81,31 +85,49 @@ func (r *ReconcileEdgeDevice) getHostIP() (string, error) {
 	return ip, nil
 }
 
-func (r *ReconcileEdgeDevice) cleanupVirtualObjects(device *aranyav1alpha1.EdgeDevice) (err error) {
+func (r *ReconcileEdgeDevice) cleanupVirtualObjects(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (err error) {
 	node.DeleteRunningServer(device.Name)
 
+	needDeleteNodeObj := true
 	nodeObj := &corev1.Node{}
 	err = r.client.Get(r.ctx, types.NamespacedName{Name: device.Name}, nodeObj)
 	if err != nil {
-		return err
+		if errors.IsNotFound(err) {
+			needDeleteNodeObj = false
+		} else {
+			reqLog.Error(err, "get node object failed")
+			return err
+		}
 	}
 
-	err = r.client.Delete(r.ctx, nodeObj)
-	if err != nil {
-		return err
+	if needDeleteNodeObj {
+		err = r.client.Delete(r.ctx, nodeObj)
+		if err != nil {
+			reqLog.Error(err, "delete node object failed")
+			return err
+		}
 	}
 
 	switch device.Spec.Connectivity.Method {
 	case aranyav1alpha1.DeviceConnectViaGRPC:
+		needDeleteSvcObj := true
 		svcObj := &corev1.Service{}
 		err = r.client.Get(r.ctx, types.NamespacedName{Name: device.Name, Namespace: device.Namespace}, svcObj)
 		if err != nil {
-			return err
+			if errors.IsNotFound(err) {
+				needDeleteSvcObj = false
+			} else {
+				reqLog.Error(err, "get svc object failed")
+				return err
+			}
 		}
 
-		err = r.client.Delete(r.ctx, svcObj)
-		if err != nil {
-			return err
+		if needDeleteSvcObj {
+			err = r.client.Delete(r.ctx, svcObj)
+			if err != nil {
+				reqLog.Error(err, "delete svc object failed")
+				return err
+			}
 		}
 	}
 

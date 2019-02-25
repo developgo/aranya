@@ -101,8 +101,11 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	reqLog := log.WithValues("ns", request.Namespace, "name", request.Name)
 	reqLog.Info("reconciling edge device")
 
-	nodeNsName := types.NamespacedName{Name: request.Name}
-	deviceNsName := types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: request.Name}
+	var (
+		deleted      bool
+		nodeNsName   = types.NamespacedName{Name: request.Name}
+		deviceNsName = types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: request.Name}
+	)
 
 	// reconcile related node object
 	if request.Namespace == corev1.NamespaceAll {
@@ -125,7 +128,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLog.Info("edge device deleted, clean up related objects")
-			if err = r.cleanupVirtualObjects(deviceObj); err != nil {
+			if err = r.cleanupVirtualObjects(reqLog, deviceObj); err != nil {
 				reqLog.Error(err, "delete related resources failed")
 				return reconcile.Result{}, err
 			}
@@ -137,8 +140,14 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	}
 
 	// tag with finalizer's name and do related job when necessary
-	if err = r.runFinalizerLogic(reqLog, deviceObj); err != nil {
+	deleted, err = r.runFinalizerLogic(reqLog, deviceObj);
+	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// edge device need to be deleted, no more check
+	if deleted {
+		return reconcile.Result{}, nil
 	}
 
 	//

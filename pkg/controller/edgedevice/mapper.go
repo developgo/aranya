@@ -28,7 +28,13 @@ func (m *ServiceMapper) Map(i handler.MapObject) []reconcile.Request {
 		return nil
 	}
 
-	name := types.NamespacedName{Namespace: i.Meta.GetNamespace(), Name: ownerRef.Name}
 	svcLog.Info("found edge device for service")
-	return []reconcile.Request{{NamespacedName: name}}
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: i.Meta.GetNamespace(),
+				Name:      ownerRef.Name,
+			},
+		},
+	}
 }
