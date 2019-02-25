@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
@@ -47,7 +48,7 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 	}
 
 	// create the virtual node object
-	err = r.client.Create(r.ctx, nodeObject)
+	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, nodeObject, func(existing runtime.Object) error { return nil })
 	if err != nil {
 		return nil, nil, err
 	}

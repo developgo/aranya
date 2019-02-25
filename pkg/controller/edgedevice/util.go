@@ -1,7 +1,6 @@
 package edgedevice
 
 import (
-	"arhat.dev/aranya/pkg/node"
 	"fmt"
 	"os"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
+	"arhat.dev/aranya/pkg/node"
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )

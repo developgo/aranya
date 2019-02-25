@@ -14,38 +14,33 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createSvcForGrpcIfUsed(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
-	switch device.Spec.Connectivity.Method {
-	case aranyav1alpha1.DeviceConnectViaGRPC:
-		grpcListenPort := getFreePort()
-		if grpcListenPort < 1 {
-			return
-		}
+func (r *ReconcileEdgeDevice) createSvcForGrpc(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
+	grpcListenPort := getFreePort()
+	if grpcListenPort < 1 {
+		return
+	}
 
-		// claim this address immediately
-		l, err = net.Listen("tcp", fmt.Sprintf(":%s", strconv.FormatInt(int64(grpcListenPort), 10)))
+	// claim this address immediately
+	l, err = net.Listen("tcp", fmt.Sprintf(":%s", strconv.FormatInt(int64(grpcListenPort), 10)))
+	if err != nil {
+		return
+	}
+	defer func() {
 		if err != nil {
-			return
+			_ = l.Close()
+			l = nil
 		}
-		defer func() {
-			if err != nil {
-				_ = l.Close()
-				l = nil
-			}
-		}()
+	}()
 
-		svcObject = newServiceForEdgeDevice(device, grpcListenPort)
-		err = controllerutil.SetControllerReference(device, svcObject, r.scheme)
-		if err != nil {
-			log.Error(err, "set svc controller reference failed")
-			return
-		}
+	svcObject = newServiceForEdgeDevice(device, grpcListenPort)
+	err = controllerutil.SetControllerReference(device, svcObject, r.scheme)
+	if err != nil {
+		log.Error(err, "set svc controller reference failed")
+		return
+	}
 
-		err = r.client.Create(r.ctx, svcObject)
-		if err != nil {
-			return
-		}
-
+	err = r.client.Create(r.ctx, svcObject)
+	if err != nil {
 		return
 	}
 
