@@ -14,22 +14,20 @@ func (n *Node) InitializeDevice() {
 
 	// TODO: wait edge device to connect and get info
 
-	me.Status = corev1.NodeStatus{
-		NodeInfo: corev1.NodeSystemInfo{
-			MachineID:               "",
-			SystemUUID:              "",
-			BootID:                  "",
-			KernelVersion:           "",
-			OSImage:                 "",
-			ContainerRuntimeVersion: "",
-			KubeletVersion:          "",
-			KubeProxyVersion:        "",
-			OperatingSystem:         "linux",
-			Architecture:            "arm",
-		},
+	me.Status.NodeInfo = corev1.NodeSystemInfo{
+		MachineID:               "",
+		SystemUUID:              "",
+		BootID:                  "",
+		KernelVersion:           "",
+		OSImage:                 "",
+		ContainerRuntimeVersion: "",
+		KubeletVersion:          "",
+		KubeProxyVersion:        "",
+		OperatingSystem:         "linux",
+		Architecture:            "arm",
 	}
 
-	updatedMe, err := n.nodeClient.UpdateStatus(me)
+	updatedMe, err := n.nodeClient.UpdateStatus(n.nodeObj)
 	if err != nil {
 		log.Error(err, "update node status failed")
 		return

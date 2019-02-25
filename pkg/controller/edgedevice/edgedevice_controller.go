@@ -220,7 +220,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 			// create and start a new virtual node instance
 			reqLog.Info("create virtual node")
-			virtualNode, err = node.CreateVirtualNode(r.ctx, *nodeObj, kubeletListener, grpcListener, *r.config)
+			virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
 			if err != nil {
 				reqLog.Error(err, "create virtual node failed")
 				return

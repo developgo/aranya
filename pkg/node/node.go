@@ -46,11 +46,10 @@ var (
 )
 
 type Node struct {
-	log  logr.Logger
-	ctx  context.Context
-	exit context.CancelFunc
-
-	name string
+	log        logr.Logger
+	ctx        context.Context
+	exit       context.CancelFunc
+	name       string
 
 	kubeClient kubeClient.Interface
 	nodeClient kubeClientTypedCoreV1.NodeInterface
@@ -72,7 +71,7 @@ type Node struct {
 	mu     sync.RWMutex
 }
 
-func CreateVirtualNode(ctx context.Context, nodeObj corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
+func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
 	// create a new kubernetes client with provided config
 	client, err := kubeClient.NewForConfig(&config)
 	if err != nil {
@@ -132,11 +131,10 @@ func CreateVirtualNode(ctx context.Context, nodeObj corev1.Node, kubeletListener
 	}
 
 	srv := &Node{
-		log:  log.WithValues("name", nodeObj.Name),
-		ctx:  ctx,
-		exit: exit,
-		name: nodeObj.Name,
-
+		log:                log.WithValues("name", nodeObj.Name),
+		ctx:                ctx,
+		exit:               exit,
+		name:               nodeObj.Name,
 		kubeClient:         client,
 		nodeClient:         client.CoreV1().Nodes(),
 		kubeletListener:    kubeletListener,
