@@ -182,6 +182,7 @@ func (n *Node) Start() error {
 	// added, expected to run
 	n.status = statusRunning
 
+	// node status update routine
 	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
 	// handle final status change
 	go func() {
@@ -192,7 +193,6 @@ func (n *Node) Start() error {
 		// force close to ensure node closed
 		n.wq.ShutDown()
 		n.status = statusStopped
-		DeleteRunningServer(n.name)
 	}()
 
 	// start a kubelet server

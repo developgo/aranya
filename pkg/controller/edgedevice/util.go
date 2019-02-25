@@ -1,6 +1,7 @@
 package edgedevice
 
 import (
+	"arhat.dev/aranya/pkg/node"
 	"fmt"
 	"os"
 	"sync"
@@ -13,7 +14,6 @@ import (
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node"
 )
 
 var (
@@ -34,7 +34,7 @@ func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aran
 	} else {
 		if containsString(device.Finalizers, constant.FinalizerName) {
 			reqLog.Info("finalizer trying to delete related objects")
-			if err = r.deleteRelatedResourceObjects(device); err != nil {
+			if err = r.cleanupVirtualObjects(device); err != nil {
 				reqLog.Error(err, "finalizer delete related objects failed")
 				return
 			}
@@ -81,7 +81,9 @@ func (r *ReconcileEdgeDevice) getHostIP() (string, error) {
 	return ip, nil
 }
 
-func (r *ReconcileEdgeDevice) deleteRelatedResourceObjects(device *aranyav1alpha1.EdgeDevice) (err error) {
+func (r *ReconcileEdgeDevice) cleanupVirtualObjects(device *aranyav1alpha1.EdgeDevice) (err error) {
+	node.DeleteRunningServer(device.Name)
+
 	nodeObj := &corev1.Node{}
 	err = r.client.Get(r.ctx, types.NamespacedName{Name: device.Name}, nodeObj)
 	if err != nil {
@@ -106,8 +108,6 @@ func (r *ReconcileEdgeDevice) deleteRelatedResourceObjects(device *aranyav1alpha
 			return err
 		}
 	}
-
-	node.DeleteRunningServer(device.Name)
 
 	return nil
 }

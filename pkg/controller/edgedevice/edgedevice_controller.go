@@ -112,7 +112,8 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLog.Info("edge device already deleted")
-			if err = r.deleteRelatedResourceObjects(device); err != nil {
+			if err = r.cleanupVirtualObjects(device); err != nil {
+				reqLog.Error(err, "delete EdgeDevice related resources failed")
 				return
 			}
 
