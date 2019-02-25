@@ -27,7 +27,7 @@ func (n *Node) InitializeDevice() {
 		Architecture:            "arm",
 	}
 
-	updatedMe, err := n.nodeClient.UpdateStatus(n.nodeObj)
+	updatedMe, err := n.nodeClient.UpdateStatus(me)
 	if err != nil {
 		log.Error(err, "update node status failed")
 		return
