@@ -16,7 +16,7 @@ import (
 
 func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObj *corev1.Node, l net.Listener, err error) {
 	var (
-		hostIP string
+		hostIP            string
 		kubeletListenPort int32
 	)
 	// get node ip address

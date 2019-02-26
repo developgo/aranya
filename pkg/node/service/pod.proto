@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package service;
+
+service Pod {
+    rpc SyncDevicePods (stream PodStatus) returns (stream PodCmd);
+}
+
+message PodStatus {
+    oneof status {
+        PodCreated created = 1;
+        PodUpdated updated = 2;
+        PodDeleted deleted = 3;
+        PodInfo info = 4;
+    }
+}
+
+message PodDeleted {
+    string pod = 1;
+}
+
+message PodCreated {
+    string pod = 1;
+}
+
+message PodUpdated {
+    string pod = 1;
+}
+
+message PodInfo {
+    string pod = 1;
+}
+
+message PodCmd {
+    oneof cmd {
+        CmdCreateOrUpdatePod create_or_update = 1;
+        CmdDeletePod delete = 2;
+        CmdListPods get = 3;
+        CmdGetPodLog log = 4;
+    }
+}
+
+message CmdCreateOrUpdatePod {
+    string pod_spec = 1;
+}
+
+message CmdDeletePod {
+    string namespace = 1;
+    string name = 2;
+}
+
+message CmdListPods {
+    string namespace = 1;
+    string name = 2;
+}
+
+message CmdGetPodLog {
+    string namespace = 1;
+    string name = 2;
+    string container_name = 3;
+}

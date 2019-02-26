@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package service;
+
+service Image {
+    rpc SyncDeviceImages (stream ImageStatus) returns (stream ImageCmd);
+}
+
+message ImageStatus {
+    oneof status {
+        ImagePulled pulled = 1;
+        ImageDeleted deleted = 2;
+        ImageInfo info = 3;
+    }
+}
+
+message ImagePulled {
+
+}
+
+message ImageDeleted {
+
+}
+
+message ImageInfo {
+
+}
+
+message ImageCmd {
+    oneof cmd {
+        CmdPullImage pull = 1;
+        CmdDeleteImage delete = 2;
+        CmdListImages list = 3;
+    }
+}
+
+message CmdPullImage {
+
+}
+
+message CmdDeleteImage {
+
+}
+
+message CmdListImages {
+
+}

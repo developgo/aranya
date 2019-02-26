@@ -14,7 +14,7 @@ func PanicRecoverMiddleware(logger logr.Logger) mux.MiddlewareFunc {
 			defer func() {
 				err := recover()
 				if err != nil {
-					logger.V(2).Info("Recovered from panic", "Panic", err)
+					logger.V(2).Info("recovered from panic", "panic", err)
 				}
 			}()
 
@@ -24,13 +24,13 @@ func PanicRecoverMiddleware(logger logr.Logger) mux.MiddlewareFunc {
 }
 
 func LogMiddleware(logger logr.Logger) mux.MiddlewareFunc {
-	log := logger.WithName("request")
+	log := logger.WithName("request.log")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			log.Info("request started", "Request.URI", req.URL.RequestURI(), "Request.RemoteAddr", req.RemoteAddr)
+			log.Info("request started", "uri", req.URL.RequestURI(), "remote", req.RemoteAddr)
 			startTime := time.Now()
 			defer func() {
-				log.Info("request finished", "Request.Duration", time.Since(startTime).String())
+				log.Info("request finished", "dur", time.Since(startTime).String())
 			}()
 
 			next.ServeHTTP(w, req)

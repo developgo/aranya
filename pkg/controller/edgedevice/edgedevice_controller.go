@@ -140,7 +140,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	}
 
 	// tag with finalizer's name and do related job when necessary
-	deleted, err = r.runFinalizerLogic(reqLog, deviceObj);
+	deleted, err = r.runFinalizerLogic(reqLog, deviceObj)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -162,6 +162,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		kubeletListener net.Listener
 	)
 
+	// check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranyav1alpha1.DeviceConnectViaGRPC:
 		svcFound := &corev1.Service{}
@@ -194,7 +195,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		}
 	}
 
-	// check virtual node exists
+	// check node object exists
 	nodeFound := &corev1.Node{}
 	err = r.client.Get(r.ctx, nodeNsName, nodeFound)
 	if err != nil {

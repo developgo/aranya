@@ -32,6 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/pod"
+	"arhat.dev/aranya/pkg/node/service"
 	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -46,10 +47,10 @@ var (
 )
 
 type Node struct {
-	log        logr.Logger
-	ctx        context.Context
-	exit       context.CancelFunc
-	name       string
+	log  logr.Logger
+	ctx  context.Context
+	exit context.CancelFunc
+	name string
 
 	kubeClient kubeClient.Interface
 	nodeClient kubeClientTypedCoreV1.NodeInterface
@@ -95,9 +96,10 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 
 	ctx, exit := context.WithCancel(ctx)
 
+	logger := log.WithValues("name", nodeObj.Name)
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
 	// register http routes
-	m.Use(util.LogMiddleware(log), util.PanicRecoverMiddleware(log))
+	m.Use(util.LogMiddleware(logger), util.PanicRecoverMiddleware(logger))
 	m.StrictSlash(true)
 	//
 	// routes for pod
@@ -128,7 +130,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// TODO: metrics
 
 	srv := &Node{
-		log:                log.WithValues("name", nodeObj.Name),
+		log:                logger,
 		ctx:                ctx,
 		exit:               exit,
 		name:               nodeObj.Name,
@@ -137,14 +139,12 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		kubeletListener:    kubeletListener,
 		grpcListener:       grpcListener,
 		httpSrv:            &http.Server{Handler: m},
-		grpcSrv:            grpc.NewServer(),
 		podInformerFactory: podInformerFactory,
 		podInformer:        podInformer,
 		wq:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
 		status:             statusReady,
-
-		statusManager: kubeletstatus.NewManager(client, podManager, podManager),
-		podManager:    podManager,
+		statusManager:      kubeletstatus.NewManager(client, podManager, podManager),
+		podManager:         podManager,
 	}
 
 	return srv, nil
@@ -179,6 +179,8 @@ func (n *Node) Start() error {
 
 	// node status update routine
 	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
+	go n.statusManager.Start()
+
 	// handle final status change
 	go func() {
 		<-n.ctx.Done()
@@ -194,17 +196,23 @@ func (n *Node) Start() error {
 	go func() {
 		n.log.Info("serve kubelet services")
 		if err := n.httpSrv.Serve(n.kubeletListener); err != nil && err != http.ErrServerClosed {
-			log.Error(err, "serve kubelet services failed")
+			n.log.Error(err, "serve kubelet services failed")
 			return
 		}
 	}()
 
 	// start a grpc server if used
-	if n.grpcSrv != nil && n.grpcListener != nil {
+	if n.grpcListener != nil {
+		n.grpcSrv = grpc.NewServer()
+
+		service.RegisterImageServer(n.grpcSrv, service.NewImageService())
+		service.RegisterPodServer(n.grpcSrv, service.NewPodService())
+		service.RegisterDeviceServer(n.grpcSrv, service.NewDeviceService())
+
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {
-				log.Error(err, "serve grpc services failed")
+				n.log.Error(err, "serve grpc services failed")
 			}
 		}()
 	}
@@ -217,7 +225,7 @@ func (n *Node) Start() error {
 		AddFunc: func(pod interface{}) {
 			// a new pod need to be created in this virtual node
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-				log.Error(err, "")
+				n.log.Error(err, "")
 			} else {
 				// enqueue the create work for workers
 				n.wq.AddRateLimited(key)
@@ -235,7 +243,7 @@ func (n *Node) Start() error {
 			}
 
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
-				log.Error(err, "")
+				n.log.Error(err, "")
 			} else {
 				// enqueue the update work for workers
 				n.wq.AddRateLimited(key)
@@ -244,7 +252,7 @@ func (n *Node) Start() error {
 		DeleteFunc: func(pod interface{}) {
 			// pod in this virtual node got deleted
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
-				log.Error(err, "")
+				n.log.Error(err, "")
 			} else {
 				// enqueue the delete work for workers
 				n.wq.AddRateLimited(key)
@@ -254,7 +262,7 @@ func (n *Node) Start() error {
 
 	go func() {
 		if ok := cache.WaitForCacheSync(n.ctx.Done(), n.podInformer.Informer().HasSynced); !ok {
-			log.V(2).Info("failed to wait for caches to sync")
+			n.log.V(2).Info("failed to wait for caches to sync")
 			return
 		}
 
@@ -328,20 +336,20 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		if err != nil {
 			// Log the error as a warning, but do not requeue the key as it is invalid.
-			log.Error(err, "invalid resource key: %q", key)
+			n.log.Error(err, "invalid resource key: %q", key)
 			return nil
 		}
 
 		podFound, err := n.podManager.GetMirrorPod(namespace, name)
 		if err != nil {
 			if !kubeErrors.IsNotFound(err) {
-				log.Error(err, "failed to fetch pod with key from lister", "key", key)
+				n.log.Error(err, "failed to fetch pod with key from lister", "key", key)
 				return err
 			}
 
 			// pod has been deleted
 			if err := n.DeletePodInDevice(namespace, name); err != nil {
-				log.Error(err, "failed to delete pod in the provider", "pod.ns", namespace, "pod.name", name)
+				n.log.Error(err, "failed to delete pod in the provider", "pod.ns", namespace, "pod.name", name)
 				return err
 			}
 		}
@@ -349,7 +357,7 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 		if err := n.SyncPodInDevice(podFound); err != nil {
 			if wq.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.Error(err, "requeue due to failed sync", "key", key)
+				n.log.Error(err, "requeue due to failed sync", "key", key)
 				wq.AddRateLimited(key)
 				return nil
 			}
@@ -363,7 +371,7 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 	}(obj)
 
 	if err != nil {
-		log.Error(err, "")
+		n.log.Error(err, "")
 		return true
 	}
 
@@ -371,21 +379,22 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 }
 
 func (n *Node) SyncPodInDevice(pod *corev1.Pod) error {
+	syncLog := n.log.WithValues("pod.ns", pod.Namespace, "pod.name", pod.Name)
 	if pod.DeletionTimestamp != nil {
 		if err := n.DeletePodInDevice(pod.Namespace, pod.Name); err != nil {
-			log.Error(err, "failed to delete pod in edge device", "pod.name", pod.Name, "pod.ns", pod.Namespace)
+			syncLog.Error(err, "failed to delete pod in edge device")
 			return err
 		}
 		return nil
 	}
 
 	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
-		n.log.Info("skipping sync of pod", "pod.phase", pod.Status.Phase, "pod.ns", pod.Namespace, "pod.name", pod.Name)
+		syncLog.Info("skipping sync of pod", "phase", pod.Status.Phase)
 		return nil
 	}
 
 	if err := n.CreateOrUpdatePodInDevice(pod); err != nil {
-		log.Error(err, "failed to sync edge pod", "pod.ns", pod.Namespace, "pod.name", pod.Name)
+		syncLog.Error(err, "failed to sync edge pod")
 		return err
 	}
 

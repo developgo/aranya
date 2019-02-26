@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package service;
+
+service Device {
+    rpc SyncDeviceInfo (stream NodeInfo) returns (stream NodeInfoReq);
+}
+
+message NodeInfo {
+
+}
+
+message NodeInfoReq {
+
+}
