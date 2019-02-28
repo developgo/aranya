@@ -294,7 +294,9 @@ func (n *Node) ForceClose() {
 	if n.status == statusRunning {
 		n.log.Info("force close virtual node")
 		_ = n.httpSrv.Close()
-		n.grpcSrv.Stop()
+		if n.grpcSrv != nil {
+			n.grpcSrv.Stop()
+		}
 
 		n.exit()
 	}
@@ -309,11 +311,13 @@ func (n *Node) Shutdown(grace time.Duration) {
 
 		ctx, _ := context.WithTimeout(n.ctx, grace)
 
-		go n.grpcSrv.GracefulStop()
-		go func() {
-			time.Sleep(grace)
-			n.grpcSrv.Stop()
-		}()
+		if n.grpcSrv != nil {
+			go n.grpcSrv.GracefulStop()
+			go func() {
+				time.Sleep(grace)
+				n.grpcSrv.Stop()
+			}()
+		}
 
 		_ = n.httpSrv.Shutdown(ctx)
 

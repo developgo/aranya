@@ -66,7 +66,7 @@ func (m *Msg) Reset()         { *m = Msg{} }
 func (m *Msg) String() string { return proto.CompactTextString(m) }
 func (*Msg) ProtoMessage()    {}
 func (*Msg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_connectivity_aaf46bb4fa9725b0, []int{0}
+	return fileDescriptor_connectivity_18de06429c25fa4e, []int{0}
 }
 func (m *Msg) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Msg.Unmarshal(m, b)
@@ -257,7 +257,7 @@ func (m *Cmd) Reset()         { *m = Cmd{} }
 func (m *Cmd) String() string { return proto.CompactTextString(m) }
 func (*Cmd) ProtoMessage()    {}
 func (*Cmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_connectivity_aaf46bb4fa9725b0, []int{1}
+	return fileDescriptor_connectivity_18de06429c25fa4e, []int{1}
 }
 func (m *Cmd) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Cmd.Unmarshal(m, b)
@@ -472,9 +472,9 @@ var _Connectivity_serviceDesc = grpc.ServiceDesc{
 	Metadata: "connectivity.proto",
 }
 
-func init() { proto.RegisterFile("connectivity.proto", fileDescriptor_connectivity_aaf46bb4fa9725b0) }
+func init() { proto.RegisterFile("connectivity.proto", fileDescriptor_connectivity_18de06429c25fa4e) }
 
-var fileDescriptor_connectivity_aaf46bb4fa9725b0 = []byte{
+var fileDescriptor_connectivity_18de06429c25fa4e = []byte{
 	// 276 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0x4f, 0x4b, 0xc3, 0x40,
 	0x10, 0xc5, 0xbb, 0xb6, 0xd6, 0x66, 0x12, 0x0f, 0x2e, 0x0a, 0x21, 0x28, 0x84, 0x9e, 0x72, 0xaa,
