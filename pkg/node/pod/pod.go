@@ -30,6 +30,31 @@ type Manager struct {
 	remoteManager connectivity.Interface
 }
 
+// PodResourcesAreReclaimed
+// implements PodDeletionSafetyProvider
 func (m *Manager) PodResourcesAreReclaimed(pod *corev1.Pod, status corev1.PodStatus) bool {
 	return true
+}
+
+func (m *Manager) SyncPodInDevice(pod *corev1.Pod) error {
+	syncLog := log.WithValues("pod.ns", pod.Namespace, "pod.name", pod.Name)
+	if pod.DeletionTimestamp != nil {
+		if err := m.DeletePodInDevice(pod.Namespace, pod.Name); err != nil {
+			syncLog.Error(err, "failed to delete pod in edge device")
+			return err
+		}
+		return nil
+	}
+
+	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
+		syncLog.Info("skipping sync of pod", "phase", pod.Status.Phase)
+		return nil
+	}
+
+	if err := m.CreateOrUpdatePodInDevice(pod); err != nil {
+		syncLog.Error(err, "failed to sync edge pod")
+		return err
+	}
+
+	return nil
 }

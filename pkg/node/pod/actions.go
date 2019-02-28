@@ -89,3 +89,34 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	}
 	return nil
 }
+
+func (m *Manager) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
+	cmd := connectivity.NewPodCreateOrUpdateCmd(pod)
+	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgCh {
+		createdPod := msg.GetPodInfo()
+
+		createdPod.GetPhase()
+		createdPod.GetSpec()
+		createdPod.GetStatus()
+	}
+
+	return nil
+}
+
+func (m *Manager) DeletePodInDevice(namespace, name string) error {
+	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
+	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgCh {
+		_ = msg.GetPodInfo()
+	}
+	return nil
+}

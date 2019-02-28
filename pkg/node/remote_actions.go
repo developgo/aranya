@@ -2,7 +2,6 @@ package node
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -17,55 +16,38 @@ func (n *Node) InitializeRemoteDevice() {
 			case *connectivity.Msg_DeviceInfo:
 				deviceInfo := msg.GetDeviceInfo()
 				// update node info
-				spec := corev1.PodSpec{}
-				status := corev1.PodStatus{}
-
-				_ = spec.Unmarshal(deviceInfo.GetSpec())
-				_ = status.Unmarshal(deviceInfo.GetStatus())
+				newStatus := &corev1.NodeStatus{}
+				if err := newStatus.Unmarshal(deviceInfo.GetStatus()); err != nil {
+					n.log.Error(err, "unmarshal device status failed")
+					continue
+				}
 
 				me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
 				if err != nil {
-					n.log.Error(err, "get own node info failed")
-					return
+					n.log.Error(err, "get self node info failed")
+					continue
 				}
 
-				me.Status.NodeInfo = corev1.NodeSystemInfo{
-					MachineID:               "",
-					SystemUUID:              "",
-					BootID:                  "",
-					KernelVersion:           "",
-					OSImage:                 "",
-					ContainerRuntimeVersion: "",
-					KubeletVersion:          "",
-					KubeProxyVersion:        "",
-					OperatingSystem:         "linux",
-					Architecture:            "arm",
-				}
-
-				me.ResourceVersion = ""
-
+				resolveDeviceStatus(me.Status, *newStatus)
 				updatedMe, err := n.nodeClient.UpdateStatus(me)
 				if err != nil {
 					n.log.Error(err, "update node status failed")
 					return
 				}
 				_ = updatedMe
-
-				podOnDevice := make([]*corev1.Pod, 0)
-				podToDelete := make([]*corev1.Pod, 0)
-				for _, p := range podOnDevice {
-					if _, err := n.podManager.GetMirrorPod(p.Namespace, p.Name); err != nil {
-						if errors.IsNotFound(err) {
-							// The current pod does not exist in Kubernetes, so we mark it for deletion.
-							podToDelete = append(podToDelete, p)
-							continue
-						}
-						n.log.Error(err, "get mirror pod failed")
-						break
-					}
-				}
 			case *connectivity.Msg_PodInfo:
-				_ = msg.GetPodInfo()
+				podInfo := msg.GetPodInfo()
+				newStatus := &corev1.PodStatus{}
+				if err := newStatus.Unmarshal(podInfo.GetStatus()); err != nil {
+					n.log.Error(err, "unmarshal pod status failed")
+				}
+
+				switch podInfo.GetPhase() {
+				case connectivity.PodInfo_Created:
+				case connectivity.PodInfo_Running:
+				case connectivity.PodInfo_Updated:
+				case connectivity.PodInfo_Deleted:
+				}
 			case *connectivity.Msg_PodData:
 				// we don't know how to handle this kind of message, discard
 			}
@@ -73,33 +55,61 @@ func (n *Node) InitializeRemoteDevice() {
 	}
 }
 
-func (n *Node) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivity.NewPodCreateOrUpdateCmd(pod)
-	msgCh, err := n.remoteManager.PostCmd(cmd, 0)
-	if err != nil {
-		return err
+func resolveDeviceStatus(old, new corev1.NodeStatus) *corev1.NodeStatus {
+	resolved := old.DeepCopy()
+	newObj := new.DeepCopy()
+
+	if newObj.Capacity != nil && len(newObj.Capacity) > 0 {
+		resolved.Capacity = newObj.Capacity
+	}
+	if newObj.Allocatable != nil && len(newObj.Allocatable) > 0 {
+		resolved.Allocatable = newObj.Allocatable
+	}
+	if newObj.Phase != "" {
+		resolved.Phase = newObj.Phase
+	}
+	if newObj.Conditions != nil && len(newObj.Conditions) > 0 {
+		resolved.Conditions = newObj.Conditions
+	}
+	if newObj.NodeInfo.MachineID != "" {
+		resolved.NodeInfo.MachineID = newObj.NodeInfo.MachineID
+	}
+	if newObj.NodeInfo.SystemUUID != "" {
+		resolved.NodeInfo.SystemUUID = newObj.NodeInfo.SystemUUID
+	}
+	if newObj.NodeInfo.BootID != "" {
+		resolved.NodeInfo.BootID = newObj.NodeInfo.BootID
+	}
+	if newObj.NodeInfo.KernelVersion != "" {
+		resolved.NodeInfo.KernelVersion = newObj.NodeInfo.KernelVersion
+	}
+	if newObj.NodeInfo.OSImage != "" {
+		resolved.NodeInfo.OSImage = newObj.NodeInfo.OSImage
+	}
+	if newObj.NodeInfo.ContainerRuntimeVersion != "" {
+		resolved.NodeInfo.ContainerRuntimeVersion = newObj.NodeInfo.ContainerRuntimeVersion
+	}
+	if newObj.NodeInfo.KubeletVersion != "" {
+		resolved.NodeInfo.KubeletVersion = newObj.NodeInfo.KubeletVersion
+	}
+	if newObj.NodeInfo.KubeProxyVersion != "" {
+		resolved.NodeInfo.KubeProxyVersion = newObj.NodeInfo.KubeProxyVersion
+	}
+	if newObj.NodeInfo.OperatingSystem != "" {
+		resolved.NodeInfo.OperatingSystem = newObj.NodeInfo.OperatingSystem
+	}
+	if newObj.NodeInfo.Architecture != "" {
+		resolved.NodeInfo.Architecture = newObj.NodeInfo.Architecture
+	}
+	if newObj.Images != nil && len(newObj.Images) > 0 {
+		resolved.Images = newObj.Images
+	}
+	if newObj.VolumesInUse != nil && len(newObj.VolumesInUse) > 0 {
+		resolved.VolumesInUse = newObj.VolumesInUse
+	}
+	if newObj.VolumesAttached != nil && len(newObj.VolumesAttached) > 0 {
+		resolved.VolumesAttached = newObj.VolumesAttached
 	}
 
-	for msg := range msgCh {
-		createdPod := msg.GetPodInfo()
-
-		createdPod.GetPhase()
-		createdPod.GetSpec()
-		createdPod.GetStatus()
-	}
-
-	return nil
-}
-
-func (n *Node) DeletePodInDevice(namespace, name string) error {
-	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
-	msgCh, err := n.remoteManager.PostCmd(cmd, 0)
-	if err != nil {
-		return err
-	}
-
-	for msg := range msgCh {
-		_ = msg.GetPodInfo()
-	}
-	return nil
+	return resolved
 }

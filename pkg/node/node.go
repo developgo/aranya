@@ -357,13 +357,13 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 			}
 
 			// pod has been deleted
-			if err := n.DeletePodInDevice(namespace, name); err != nil {
+			if err := n.podManager.DeletePodInDevice(namespace, name); err != nil {
 				n.log.Error(err, "failed to delete pod in the provider", "pod.ns", namespace, "pod.name", name)
 				return err
 			}
 		}
 
-		if err := n.SyncPodInDevice(podFound); err != nil {
+		if err := n.podManager.SyncPodInDevice(podFound); err != nil {
 			if wq.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
 				n.log.Error(err, "requeue due to failed sync", "key", key)
@@ -384,35 +384,6 @@ func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
 		return true
 	}
 
-	return true
-}
-
-func (n *Node) SyncPodInDevice(pod *corev1.Pod) error {
-	syncLog := n.log.WithValues("pod.ns", pod.Namespace, "pod.name", pod.Name)
-	if pod.DeletionTimestamp != nil {
-		if err := n.DeletePodInDevice(pod.Namespace, pod.Name); err != nil {
-			syncLog.Error(err, "failed to delete pod in edge device")
-			return err
-		}
-		return nil
-	}
-
-	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
-		syncLog.Info("skipping sync of pod", "phase", pod.Status.Phase)
-		return nil
-	}
-
-	if err := n.CreateOrUpdatePodInDevice(pod); err != nil {
-		syncLog.Error(err, "failed to sync edge pod")
-		return err
-	}
-
-	return nil
-}
-
-// PodResourcesAreReclaimed
-// implements PodDeletionSafetyProvider
-func (n *Node) PodResourcesAreReclaimed(pod *corev1.Pod, status corev1.PodStatus) bool {
 	return true
 }
 

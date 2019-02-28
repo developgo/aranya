@@ -15,7 +15,7 @@ message Msg {
 
     oneof msg {
         DeviceInfo device_info = 11;
-        // used by list
+        // used by list and device active pod update
         PodInfo pod_info = 12;
         // messages
         PodData pod_data = 13;
