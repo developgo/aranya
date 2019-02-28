@@ -16,7 +16,7 @@ func (m *Manager) HandleNodeLog(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandlePodContainerLog
-// GET /containerLogs/{namespace}/{pod}/{container}
+// GET /containerLogs/{namespace}/{podID}/{containerName}
 func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodContainerLog")
 

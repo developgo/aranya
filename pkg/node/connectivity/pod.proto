@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package service;
+
+message PodInfo {
+    enum Phase {
+        Created = 0;
+        Running = 1;
+        Deleted = 2;
+        Updated = 3;
+    }
+
+    Phase phase = 1;
+
+    bytes spec = 10;
+    bytes status = 11;
+}
+
+message PodIdentity {
+    string namespace = 1;
+    string name = 2;
+}
+
+message PodCmd {
+    enum ActionType {
+        CreateOrUpdate = 0;
+        Delete = 1;
+        List = 2;
+        Exec = 3;
+        Attach = 4;
+        Log = 5;
+        PortForward = 6;
+    }
+
+    PodIdentity id = 1;
+    ActionType action = 2;
+
+    oneof options {
+        // used by create or update
+        PodCreateOptions create_options = 11;
+        // used by delete
+        PodDeleteOptions delete_options = 12;
+        // used by list
+        PodListOptions list_options = 13;
+        // used by log
+        PodLogOptions log_options = 14;
+        // used by exec and attach
+        PodExecOptions exec_options = 15;
+        // used by port forward
+        PodPortForwardOptions port_forward_options = 16;
+    }
+}
+
+message PodCreateOptions {
+    // protobuf bytes of PodSpec
+    bytes spec = 1;
+}
+
+message PodDeleteOptions {
+    int64 grace_time = 1;
+}
+
+message PodListOptions {
+}
+
+message PodLogOptions {
+    string container_name = 1;
+}
+
+message PodExecOptions {
+    string container_name = 1;
+    repeated string commands = 2;
+
+    bool tty = 11;
+    bool stdin = 12;
+    bool stdout = 13;
+    bool stderr = 14;
+    int32 cols = 15;
+    int32 rows = 16;
+}
+
+message PodPortForwardOptions {
+    repeated int32 ports = 1;
+}
+
+message PodData {
+    bytes data = 10;
+}

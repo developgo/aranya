@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package service;
+
+import public "pod.proto";
+import public "device.proto";
+
+service Connectivity {
+    rpc Sync (stream Message) returns (stream Cmd);
+}
+
+message Message {
+    uint64 session_id = 1;
+    bool completed = 2;
+
+    oneof message {
+        DeviceInfo device_info = 11;
+        // used by list
+        PodInfo pod_info = 12;
+        // messages
+        PodData pod_data = 13;
+    }
+}
+
+message Cmd {
+    uint64 session_id = 1;
+
+    oneof cmd {
+        PodCmd pod_cmd = 11;
+    }
+}

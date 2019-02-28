@@ -32,7 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/pod"
-	"arhat.dev/aranya/pkg/node/service"
+	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -56,10 +56,11 @@ type Node struct {
 	nodeClient kubeClientTypedCoreV1.NodeInterface
 	wq         workqueue.RateLimitingInterface
 
-	httpSrv         *http.Server
-	kubeletListener net.Listener
-	grpcSrv         *grpc.Server
-	grpcListener    net.Listener
+	httpSrv             *http.Server
+	kubeletListener     net.Listener
+	grpcSrv             *grpc.Server
+	grpcListener        net.Listener
+	remoteDeviceManager *connectivity.ConnectivityService
 
 	podInformerFactory kubeInformers.SharedInformerFactory
 	podInformer        kubeInformersCoreV1.PodInformer
@@ -204,11 +205,9 @@ func (n *Node) Start() error {
 	// start a grpc server if used
 	if n.grpcListener != nil {
 		n.grpcSrv = grpc.NewServer()
+		n.remoteDeviceManager = connectivity.NewDeviceService(n.name)
 
-		service.RegisterImageServer(n.grpcSrv, service.NewImageService())
-		service.RegisterPodServer(n.grpcSrv, service.NewPodService())
-		service.RegisterDeviceServer(n.grpcSrv, service.NewDeviceService())
-
+		connectivity.RegisterConnectivityServer(n.grpcSrv, n.remoteDeviceManager)
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {
@@ -266,7 +265,7 @@ func (n *Node) Start() error {
 			return
 		}
 
-		n.InitializeDevice()
+		go n.InitializeRemoteDevice()
 
 		n.log.Info("start node work queue workers")
 		go func() {
@@ -401,6 +400,17 @@ func (n *Node) SyncPodInDevice(pod *corev1.Pod) error {
 	return nil
 }
 
+// PodResourcesAreReclaimed
+// implements PodDeletionSafetyProvider
 func (n *Node) PodResourcesAreReclaimed(pod *corev1.Pod, status corev1.PodStatus) bool {
 	return true
+}
+
+func (n *Node) closing() bool {
+	select {
+	case <-n.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
