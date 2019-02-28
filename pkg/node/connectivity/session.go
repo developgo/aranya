@@ -9,15 +9,15 @@ import (
 type sessionManager struct {
 	timeoutMap map[uint64]time.Duration
 	timerMap   map[uint64]*time.Timer
-	msgMap     map[uint64]chan *Message
+	msgMap     map[uint64]chan *Msg
 	mu         sync.RWMutex
 }
 
-func (s *sessionManager) new(cmd *Cmd, timeout time.Duration) (uint64, chan *Message) {
+func (s *sessionManager) new(cmd *Cmd, timeout time.Duration) (uint64, chan *Msg) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	ch := make(chan *Message, 1)
+	ch := make(chan *Msg, 1)
 	sid := *(*uint64)(unsafe.Pointer(&cmd))
 
 	s.msgMap[sid] = ch
@@ -37,7 +37,7 @@ func (s *sessionManager) new(cmd *Cmd, timeout time.Duration) (uint64, chan *Mes
 	return sid, ch
 }
 
-func (s *sessionManager) get(sid uint64) (chan *Message, bool) {
+func (s *sessionManager) get(sid uint64) (chan *Msg, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -65,6 +65,6 @@ func (s *sessionManager) del(sid uint64) {
 
 func newSessionMap() *sessionManager {
 	return &sessionManager{
-		msgMap: make(map[uint64]chan *Message),
+		msgMap: make(map[uint64]chan *Msg),
 	}
 }

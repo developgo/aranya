@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package service;
+package connectivity;
 
 message DeviceInfo {
-    // json string of NodeSpec
-    string spec = 1;
-    // json string of NodeStatus
-    string status = 2;
+    // protobuf bytes of NodeSpec
+    bytes spec = 1;
+    // protobuf bytes of NodeStatus
+    bytes status = 2;
 }

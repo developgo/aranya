@@ -1,23 +1,27 @@
 package node
 
 import (
-	"arhat.dev/aranya/pkg/node/connectivity"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
-		n.remoteDeviceManager.WaitUntilDeviceConnected()
-		msgCh := n.remoteDeviceManager.ConsumeOrphanedMessage()
+		n.remoteManager.WaitUntilDeviceConnected()
+		msgCh := n.remoteManager.ConsumeOrphanedMessage()
 		for msg := range msgCh {
-			switch msg.GetMessage().(type) {
-			case *connectivity.Message_DeviceInfo:
+			switch msg.GetMsg().(type) {
+			case *connectivity.Msg_DeviceInfo:
 				deviceInfo := msg.GetDeviceInfo()
 				// update node info
-				_ = deviceInfo.GetSpec()
-				_ = deviceInfo.GetStatus()
+				spec := corev1.PodSpec{}
+				status := corev1.PodStatus{}
+
+				_ = spec.Unmarshal(deviceInfo.GetSpec())
+				_ = status.Unmarshal(deviceInfo.GetStatus())
 
 				me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
 				if err != nil {
@@ -40,6 +44,13 @@ func (n *Node) InitializeRemoteDevice() {
 
 				me.ResourceVersion = ""
 
+				updatedMe, err := n.nodeClient.UpdateStatus(me)
+				if err != nil {
+					n.log.Error(err, "update node status failed")
+					return
+				}
+				_ = updatedMe
+
 				podOnDevice := make([]*corev1.Pod, 0)
 				podToDelete := make([]*corev1.Pod, 0)
 				for _, p := range podOnDevice {
@@ -50,19 +61,12 @@ func (n *Node) InitializeRemoteDevice() {
 							continue
 						}
 						n.log.Error(err, "get mirror pod failed")
-						return
+						break
 					}
 				}
-
-				updatedMe, err := n.nodeClient.UpdateStatus(me)
-				if err != nil {
-					n.log.Error(err, "update node status failed")
-					return
-				}
-				_ = updatedMe
-			case *connectivity.Message_PodInfo:
+			case *connectivity.Msg_PodInfo:
 				_ = msg.GetPodInfo()
-			case *connectivity.Message_PodData:
+			case *connectivity.Msg_PodData:
 				// we don't know how to handle this kind of message, discard
 			}
 		}
@@ -71,7 +75,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 func (n *Node) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
 	cmd := connectivity.NewPodCreateOrUpdateCmd(pod)
-	msgCh, err := n.remoteDeviceManager.PostCmd(cmd, 0)
+	msgCh, err := n.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err
 	}
@@ -88,5 +92,14 @@ func (n *Node) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
 }
 
 func (n *Node) DeletePodInDevice(namespace, name string) error {
+	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
+	msgCh, err := n.remoteManager.PostCmd(cmd, 0)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgCh {
+		_ = msg.GetPodInfo()
+	}
 	return nil
 }

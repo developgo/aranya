@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package service;
+package connectivity;
 
 message PodInfo {
     enum Phase {
@@ -69,7 +69,7 @@ message PodLogOptions {
 
 message PodExecOptions {
     string container_name = 1;
-    repeated string commands = 2;
+    repeated string command = 2;
 
     bool tty = 11;
     bool stdin = 12;
@@ -80,9 +80,9 @@ message PodExecOptions {
 }
 
 message PodPortForwardOptions {
-    repeated int32 ports = 1;
+    int32 port = 1;
 }
 
 message PodData {
-    bytes data = 10;
+    bytes data = 1;
 }

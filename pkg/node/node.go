@@ -31,8 +31,8 @@ import (
 	kubeletstatus "k8s.io/kubernetes/pkg/kubelet/status"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -56,11 +56,11 @@ type Node struct {
 	nodeClient kubeClientTypedCoreV1.NodeInterface
 	wq         workqueue.RateLimitingInterface
 
-	httpSrv             *http.Server
-	kubeletListener     net.Listener
-	grpcSrv             *grpc.Server
-	grpcListener        net.Listener
-	remoteDeviceManager *connectivity.ConnectivityService
+	httpSrv         *http.Server
+	kubeletListener net.Listener
+	grpcSrv         *grpc.Server
+	grpcListener    net.Listener
+	remoteManager   connectivity.Interface
 
 	podInformerFactory kubeInformers.SharedInformerFactory
 	podInformer        kubeInformersCoreV1.PodInformer
@@ -92,7 +92,15 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		kubeletsecret.NewWatchingSecretManager(client),
 		kubeletconfigmap.NewWatchingConfigMapManager(client),
 		nil)
-	podManager := pod.NewManager(podInformer.Lister(), basicPodManager)
+
+	var remoteManager connectivity.Interface
+	if grpcListener != nil {
+		remoteManager = connectivity.NewGRPCService(nodeObj.Name)
+	} else {
+		remoteManager = connectivity.NewMQTTService(nodeObj.Name)
+	}
+
+	podManager := pod.NewManager(podInformer.Lister(), basicPodManager, remoteManager)
 	statsManager := stats.NewManager()
 
 	ctx, exit := context.WithCancel(ctx)
@@ -137,6 +145,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		name:               nodeObj.Name,
 		kubeClient:         client,
 		nodeClient:         client.CoreV1().Nodes(),
+		remoteManager:      remoteManager,
 		kubeletListener:    kubeletListener,
 		grpcListener:       grpcListener,
 		httpSrv:            &http.Server{Handler: m},
@@ -205,15 +214,16 @@ func (n *Node) Start() error {
 	// start a grpc server if used
 	if n.grpcListener != nil {
 		n.grpcSrv = grpc.NewServer()
-		n.remoteDeviceManager = connectivity.NewDeviceService(n.name)
 
-		connectivity.RegisterConnectivityServer(n.grpcSrv, n.remoteDeviceManager)
+		connectivity.RegisterConnectivityServer(n.grpcSrv, n.remoteManager.(*connectivity.GRPCService))
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {
 				n.log.Error(err, "serve grpc services failed")
 			}
 		}()
+	} else {
+		// TODO: setup mqtt connection to broker
 	}
 
 	// informer routine

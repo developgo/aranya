@@ -15,26 +15,26 @@ const (
 	messageChannelSize = 10
 )
 
-type ConnectivityService struct {
+type GRPCService struct {
 	log             logr.Logger
 	sessions        *sessionManager
 	deviceConnected chan struct{}
 	syncSrv         Connectivity_SyncServer
 	mu              sync.RWMutex
 	sessionTimeout  time.Duration
-	globalChan      chan *Message
+	globalChan      chan *Msg
 }
 
-func NewDeviceService(name string) *ConnectivityService {
-	return &ConnectivityService{
+func NewGRPCService(name string) *GRPCService {
+	return &GRPCService{
 		log:             logf.Log.WithName("service.pod").WithValues("name", name),
 		sessions:        newSessionMap(),
 		deviceConnected: make(chan struct{}),
-		globalChan:      make(chan *Message, messageChannelSize),
+		globalChan:      make(chan *Msg, messageChannelSize),
 	}
 }
 
-func (p *ConnectivityService) Sync(server Connectivity_SyncServer) error {
+func (p *GRPCService) Sync(server Connectivity_SyncServer) error {
 	if err := func() error {
 		// check if device has already connected
 		p.mu.Lock()
@@ -58,14 +58,14 @@ func (p *ConnectivityService) Sync(server Connectivity_SyncServer) error {
 		p.syncSrv = nil
 		p.deviceConnected = make(chan struct{})
 		close(p.globalChan)
-		p.globalChan = make(chan *Message, messageChannelSize)
+		p.globalChan = make(chan *Msg, messageChannelSize)
 	}()
 
 	// signal device connected
 	close(p.deviceConnected)
 
 	ctx, exit := context.WithCancel(server.Context())
-	msgCh := make(chan *Message, messageChannelSize)
+	msgCh := make(chan *Msg, messageChannelSize)
 	go func() {
 		for {
 			msg, err := server.Recv()
@@ -105,11 +105,11 @@ func (p *ConnectivityService) Sync(server Connectivity_SyncServer) error {
 	}
 }
 
-func (p *ConnectivityService) ConsumeOrphanedMessage() <-chan *Message {
+func (p *GRPCService) ConsumeOrphanedMessage() <-chan *Msg {
 	return p.globalChan
 }
 
-func (p *ConnectivityService) WaitUntilDeviceConnected() {
+func (p *GRPCService) WaitUntilDeviceConnected() {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -117,7 +117,7 @@ func (p *ConnectivityService) WaitUntilDeviceConnected() {
 }
 
 // PostCmd sends a command to remote device
-func (p *ConnectivityService) PostCmd(c *Cmd, timeout time.Duration) (ch <-chan *Message, err error) {
+func (p *GRPCService) PostCmd(c *Cmd, timeout time.Duration) (ch <-chan *Msg, err error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 

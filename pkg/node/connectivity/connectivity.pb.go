@@ -49,189 +49,189 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // Ignoring public import of DeviceInfo from device.proto
 
-type Message struct {
+type Msg struct {
 	SessionId uint64 `protobuf:"varint,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Completed bool   `protobuf:"varint,2,opt,name=completed,proto3" json:"completed,omitempty"`
-	// Types that are valid to be assigned to Message:
-	//	*Message_DeviceInfo
-	//	*Message_PodInfo
-	//	*Message_PodData
-	Message              isMessage_Message `protobuf_oneof:"message"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	// Types that are valid to be assigned to Msg:
+	//	*Msg_DeviceInfo
+	//	*Msg_PodInfo
+	//	*Msg_PodData
+	Msg                  isMsg_Msg `protobuf_oneof:"msg"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
 }
 
-func (m *Message) Reset()         { *m = Message{} }
-func (m *Message) String() string { return proto.CompactTextString(m) }
-func (*Message) ProtoMessage()    {}
-func (*Message) Descriptor() ([]byte, []int) {
-	return fileDescriptor_connectivity_d587803b39197f99, []int{0}
+func (m *Msg) Reset()         { *m = Msg{} }
+func (m *Msg) String() string { return proto.CompactTextString(m) }
+func (*Msg) ProtoMessage()    {}
+func (*Msg) Descriptor() ([]byte, []int) {
+	return fileDescriptor_connectivity_aaf46bb4fa9725b0, []int{0}
 }
-func (m *Message) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Message.Unmarshal(m, b)
+func (m *Msg) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Msg.Unmarshal(m, b)
 }
-func (m *Message) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Message.Marshal(b, m, deterministic)
+func (m *Msg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Msg.Marshal(b, m, deterministic)
 }
-func (dst *Message) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Message.Merge(dst, src)
+func (dst *Msg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Msg.Merge(dst, src)
 }
-func (m *Message) XXX_Size() int {
-	return xxx_messageInfo_Message.Size(m)
+func (m *Msg) XXX_Size() int {
+	return xxx_messageInfo_Msg.Size(m)
 }
-func (m *Message) XXX_DiscardUnknown() {
-	xxx_messageInfo_Message.DiscardUnknown(m)
+func (m *Msg) XXX_DiscardUnknown() {
+	xxx_messageInfo_Msg.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Message proto.InternalMessageInfo
+var xxx_messageInfo_Msg proto.InternalMessageInfo
 
-func (m *Message) GetSessionId() uint64 {
+func (m *Msg) GetSessionId() uint64 {
 	if m != nil {
 		return m.SessionId
 	}
 	return 0
 }
 
-func (m *Message) GetCompleted() bool {
+func (m *Msg) GetCompleted() bool {
 	if m != nil {
 		return m.Completed
 	}
 	return false
 }
 
-type isMessage_Message interface {
-	isMessage_Message()
+type isMsg_Msg interface {
+	isMsg_Msg()
 }
 
-type Message_DeviceInfo struct {
+type Msg_DeviceInfo struct {
 	DeviceInfo *DeviceInfo `protobuf:"bytes,11,opt,name=device_info,json=deviceInfo,proto3,oneof"`
 }
 
-type Message_PodInfo struct {
+type Msg_PodInfo struct {
 	PodInfo *PodInfo `protobuf:"bytes,12,opt,name=pod_info,json=podInfo,proto3,oneof"`
 }
 
-type Message_PodData struct {
+type Msg_PodData struct {
 	PodData *PodData `protobuf:"bytes,13,opt,name=pod_data,json=podData,proto3,oneof"`
 }
 
-func (*Message_DeviceInfo) isMessage_Message() {}
+func (*Msg_DeviceInfo) isMsg_Msg() {}
 
-func (*Message_PodInfo) isMessage_Message() {}
+func (*Msg_PodInfo) isMsg_Msg() {}
 
-func (*Message_PodData) isMessage_Message() {}
+func (*Msg_PodData) isMsg_Msg() {}
 
-func (m *Message) GetMessage() isMessage_Message {
+func (m *Msg) GetMsg() isMsg_Msg {
 	if m != nil {
-		return m.Message
+		return m.Msg
 	}
 	return nil
 }
 
-func (m *Message) GetDeviceInfo() *DeviceInfo {
-	if x, ok := m.GetMessage().(*Message_DeviceInfo); ok {
+func (m *Msg) GetDeviceInfo() *DeviceInfo {
+	if x, ok := m.GetMsg().(*Msg_DeviceInfo); ok {
 		return x.DeviceInfo
 	}
 	return nil
 }
 
-func (m *Message) GetPodInfo() *PodInfo {
-	if x, ok := m.GetMessage().(*Message_PodInfo); ok {
+func (m *Msg) GetPodInfo() *PodInfo {
+	if x, ok := m.GetMsg().(*Msg_PodInfo); ok {
 		return x.PodInfo
 	}
 	return nil
 }
 
-func (m *Message) GetPodData() *PodData {
-	if x, ok := m.GetMessage().(*Message_PodData); ok {
+func (m *Msg) GetPodData() *PodData {
+	if x, ok := m.GetMsg().(*Msg_PodData); ok {
 		return x.PodData
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*Message) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Message_OneofMarshaler, _Message_OneofUnmarshaler, _Message_OneofSizer, []interface{}{
-		(*Message_DeviceInfo)(nil),
-		(*Message_PodInfo)(nil),
-		(*Message_PodData)(nil),
+func (*Msg) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _Msg_OneofMarshaler, _Msg_OneofUnmarshaler, _Msg_OneofSizer, []interface{}{
+		(*Msg_DeviceInfo)(nil),
+		(*Msg_PodInfo)(nil),
+		(*Msg_PodData)(nil),
 	}
 }
 
-func _Message_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Message)
-	// message
-	switch x := m.Message.(type) {
-	case *Message_DeviceInfo:
+func _Msg_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*Msg)
+	// msg
+	switch x := m.Msg.(type) {
+	case *Msg_DeviceInfo:
 		b.EncodeVarint(11<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.DeviceInfo); err != nil {
 			return err
 		}
-	case *Message_PodInfo:
+	case *Msg_PodInfo:
 		b.EncodeVarint(12<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.PodInfo); err != nil {
 			return err
 		}
-	case *Message_PodData:
+	case *Msg_PodData:
 		b.EncodeVarint(13<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.PodData); err != nil {
 			return err
 		}
 	case nil:
 	default:
-		return fmt.Errorf("Message.Message has unexpected type %T", x)
+		return fmt.Errorf("Msg.Msg has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _Message_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Message)
+func _Msg_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*Msg)
 	switch tag {
-	case 11: // message.device_info
+	case 11: // msg.device_info
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(DeviceInfo)
 		err := b.DecodeMessage(msg)
-		m.Message = &Message_DeviceInfo{msg}
+		m.Msg = &Msg_DeviceInfo{msg}
 		return true, err
-	case 12: // message.pod_info
+	case 12: // msg.pod_info
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(PodInfo)
 		err := b.DecodeMessage(msg)
-		m.Message = &Message_PodInfo{msg}
+		m.Msg = &Msg_PodInfo{msg}
 		return true, err
-	case 13: // message.pod_data
+	case 13: // msg.pod_data
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(PodData)
 		err := b.DecodeMessage(msg)
-		m.Message = &Message_PodData{msg}
+		m.Msg = &Msg_PodData{msg}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _Message_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Message)
-	// message
-	switch x := m.Message.(type) {
-	case *Message_DeviceInfo:
+func _Msg_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*Msg)
+	// msg
+	switch x := m.Msg.(type) {
+	case *Msg_DeviceInfo:
 		s := proto.Size(x.DeviceInfo)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Message_PodInfo:
+	case *Msg_PodInfo:
 		s := proto.Size(x.PodInfo)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Message_PodData:
+	case *Msg_PodData:
 		s := proto.Size(x.PodData)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
@@ -257,7 +257,7 @@ func (m *Cmd) Reset()         { *m = Cmd{} }
 func (m *Cmd) String() string { return proto.CompactTextString(m) }
 func (*Cmd) ProtoMessage()    {}
 func (*Cmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_connectivity_d587803b39197f99, []int{1}
+	return fileDescriptor_connectivity_aaf46bb4fa9725b0, []int{1}
 }
 func (m *Cmd) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Cmd.Unmarshal(m, b)
@@ -364,8 +364,8 @@ func _Cmd_OneofSizer(msg proto.Message) (n int) {
 }
 
 func init() {
-	proto.RegisterType((*Message)(nil), "service.Message")
-	proto.RegisterType((*Cmd)(nil), "service.Cmd")
+	proto.RegisterType((*Msg)(nil), "connectivity.Msg")
+	proto.RegisterType((*Cmd)(nil), "connectivity.Cmd")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -392,7 +392,7 @@ func NewConnectivityClient(cc *grpc.ClientConn) ConnectivityClient {
 }
 
 func (c *connectivityClient) Sync(ctx context.Context, opts ...grpc.CallOption) (Connectivity_SyncClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Connectivity_serviceDesc.Streams[0], "/service.Connectivity/Sync", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Connectivity_serviceDesc.Streams[0], "/connectivity.Connectivity/Sync", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +401,7 @@ func (c *connectivityClient) Sync(ctx context.Context, opts ...grpc.CallOption) 
 }
 
 type Connectivity_SyncClient interface {
-	Send(*Message) error
+	Send(*Msg) error
 	Recv() (*Cmd, error)
 	grpc.ClientStream
 }
@@ -410,7 +410,7 @@ type connectivitySyncClient struct {
 	grpc.ClientStream
 }
 
-func (x *connectivitySyncClient) Send(m *Message) error {
+func (x *connectivitySyncClient) Send(m *Msg) error {
 	return x.ClientStream.SendMsg(m)
 }
 
@@ -437,7 +437,7 @@ func _Connectivity_Sync_Handler(srv interface{}, stream grpc.ServerStream) error
 
 type Connectivity_SyncServer interface {
 	Send(*Cmd) error
-	Recv() (*Message, error)
+	Recv() (*Msg, error)
 	grpc.ServerStream
 }
 
@@ -449,8 +449,8 @@ func (x *connectivitySyncServer) Send(m *Cmd) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *connectivitySyncServer) Recv() (*Message, error) {
-	m := new(Message)
+func (x *connectivitySyncServer) Recv() (*Msg, error) {
+	m := new(Msg)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func (x *connectivitySyncServer) Recv() (*Message, error) {
 }
 
 var _Connectivity_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "service.Connectivity",
+	ServiceName: "connectivity.Connectivity",
 	HandlerType: (*ConnectivityServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
@@ -472,26 +472,26 @@ var _Connectivity_serviceDesc = grpc.ServiceDesc{
 	Metadata: "connectivity.proto",
 }
 
-func init() { proto.RegisterFile("connectivity.proto", fileDescriptor_connectivity_d587803b39197f99) }
+func init() { proto.RegisterFile("connectivity.proto", fileDescriptor_connectivity_aaf46bb4fa9725b0) }
 
-var fileDescriptor_connectivity_d587803b39197f99 = []byte{
-	// 285 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_connectivity_aaf46bb4fa9725b0 = []byte{
+	// 276 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0x4f, 0x4b, 0xc3, 0x40,
-	0x10, 0xc5, 0xbb, 0xb6, 0x36, 0xcd, 0x34, 0xa2, 0xac, 0x97, 0x50, 0x14, 0x4a, 0x4f, 0xa1, 0x60,
-	0x91, 0x0a, 0x1e, 0x3c, 0x36, 0x3d, 0xb4, 0x07, 0x21, 0xc4, 0x83, 0xc7, 0x10, 0x77, 0xb6, 0xb2,
-	0xe0, 0xfe, 0xa1, 0xbb, 0x14, 0xfa, 0x89, 0xfd, 0x1a, 0x92, 0xec, 0x9a, 0x16, 0x3c, 0x78, 0x9b,
-	0x79, 0xfb, 0x7e, 0xc3, 0xbc, 0x59, 0xa0, 0x4c, 0x2b, 0xc5, 0x99, 0x13, 0x07, 0xe1, 0x8e, 0x0b,
-	0xb3, 0xd7, 0x4e, 0xd3, 0xc8, 0xf2, 0xfd, 0x41, 0x30, 0x3e, 0x89, 0x8d, 0x46, 0xaf, 0x4d, 0x12,
-	0xe4, 0x8d, 0xe4, 0xbb, 0xd9, 0x37, 0x81, 0xe8, 0x95, 0x5b, 0x5b, 0x7f, 0x72, 0x7a, 0x0f, 0x60,
-	0xb9, 0xb5, 0x42, 0xab, 0x4a, 0x60, 0x4a, 0xa6, 0x24, 0x1b, 0x94, 0x71, 0x50, 0xb6, 0x48, 0xef,
-	0x20, 0x66, 0x5a, 0x9a, 0x2f, 0xee, 0x38, 0xa6, 0x17, 0x53, 0x92, 0x8d, 0xca, 0x93, 0x40, 0x9f,
-	0x61, 0xec, 0x07, 0x57, 0x42, 0xed, 0x74, 0x3a, 0x9e, 0x92, 0x6c, 0xbc, 0xbc, 0x5d, 0x84, 0x05,
-	0x16, 0xeb, 0xf6, 0x6d, 0xab, 0x76, 0x7a, 0xd3, 0x2b, 0x01, 0xbb, 0x8e, 0x3e, 0xc0, 0xc8, 0x68,
-	0xf4, 0x50, 0xd2, 0x42, 0x37, 0x1d, 0x54, 0x68, 0x0c, 0x44, 0x64, 0x7c, 0xf9, 0x6b, 0xc7, 0xda,
-	0xd5, 0xe9, 0xd5, 0x5f, 0xfb, 0xba, 0x76, 0x75, 0xb0, 0x37, 0xe5, 0x2a, 0x86, 0x48, 0xfa, 0x74,
-	0xb3, 0x77, 0xe8, 0xe7, 0x12, 0xff, 0x0b, 0x39, 0x87, 0x86, 0xad, 0x98, 0xc4, 0x10, 0xe1, 0xfa,
-	0x7c, 0x7c, 0x2e, 0x71, 0xd3, 0x2b, 0x87, 0xa6, 0xad, 0x56, 0x97, 0xd0, 0x67, 0x12, 0x97, 0x2f,
-	0x90, 0xe4, 0x67, 0xa7, 0xa7, 0x73, 0x18, 0xbc, 0x1d, 0x15, 0xa3, 0xa7, 0xc5, 0xc2, 0x81, 0x27,
-	0x49, 0xa7, 0xe4, 0x12, 0x33, 0xf2, 0x48, 0x8a, 0x5e, 0x41, 0x3e, 0x86, 0xed, 0x4f, 0x3c, 0xfd,
-	0x04, 0x00, 0x00, 0xff, 0xff, 0x55, 0x8d, 0xea, 0xaf, 0xc1, 0x01, 0x00, 0x00,
+	0x10, 0xc5, 0xbb, 0xb6, 0xd6, 0x66, 0x12, 0x0f, 0x2e, 0x0a, 0x21, 0x28, 0x84, 0x9e, 0x72, 0xaa,
+	0x25, 0x1e, 0xbd, 0x88, 0xe9, 0xa1, 0x3d, 0x14, 0x42, 0xbc, 0x0a, 0x21, 0xee, 0x6c, 0xc3, 0x82,
+	0xfb, 0x07, 0x77, 0x29, 0xf4, 0x4b, 0xfb, 0x19, 0x24, 0x7f, 0xd4, 0x46, 0x11, 0x6f, 0x6f, 0xde,
+	0xce, 0xef, 0xb1, 0x8f, 0x01, 0xca, 0xb4, 0x52, 0x9c, 0x39, 0xb1, 0x17, 0xee, 0xb0, 0x30, 0x6f,
+	0xda, 0x69, 0x1a, 0x1c, 0x7b, 0x91, 0x67, 0x34, 0x76, 0x0f, 0x51, 0x80, 0x7c, 0x2f, 0x18, 0xef,
+	0xa6, 0xf9, 0x3b, 0x81, 0xf1, 0xd6, 0xd6, 0xf4, 0x06, 0xc0, 0x72, 0x6b, 0x85, 0x56, 0xa5, 0xc0,
+	0x90, 0xc4, 0x24, 0x99, 0x14, 0x5e, 0xef, 0x6c, 0x90, 0x5e, 0x83, 0xc7, 0xb4, 0x34, 0xaf, 0xdc,
+	0x71, 0x0c, 0x4f, 0x62, 0x92, 0xcc, 0x8a, 0x6f, 0x83, 0xde, 0x83, 0xdf, 0x85, 0x96, 0x42, 0xed,
+	0x74, 0xe8, 0xc7, 0x24, 0xf1, 0xd3, 0x70, 0x31, 0xf8, 0xd5, 0xaa, 0x5d, 0xd8, 0xa8, 0x9d, 0x5e,
+	0x8f, 0x0a, 0xc0, 0xaf, 0x89, 0xa6, 0x30, 0x33, 0x1a, 0x3b, 0x32, 0x68, 0xc9, 0xab, 0x21, 0x99,
+	0x6b, 0xec, 0xb1, 0x33, 0xd3, 0xc9, 0x4f, 0x06, 0x2b, 0x57, 0x85, 0xe7, 0x7f, 0x30, 0xab, 0xca,
+	0x55, 0x3d, 0xd3, 0xc8, 0xc7, 0x53, 0x18, 0x4b, 0x5b, 0xcf, 0x9f, 0x61, 0x9c, 0x49, 0xfc, 0xaf,
+	0xef, 0x2d, 0x34, 0x5c, 0xc9, 0x24, 0xf6, 0x6d, 0x2e, 0x7f, 0xe5, 0x67, 0x12, 0xd7, 0xa3, 0x62,
+	0x6a, 0x5a, 0xd5, 0xa4, 0x33, 0x89, 0xe9, 0x03, 0x04, 0xd9, 0xd1, 0x1e, 0x5d, 0xc2, 0xe4, 0xe9,
+	0xa0, 0x18, 0xbd, 0x18, 0xe2, 0x5b, 0x5b, 0x47, 0x3f, 0xac, 0x4c, 0x62, 0x42, 0x96, 0x24, 0x1f,
+	0xe5, 0xe4, 0x65, 0xda, 0xde, 0xe6, 0xee, 0x23, 0x00, 0x00, 0xff, 0xff, 0x84, 0xc7, 0xa7, 0xf4,
+	0xd8, 0x01, 0x00, 0x00,
 }
