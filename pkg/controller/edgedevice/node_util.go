@@ -47,13 +47,13 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 	nodeObj = newNodeForEdgeDevice(device, hostIP, hostname, kubeletListenPort)
 	err = controllerutil.SetControllerReference(device, nodeObj, r.scheme)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
 	// create the virtual node object
 	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, nodeObj, func(existing runtime.Object) error { return nil })
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
 	return

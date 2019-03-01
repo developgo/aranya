@@ -1,7 +1,6 @@
 package edgedevice
 
 import (
-	"arhat.dev/aranya/pkg/node/util"
 	"context"
 	"fmt"
 	"net"
@@ -22,6 +21,7 @@ import (
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
+	"arhat.dev/aranya/pkg/node/util"
 )
 
 const (
