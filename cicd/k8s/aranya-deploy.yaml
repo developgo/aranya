@@ -8,13 +8,13 @@ spec:
   selector:
     matchLabels:
       name: aranya
-      arhat.dev/type: controller
+      arhat.dev/role: controller
   template:
     metadata:
       labels:
         name: aranya
         # required label to get grpc services working
-        arhat.dev/type: controller
+        arhat.dev/role: controller
     spec:
       serviceAccountName: aranya
       # required to work with host network to serve as virtual node

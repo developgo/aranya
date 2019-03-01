@@ -1,6 +1,7 @@
 package edgedevice
 
 import (
+	"arhat.dev/aranya/pkg/node/util"
 	"fmt"
 	"net"
 	"strconv"
@@ -17,10 +18,11 @@ import (
 func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObj *corev1.Node, l net.Listener, err error) {
 	var (
 		hostIP            string
+		hostname          string
 		kubeletListenPort int32
 	)
 	// get node ip address
-	hostIP, err = r.getHostIP()
+	hostIP, hostname, err = r.getHostAddress()
 	if err != nil {
 		return
 	}
@@ -42,7 +44,7 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 		}
 	}()
 
-	nodeObj = newNodeForEdgeDevice(device, hostIP, kubeletListenPort)
+	nodeObj = newNodeForEdgeDevice(device, hostIP, hostname, kubeletListenPort)
 	err = controllerutil.SetControllerReference(device, nodeObj, r.scheme)
 	if err != nil {
 		return nil, nil, err
@@ -58,17 +60,17 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 }
 
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
-func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kubeletPort int32) *corev1.Node {
+func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, hostname string, kubeletPort int32) *corev1.Node {
 	createdAt := metav1.Now()
-
+	virtualNodeName := util.GetNodeName(device.Namespace, device.Name)
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      device.Name,
+			Name:      virtualNodeName,
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
-				constant.LabelType: constant.LabelTypeValueNode,
+				constant.LabelRole: constant.LabelRoleValueNode,
 				// TODO: use corev1.LabelHostname in future when controller-runtime updated
-				"kubernetes.io/hostname": device.Name,
+				"kubernetes.io/hostname": hostname,
 			},
 			ClusterName: device.ClusterName,
 		},
@@ -84,6 +86,9 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, kube
 			Addresses: []corev1.NodeAddress{{
 				Type:    corev1.NodeInternalIP,
 				Address: hostIP,
+			}, {
+				Type:    corev1.NodeHostName,
+				Address: hostname,
 			}},
 			DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: kubeletPort}},
 

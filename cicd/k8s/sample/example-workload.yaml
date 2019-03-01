@@ -8,9 +8,11 @@ spec:
     # this toleration is requeired, because it's the taint set on every node in that virtual cluster
     - key: arhat.dev/namespace
       value: edge
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
   nodeSelector:
     # select specific edge device(s) with labels
-    arhat.dev/type: node
+    arhat.dev/role: node
     kubernetes.io/hostname: example-edge-device-mqtt
   containers:
   - name: sleep

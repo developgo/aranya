@@ -1,6 +1,7 @@
 package edgedevice
 
 import (
+	"arhat.dev/aranya/pkg/node/util"
 	"context"
 	"fmt"
 	"net"
@@ -108,6 +109,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	)
 
 	// reconcile related node object
+	// node name is in the form of `namespace/name`
 	if request.Namespace == corev1.NamespaceAll {
 		nodeObj := &corev1.Node{}
 		err = r.client.Get(r.ctx, nodeNsName, nodeObj)
@@ -120,6 +122,8 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 				return reconcile.Result{}, err
 			}
 		}
+	} else {
+		nodeNsName = types.NamespacedName{Name: util.GetNodeName(deviceNsName.Namespace, deviceNsName.Name)}
 	}
 
 	// get the edge device instance
@@ -178,13 +182,11 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 				defer func() {
 					if err != nil {
-						if grpcListener != nil {
-							_ = grpcListener.Close()
+						_ = grpcListener.Close()
 
-							reqLog.Info("delete grpc svc object on error")
-							if e := r.client.Delete(r.ctx, svcObj); e != nil {
-								log.Error(e, "delete svc object failed")
-							}
+						reqLog.Info("delete grpc svc object on error")
+						if e := r.client.Delete(r.ctx, svcObj); e != nil {
+							log.Error(e, "delete svc object failed")
 						}
 					}
 				}()

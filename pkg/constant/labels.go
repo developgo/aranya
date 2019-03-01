@@ -1,11 +1,11 @@
 package constant
 
 const (
-	LabelType = "arhat.dev/type"
+	LabelRole = "arhat.dev/role"
 )
 
 const (
-	LabelTypeValueNode       = "node"
-	LabelTypeValueService    = "service"
-	LabelTypeValueController = "controller"
+	LabelRoleValueNode       = "node"
+	LabelRoleValueService    = "service"
+	LabelRoleValueController = "controller"
 )

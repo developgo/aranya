@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	hostIP string
-	mutex  sync.RWMutex
+	globalHostIP   string
+	globalHostname string
+	mutex          sync.RWMutex
 )
 
 func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (deleted bool, err error) {
@@ -55,34 +56,57 @@ func (r *ReconcileEdgeDevice) runFinalizerLogic(reqLog logr.Logger, device *aran
 	return
 }
 
-func (r *ReconcileEdgeDevice) getHostIP() (string, error) {
-	ip := func() string {
+func (r *ReconcileEdgeDevice) getHostAddress() (ip, name string, err error) {
+	ip, name = func() (ip, name string) {
 		mutex.RLock()
 		defer mutex.RUnlock()
 
-		return hostIP
+		return globalHostIP, globalHostname
 	}()
 
 	if ip == "" {
-		mutex.Lock()
-		defer mutex.Unlock()
+		err = func() error {
+			mutex.Lock()
+			defer mutex.Unlock()
 
-		currentPod := &corev1.Pod{}
-		err := r.client.Get(r.ctx, types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, currentPod)
+			currentPod := &corev1.Pod{}
+			err := r.client.Get(r.ctx, types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, currentPod)
+			if err != nil {
+				return err
+			}
+
+			globalHostIP = currentPod.Status.HostIP
+			nodeName := currentPod.Spec.NodeName
+
+			currentNode := &corev1.Node{}
+			err = r.client.Get(r.ctx, types.NamespacedName{Name: nodeName}, currentNode)
+			if err != nil {
+				return err
+			}
+
+			for _, addr := range currentNode.Status.Addresses {
+				if addr.Type == corev1.NodeHostName {
+					globalHostname = addr.Address
+					break
+				}
+			}
+
+			if globalHostIP == "" || globalHostname == "" {
+				return fmt.Errorf("unable to find host ip and hostname")
+			}
+
+			ip = globalHostIP
+			name = globalHostname
+			return nil
+		}()
+
 		if err != nil {
-			return "", err
+			log.Error(errors.NewInternalError(fmt.Errorf("can't determine host ip and hostname")), "set host ip and hostname failed")
+			os.Exit(1)
 		}
-
-		hostIP = currentPod.Status.HostIP
-		ip = hostIP
 	}
 
-	if ip == "" {
-		log.Error(errors.NewInternalError(fmt.Errorf("can't determine host ip")), "can't determine host ip")
-		os.Exit(1)
-	}
-
-	return ip, nil
+	return ip, name, nil
 }
 
 func (r *ReconcileEdgeDevice) cleanupVirtualObjects(reqLog logr.Logger, device *aranyav1alpha1.EdgeDevice) (err error) {
