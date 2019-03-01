@@ -21,7 +21,6 @@ import (
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
-	"arhat.dev/aranya/pkg/node/util"
 )
 
 const (
@@ -122,8 +121,6 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 				return reconcile.Result{}, err
 			}
 		}
-	} else {
-		nodeNsName = types.NamespacedName{Name: util.GetNodeName(deviceNsName.Namespace, deviceNsName.Name)}
 	}
 
 	// get the edge device instance

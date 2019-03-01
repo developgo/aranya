@@ -106,10 +106,12 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	ctx, exit := context.WithCancel(ctx)
 
 	logger := log.WithValues("name", nodeObj.Name)
+
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
 	// register http routes
 	m.Use(util.LogMiddleware(logger), util.PanicRecoverMiddleware(logger))
 	m.StrictSlash(true)
+
 	//
 	// routes for pod
 	//
@@ -187,10 +189,6 @@ func (n *Node) Start() error {
 	// added, expected to run
 	n.status = statusRunning
 
-	// node status update routine
-	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
-	go n.statusManager.Start()
-
 	// handle final status change
 	go func() {
 		<-n.ctx.Done()
@@ -201,6 +199,10 @@ func (n *Node) Start() error {
 		n.wq.ShutDown()
 		n.status = statusStopped
 	}()
+
+	// node status update routine
+	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
+	go n.statusManager.Start()
 
 	// start a kubelet server
 	go func() {

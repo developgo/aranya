@@ -62,7 +62,7 @@ func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort i
 			Selector: map[string]string{constant.LabelRole: constant.LabelRoleValueController},
 
 			// setup port for grpc server served by virtual node,
-			// with mqtt we don't need to expose a port
+			// with mqtt we don't need to expose service
 			Ports: []corev1.ServicePort{{
 				Name:     "grpc",
 				Protocol: corev1.ProtocolTCP,

@@ -1,7 +1,6 @@
 package edgedevice
 
 import (
-	"arhat.dev/aranya/pkg/node/util"
 	"fmt"
 	"net"
 	"strconv"
@@ -62,10 +61,9 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
 func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, hostname string, kubeletPort int32) *corev1.Node {
 	createdAt := metav1.Now()
-	virtualNodeName := util.GetNodeName(device.Namespace, device.Name)
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      virtualNodeName,
+			Name:      device.Name,
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelRole: constant.LabelRoleValueNode,

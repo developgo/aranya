@@ -2,9 +2,7 @@ package util
 
 import (
 	"net/http"
-)
 
-import (
 	corev1 "k8s.io/api/core/v1"
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
