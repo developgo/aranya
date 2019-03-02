@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -89,8 +90,19 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, host
 				Address: hostname,
 			}},
 			DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: kubeletPort}},
-
-			Phase: corev1.NodePending,
+			Phase:           corev1.NodePending,
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+			},
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+			},
 			Conditions: []corev1.NodeCondition{
 				{Type: corev1.NodeReady, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
 				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
