@@ -29,7 +29,7 @@ func GetParamsForPortForward(req *http.Request) (namespace, podID string, uid ty
 	return pathVars[PathParamNamespace], pathVars[PathParamPodID], types.UID(pathVars[PathParamUID])
 }
 
-func GetParamsForContainerLog(req *http.Request) (namespace, podID, containerName string, opt *corev1.PodLogOptions, err error) {
+func GetParamsForContainerLog(req *http.Request) (namespace, podID, containerName string, opt corev1.PodLogOptions, err error) {
 	pathVars := mux.Vars(req)
 
 	query := req.URL.Query()
@@ -53,5 +53,5 @@ func GetParamsForContainerLog(req *http.Request) (namespace, podID, containerNam
 		return
 	}
 
-	return pathVars[PathParamNamespace], pathVars[PathParamPodID], pathVars[PathParamContainer], logOptions, nil
+	return pathVars[PathParamNamespace], pathVars[PathParamPodID], pathVars[PathParamContainer], *logOptions, nil
 }

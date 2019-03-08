@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"k8s.io/kubernetes/pkg/kubelet/server/portforward"
-	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
+	kubeletportforward "k8s.io/kubernetes/pkg/kubelet/server/portforward"
+	kubeletremotecommand "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -28,11 +28,13 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 
 	logReader, err := m.GetContainerLogs(namespace, podID, container, opt)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err, "Get container log failed", "Pod.Namespace", namespace, "Pod.Name", podID, "Container.Name", container)
 		return
 	}
 
 	// read until EOF (err = nil)
+	w.WriteHeader(http.StatusOK)
 	if _, err := io.Copy(w, logReader); err != nil {
 		log.Error(err, "Send container log response failed")
 		return
@@ -45,7 +47,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	namespace, podID, uid, containerName, cmd := util.GetParamsForExec(r)
 
-	kubeletrc.ServeExec(
+	kubeletremotecommand.ServeExec(
 		// http context
 		w, r,
 		// edge pod executor provided by Manager (implements ExecInContainer)
@@ -70,7 +72,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodAttach")
 	namespace, podID, uid, containerName, _ := util.GetParamsForExec(r)
-	kubeletrc.ServeAttach(
+	kubeletremotecommand.ServeAttach(
 		// http context
 		w, r,
 		// edge pod executor provided by Manager (implements ExecInContainer)
@@ -93,13 +95,13 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodAttach")
 	namespace, podID, uid := util.GetParamsForPortForward(r)
 
-	portForwardOptions, err := portforward.NewV4Options(r)
+	portForwardOptions, err := kubeletportforward.NewV4Options(r)
 	if err != nil {
 		log.Error(err, "parse portforward options failed")
 		return
 	}
 
-	portforward.ServePortForward(
+	kubeletportforward.ServePortForward(
 		// http context
 		w, r,
 		// edge pod executor provided by Manager (implements ExecInContainer)

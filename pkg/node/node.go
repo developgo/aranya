@@ -32,6 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
+	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
@@ -56,11 +57,11 @@ type Node struct {
 	nodeClient kubeClientTypedCoreV1.NodeInterface
 	wq         workqueue.RateLimitingInterface
 
-	httpSrv         *http.Server
-	kubeletListener net.Listener
-	grpcSrv         *grpc.Server
-	grpcListener    net.Listener
-	remoteManager   connectivity.Interface
+	httpSrv             *http.Server
+	kubeletListener     net.Listener
+	grpcSrv             *grpc.Server
+	grpcListener        net.Listener
+	connectivityManager connectivitySrv.Interface
 
 	podInformerFactory kubeInformers.SharedInformerFactory
 	podInformer        kubeInformersCoreV1.PodInformer
@@ -93,14 +94,14 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		kubeletconfigmap.NewWatchingConfigMapManager(client),
 		nil)
 
-	var remoteManager connectivity.Interface
+	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
-		remoteManager = connectivity.NewGRPCService(nodeObj.Name)
+		connectivityManager = connectivitySrv.NewGrpcConnectivity(nodeObj.Name)
 	} else {
-		remoteManager = connectivity.NewMQTTService(nodeObj.Name)
+		connectivityManager = connectivitySrv.NewMqttSrv(nodeObj.Name)
 	}
 
-	podManager := pod.NewManager(podInformer.Lister(), basicPodManager, remoteManager)
+	podManager := pod.NewManager(podInformer.Lister(), basicPodManager, connectivityManager)
 	statsManager := stats.NewManager()
 
 	ctx, exit := context.WithCancel(ctx)
@@ -141,22 +142,22 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// TODO: metrics
 
 	srv := &Node{
-		log:                logger,
-		ctx:                ctx,
-		exit:               exit,
-		name:               nodeObj.Name,
-		kubeClient:         client,
-		nodeClient:         client.CoreV1().Nodes(),
-		remoteManager:      remoteManager,
-		kubeletListener:    kubeletListener,
-		grpcListener:       grpcListener,
-		httpSrv:            &http.Server{Handler: m},
-		podInformerFactory: podInformerFactory,
-		podInformer:        podInformer,
-		wq:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
-		status:             statusReady,
-		statusManager:      kubeletstatus.NewManager(client, podManager, podManager),
-		podManager:         podManager,
+		log:                 logger,
+		ctx:                 ctx,
+		exit:                exit,
+		name:                nodeObj.Name,
+		kubeClient:          client,
+		nodeClient:          client.CoreV1().Nodes(),
+		connectivityManager: connectivityManager,
+		kubeletListener:     kubeletListener,
+		grpcListener:        grpcListener,
+		httpSrv:             &http.Server{Handler: m},
+		podInformerFactory:  podInformerFactory,
+		podInformer:         podInformer,
+		wq:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
+		status:              statusReady,
+		statusManager:       kubeletstatus.NewManager(client, podManager, podManager),
+		podManager:          podManager,
 	}
 
 	return srv, nil
@@ -217,7 +218,7 @@ func (n *Node) Start() error {
 	if n.grpcListener != nil {
 		n.grpcSrv = grpc.NewServer()
 
-		connectivity.RegisterConnectivityServer(n.grpcSrv, n.remoteManager.(*connectivity.GRPCService))
+		connectivity.RegisterConnectivityServer(n.grpcSrv, n.connectivityManager.(*connectivitySrv.GrpcSrv))
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {

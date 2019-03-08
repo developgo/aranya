@@ -8,7 +8,7 @@ import (
 	kubeletpod "k8s.io/kubernetes/pkg/kubelet/pod"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"arhat.dev/aranya/pkg/node/connectivity"
+	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 )
 
 const (
@@ -20,14 +20,14 @@ var (
 	log = logf.Log.WithName("aranya.node.pod")
 )
 
-func NewManager(podLister kubeListersCoreV1.PodLister, manager kubeletpod.Manager, remoteManager connectivity.Interface) *Manager {
+func NewManager(podLister kubeListersCoreV1.PodLister, manager kubeletpod.Manager, remoteManager connectivitySrv.Interface) *Manager {
 	return &Manager{lister: podLister, Manager: manager, remoteManager: remoteManager}
 }
 
 type Manager struct {
 	kubeletpod.Manager
 	lister        kubeListersCoreV1.PodLister
-	remoteManager connectivity.Interface
+	remoteManager connectivitySrv.Interface
 }
 
 // PodResourcesAreReclaimed

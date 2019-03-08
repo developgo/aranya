@@ -1,4 +1,4 @@
-package connectivity
+package server
 
 import (
 	"context"
@@ -9,32 +9,34 @@ import (
 
 	"github.com/go-logr/logr"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 const (
 	messageChannelSize = 10
 )
 
-type GRPCService struct {
+type GrpcSrv struct {
 	log             logr.Logger
 	sessions        *sessionManager
 	deviceConnected chan struct{}
-	syncSrv         Connectivity_SyncServer
+	syncSrv         connectivity.Connectivity_SyncServer
 	mu              sync.RWMutex
 	sessionTimeout  time.Duration
-	globalChan      chan *Msg
+	globalChan      chan *connectivity.Msg
 }
 
-func NewGRPCService(name string) *GRPCService {
-	return &GRPCService{
+func NewGrpcConnectivity(name string) *GrpcSrv {
+	return &GrpcSrv{
 		log:             logf.Log.WithName("service.pod").WithValues("name", name),
 		sessions:        newSessionMap(),
 		deviceConnected: make(chan struct{}),
-		globalChan:      make(chan *Msg, messageChannelSize),
+		globalChan:      make(chan *connectivity.Msg, messageChannelSize),
 	}
 }
 
-func (p *GRPCService) Sync(server Connectivity_SyncServer) error {
+func (p *GrpcSrv) Sync(server connectivity.Connectivity_SyncServer) error {
 	if err := func() error {
 		// check if device has already connected
 		p.mu.Lock()
@@ -58,14 +60,14 @@ func (p *GRPCService) Sync(server Connectivity_SyncServer) error {
 		p.syncSrv = nil
 		p.deviceConnected = make(chan struct{})
 		close(p.globalChan)
-		p.globalChan = make(chan *Msg, messageChannelSize)
+		p.globalChan = make(chan *connectivity.Msg, messageChannelSize)
 	}()
 
 	// signal device connected
 	close(p.deviceConnected)
 
 	ctx, exit := context.WithCancel(server.Context())
-	msgCh := make(chan *Msg, messageChannelSize)
+	msgCh := make(chan *connectivity.Msg, messageChannelSize)
 	go func() {
 		for {
 			msg, err := server.Recv()
@@ -105,11 +107,14 @@ func (p *GRPCService) Sync(server Connectivity_SyncServer) error {
 	}
 }
 
-func (p *GRPCService) ConsumeOrphanedMessage() <-chan *Msg {
+func (p *GrpcSrv) ConsumeOrphanedMessage() <-chan *connectivity.Msg {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	return p.globalChan
 }
 
-func (p *GRPCService) WaitUntilDeviceConnected() {
+func (p *GrpcSrv) WaitUntilDeviceConnected() {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -117,7 +122,7 @@ func (p *GRPCService) WaitUntilDeviceConnected() {
 }
 
 // PostCmd sends a command to remote device
-func (p *GRPCService) PostCmd(c *Cmd, timeout time.Duration) (ch <-chan *Msg, err error) {
+func (p *GrpcSrv) PostCmd(c *connectivity.Cmd, timeout time.Duration) (ch <-chan *connectivity.Msg, err error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -128,17 +133,11 @@ func (p *GRPCService) PostCmd(c *Cmd, timeout time.Duration) (ch <-chan *Msg, er
 		return nil, ErrDeviceNotConnected
 	}
 
-	sid, ch := p.sessions.new(c, timeout)
-	c.SessionId = sid
-
-	defer func() {
-		if err != nil {
-			p.sessions.del(sid)
-		}
-	}()
+	c.SessionId, ch = p.sessions.add(c, timeout)
 
 	err = p.syncSrv.Send(c)
 	if err != nil {
+		p.sessions.del(c.SessionId)
 		return nil, err
 	}
 

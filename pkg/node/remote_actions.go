@@ -9,15 +9,15 @@ import (
 
 func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
-		n.remoteManager.WaitUntilDeviceConnected()
-		msgCh := n.remoteManager.ConsumeOrphanedMessage()
+		n.connectivityManager.WaitUntilDeviceConnected()
+		msgCh := n.connectivityManager.ConsumeOrphanedMessage()
 		for msg := range msgCh {
 			switch msg.GetMsg().(type) {
-			case *connectivity.Msg_DeviceInfo:
-				deviceInfo := msg.GetDeviceInfo()
+			case *connectivity.Msg_NodeInfo:
+				nodeInfo := msg.GetNodeInfo()
 				// update node info
-				newStatus := &corev1.NodeStatus{}
-				if err := newStatus.Unmarshal(deviceInfo.GetStatus()); err != nil {
+				newNode := &corev1.Node{}
+				if err := newNode.Unmarshal(nodeInfo.GetNodev1()); err != nil {
 					n.log.Error(err, "unmarshal device status failed")
 					continue
 				}
@@ -28,7 +28,7 @@ func (n *Node) InitializeRemoteDevice() {
 					continue
 				}
 
-				resolveDeviceStatus(me.Status, *newStatus)
+				resolveDeviceStatus(me.Status, newNode.Status)
 				updatedMe, err := n.nodeClient.UpdateStatus(me)
 				if err != nil {
 					n.log.Error(err, "update node status failed")
@@ -37,16 +37,9 @@ func (n *Node) InitializeRemoteDevice() {
 				_ = updatedMe
 			case *connectivity.Msg_PodInfo:
 				podInfo := msg.GetPodInfo()
-				newStatus := &corev1.PodStatus{}
-				if err := newStatus.Unmarshal(podInfo.GetStatus()); err != nil {
+				pod := &corev1.Pod{}
+				if err := pod.Unmarshal(podInfo.GetPodv1()); err != nil {
 					n.log.Error(err, "unmarshal pod status failed")
-				}
-
-				switch podInfo.GetPhase() {
-				case connectivity.PodInfo_Created:
-				case connectivity.PodInfo_Running:
-				case connectivity.PodInfo_Updated:
-				case connectivity.PodInfo_Deleted:
 				}
 			case *connectivity.Msg_PodData:
 				// we don't know how to handle this kind of message, discard

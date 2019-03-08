@@ -3,7 +3,7 @@
 package connectivity;
 
 import public "pod.proto";
-import public "device.proto";
+import public "node.proto";
 
 service Connectivity {
     rpc Sync (stream Msg) returns (stream Cmd);
@@ -14,7 +14,7 @@ message Msg {
     bool completed = 2;
 
     oneof msg {
-        DeviceInfo device_info = 11;
+        NodeInfo node_info = 11;
         // used by list and device active pod update
         PodInfo pod_info = 12;
         // messages
@@ -26,6 +26,7 @@ message Cmd {
     uint64 session_id = 1;
 
     oneof cmd {
-        PodCmd pod_cmd = 11;
+        NodeCmd node_cmd = 11;
+        PodCmd pod_cmd = 12;
     }
 }

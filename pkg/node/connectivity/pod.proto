@@ -3,17 +3,10 @@ syntax = "proto3";
 package connectivity;
 
 message PodInfo {
-    enum Phase {
-        Created = 0;
-        Running = 1;
-        Deleted = 2;
-        Updated = 3;
+    oneof pod {
+        // protobuf bytes of corev1.Pod
+        bytes podv1 = 1;
     }
-
-    Phase phase = 1;
-
-    bytes spec = 10;
-    bytes status = 11;
 }
 
 message PodIdentity {
@@ -22,7 +15,7 @@ message PodIdentity {
 }
 
 message PodCmd {
-    enum ActionType {
+    enum Action {
         CreateOrUpdate = 0;
         Delete = 1;
         List = 2;
@@ -30,10 +23,12 @@ message PodCmd {
         Attach = 4;
         Log = 5;
         PortForward = 6;
+        Data = 7;
+        ResizeTty = 8;
     }
 
     PodIdentity id = 1;
-    ActionType action = 2;
+    Action action = 2;
 
     oneof options {
         // used by create or update
@@ -48,12 +43,18 @@ message PodCmd {
         PodExecOptions exec_options = 15;
         // used by port forward
         PodPortForwardOptions port_forward_options = 16;
+        // used in exec, attach, portforward session
+        PodDataOptions data_options = 17;
+        // used in exec, attach session
+        TtyResizeOptions resize_options = 18;
     }
 }
 
 message PodCreateOptions {
-    // protobuf bytes of PodSpec
-    bytes spec = 1;
+    oneof pod_spec {
+        // protobuf bytes of corev1.PodSpec
+        bytes pod_spec_v1 = 1;
+    }
 }
 
 message PodDeleteOptions {
@@ -64,25 +65,45 @@ message PodListOptions {
 }
 
 message PodLogOptions {
-    string container_name = 1;
+    oneof log_options {
+        // protobuf bytes of corev1.PodLogOptions
+        bytes log_options_v1 = 1;
+    }
 }
 
 message PodExecOptions {
-    string container_name = 1;
-    repeated string command = 2;
-
-    bool tty = 11;
-    bool stdin = 12;
-    bool stdout = 13;
-    bool stderr = 14;
-    int32 cols = 15;
-    int32 rows = 16;
+    oneof exec_options {
+        // protobuf bytes of corev1.PodExecOptions
+        bytes exec_options_v1 = 1;
+    }
 }
 
 message PodPortForwardOptions {
-    int32 port = 1;
+    oneof portforward_options {
+        // protobuf bytes of corev1.PodPortForwardOptions
+        bytes portforward_options_v1 = 1;
+    }
+}
+
+message PodDataOptions {
+    bool completed = 1;
+
+    bytes data = 11;
+}
+
+message TtyResizeOptions {
+    uint32 cols = 1;
+    uint32 rows = 2;
 }
 
 message PodData {
-    bytes data = 1;
+    enum Kind {
+        STDOUT = 0;
+        STDERR = 1;
+        OTHER = 2;
+    }
+
+    Kind kind = 1;
+
+    bytes data = 11;
 }
