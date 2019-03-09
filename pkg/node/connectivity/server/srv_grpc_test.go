@@ -106,8 +106,8 @@ func TestGrpcSrv(t *testing.T) {
 		cmdRecv, err := syncClient.Recv()
 		assert.NoError(t, err)
 		assert.Equal(t, cmd.GetSessionId(), cmdRecv.GetSessionId())
-		assert.Equal(t, "foo", cmdRecv.GetPodCmd().GetId().GetNamespace())
-		assert.Equal(t, "bar", cmdRecv.GetPodCmd().GetId().GetName())
+		assert.Equal(t, "foo", cmdRecv.GetPodCmd().GetNamespace())
+		assert.Equal(t, "bar", cmdRecv.GetPodCmd().GetName())
 
 		err = syncClient.Send(&connectivity.Msg{
 			SessionId: cmdRecv.GetSessionId(),
