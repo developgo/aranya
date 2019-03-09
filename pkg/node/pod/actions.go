@@ -47,7 +47,7 @@ func (m *Manager) ExecInContainer(name string, uid types.UID, container string, 
 		Command:   cmd,
 	}
 
-	execCmd := connectivitySrv.NewPodExecCmd("", name, options)
+	execCmd := connectivitySrv.NewContainerExecCmd("", name, options)
 	return m.handleBidirectionalStream(execCmd, timeout, stdin, stdout, stderr, resize)
 }
 
@@ -77,7 +77,7 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 }
 
 func (m *Manager) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivitySrv.NewPodCreateOrUpdateCmd(pod)
+	cmd := connectivitySrv.NewPodCreateOrUpdateCmd(pod.Namespace, pod.Name, pod.Spec)
 	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err

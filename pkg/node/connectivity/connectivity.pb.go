@@ -25,8 +25,6 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // Ignoring public import of PodInfo from pod.proto
 
-// Ignoring public import of PodIdentity from pod.proto
-
 // Ignoring public import of PodCmd from pod.proto
 
 // Ignoring public import of PodCreateOptions from pod.proto

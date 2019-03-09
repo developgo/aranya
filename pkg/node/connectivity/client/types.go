@@ -1,19 +1,27 @@
 package client
 
 import (
+	"errors"
+	"sync"
+
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-type PodCreateOrUpdateHandler func(identity *connectivity.PodIdentity, options *connectivity.PodCreateOptions)
-type PodDeleteHandler func(identity *connectivity.PodIdentity, options *connectivity.PodDeleteOptions)
-type PodListHandler func(identity *connectivity.PodIdentity, options *connectivity.PodListOptions)
-type PodPortForwardHandler func(identity *connectivity.PodIdentity, options *connectivity.PodPortForwardOptions)
+var (
+	ErrClientAlreadyConnected = errors.New("client already connected ")
+	ErrClientNotConnected     = errors.New("client not connected ")
+)
 
-type ContainerLogHandler func(identity *connectivity.PodIdentity, options *connectivity.PodLogOptions)
-type ContainerExecHandler func(identity *connectivity.PodIdentity, options *connectivity.PodExecOptions)
-type ContainerAttachHandler func(identity *connectivity.PodIdentity, options *connectivity.PodExecOptions)
-type ContainerInputHandler func(identity *connectivity.PodIdentity, options *connectivity.PodDataOptions)
-type ContainerTtyResizeHandler func(identity *connectivity.PodIdentity, options *connectivity.TtyResizeOptions)
+type PodCreateOrUpdateHandler func(sid uint64, namespace, name string, options *connectivity.PodCreateOptions)
+type PodDeleteHandler func(sid uint64, namespace, name string, options *connectivity.PodDeleteOptions)
+type PodListHandler func(sid uint64, namespace, name string, options *connectivity.PodListOptions)
+type PodPortForwardHandler func(sid uint64, namespace, name string, options *connectivity.PodPortForwardOptions)
+
+type ContainerLogHandler func(sid uint64, namespace, name string, options *connectivity.PodLogOptions)
+type ContainerExecHandler func(sid uint64, namespace, name string, options *connectivity.PodExecOptions)
+type ContainerAttachHandler func(sid uint64, namespace, name string, options *connectivity.PodExecOptions)
+type ContainerInputHandler func(sid uint64, namespace, name string, options *connectivity.PodDataOptions)
+type ContainerTtyResizeHandler func(sid uint64, namespace, name string, options *connectivity.TtyResizeOptions)
 
 type Option func(*baseClient) error
 
@@ -28,9 +36,33 @@ type baseClient struct {
 	containerAttachHandler    ContainerAttachHandler
 	containerInputHandler     ContainerInputHandler
 	containerTtyResizeHandler ContainerTtyResizeHandler
+
+	globalMsgCh chan *connectivity.Msg
+	mu          sync.RWMutex
 }
 
-func (c *baseClient) handleCmd(cmd *connectivity.Cmd) {
+func (c *baseClient) onConnect(connect func() error) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return connect()
+}
+
+func (c *baseClient) onDisconnected(setDisconnected func()) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	setDisconnected()
+}
+
+func (c *baseClient) onPostMsg(m *connectivity.Msg, sendMsg func(msg *connectivity.Msg) error) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return sendMsg(m)
+}
+
+func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 	switch cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
 		nodeCmd := cmd.GetNodeCmd()
@@ -38,84 +70,88 @@ func (c *baseClient) handleCmd(cmd *connectivity.Cmd) {
 	case *connectivity.Cmd_PodCmd:
 		podCmd := cmd.GetPodCmd()
 
+		sid := cmd.GetSessionId()
+		ns := podCmd.GetNamespace()
+		name := podCmd.GetName()
+
 		switch podCmd.GetAction() {
 
 		// pod scope commands
 		case connectivity.PodCmd_CreateOrUpdate:
-			c.podCreateOrUpdate(podCmd.GetId(), podCmd.GetCreateOptions())
+			c.podCreateOrUpdate(sid, ns, name, podCmd.GetCreateOptions())
 		case connectivity.PodCmd_Delete:
-			c.podDelete(podCmd.GetId(), podCmd.GetDeleteOptions())
+			c.podDelete(sid, ns, name, podCmd.GetDeleteOptions())
 		case connectivity.PodCmd_List:
-			c.podList(podCmd.GetId(), podCmd.GetListOptions())
+			c.podList(sid, ns, name, podCmd.GetListOptions())
 		case connectivity.PodCmd_PortForward:
-			c.podPortForward(podCmd.GetId(), podCmd.GetPortForwardOptions())
+			c.podPortForward(sid, ns, name, podCmd.GetPortForwardOptions())
 
 		// container scope commands
 		case connectivity.PodCmd_Exec:
-			c.containerExec(podCmd.GetId(), podCmd.GetExecOptions())
+			c.containerExec(sid, ns, name, podCmd.GetExecOptions())
 		case connectivity.PodCmd_Attach:
-			c.containerAttachHandler(podCmd.GetId(), podCmd.GetExecOptions())
+			c.containerAttachHandler(sid, ns, name, podCmd.GetExecOptions())
 		case connectivity.PodCmd_Log:
-			c.containerLog(podCmd.GetId(), podCmd.GetLogOptions())
+			c.containerLog(sid, ns, name, podCmd.GetLogOptions())
 		case connectivity.PodCmd_Data:
 			// data for user input, check sid
-			c.containerInput(podCmd.GetId(), podCmd.GetDataOptions())
+			c.containerInput(sid, ns, name, podCmd.GetDataOptions())
 		case connectivity.PodCmd_ResizeTty:
-			c.containerTtyResize(podCmd.GetId(), podCmd.GetResizeOptions())
+			c.containerTtyResize(sid, ns, name, podCmd.GetResizeOptions())
 		}
 	}
 }
 
-func (c *baseClient) podCreateOrUpdate(identity *connectivity.PodIdentity, options *connectivity.PodCreateOptions) {
+func (c *baseClient) podCreateOrUpdate(sid uint64, namespace, name string, options *connectivity.PodCreateOptions) {
 	if c.podCreateOrUpdateHandler != nil {
-		c.podCreateOrUpdateHandler(identity, options)
+		c.podCreateOrUpdateHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) podDelete(identity *connectivity.PodIdentity, options *connectivity.PodDeleteOptions) {
+func (c *baseClient) podDelete(sid uint64, namespace, name string, options *connectivity.PodDeleteOptions) {
 	if c.podDeleteHandler != nil {
-		c.podDeleteHandler(identity, options)
+		c.podDeleteHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) podList(identity *connectivity.PodIdentity, options *connectivity.PodListOptions) {
+func (c *baseClient) podList(sid uint64, namespace, name string, options *connectivity.PodListOptions) {
 	if c.podListHandler != nil {
-		c.podListHandler(identity, options)
+		c.podListHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) podPortForward(identity *connectivity.PodIdentity, options *connectivity.PodPortForwardOptions) {
+func (c *baseClient) podPortForward(sid uint64, namespace, name string, options *connectivity.PodPortForwardOptions) {
 	if c.podPortForwardHandler != nil {
-		c.podPortForwardHandler(identity, options)
+		c.podPortForwardHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) containerLog(identity *connectivity.PodIdentity, options *connectivity.PodLogOptions) {
+func (c *baseClient) containerLog(sid uint64, namespace, name string, options *connectivity.PodLogOptions) {
 	if c.containerLogHandler != nil {
-		c.containerLogHandler(identity, options)
+		c.containerLogHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) containerExec(identity *connectivity.PodIdentity, options *connectivity.PodExecOptions) {
+func (c *baseClient) containerExec(sid uint64, namespace, name string, options *connectivity.PodExecOptions) {
 	if c.containerExecHandler != nil {
-		c.containerExecHandler(identity, options)
+		c.containerExecHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) containerAttach(identity *connectivity.PodIdentity, options *connectivity.PodExecOptions) {
+func (c *baseClient) containerAttach(sid uint64, namespace, name string, options *connectivity.PodExecOptions) {
 	if c.containerAttachHandler != nil {
-		c.containerAttachHandler(identity, options)
+		c.containerAttachHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) containerInput(identity *connectivity.PodIdentity, options *connectivity.PodDataOptions) {
+func (c *baseClient) containerInput(sid uint64, namespace, name string, options *connectivity.PodDataOptions) {
 	if c.containerInputHandler != nil {
-		c.containerInputHandler(identity, options)
+		c.containerInputHandler(sid, namespace, name, options)
 	}
 }
 
-func (c *baseClient) containerTtyResize(identity *connectivity.PodIdentity, options *connectivity.TtyResizeOptions) {
+func (c *baseClient) containerTtyResize(sid uint64, namespace, name string, options *connectivity.TtyResizeOptions) {
 	if c.containerTtyResizeHandler != nil {
-		c.containerTtyResizeHandler(identity, options)
+		c.containerTtyResizeHandler(sid, namespace, name, options)
 	}
 }

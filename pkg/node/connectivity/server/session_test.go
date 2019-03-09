@@ -8,9 +8,9 @@ import (
 )
 
 func TestSessionManager_Add(t *testing.T) {
-	mgr := newSessionMap()
+	mgr := newSessionManager()
 	sidA, chA := mgr.add(NewPodListCmd("", ""), 0)
-	sidB, chB := mgr.add(NewPodResizeCmd(sidA, 0, 0), 0)
+	sidB, chB := mgr.add(NewContainerResizeCmd(sidA, 0, 0), 0)
 	sidC, chC := mgr.add(NewPodListCmd("", ""), time.Millisecond)
 
 	assert.NotEqual(t, nil, sidA)
@@ -25,7 +25,7 @@ func TestSessionManager_Add(t *testing.T) {
 }
 
 func TestSessionManager_Del(t *testing.T) {
-	mgr := newSessionMap()
+	mgr := newSessionManager()
 	sid, ch := mgr.add(NewPodListCmd("", ""), 0)
 	mgr.del(sid)
 	_, ok := mgr.get(sid)
@@ -36,7 +36,7 @@ func TestSessionManager_Del(t *testing.T) {
 }
 
 func TestSessionManager_Get(t *testing.T) {
-	mgr := newSessionMap()
+	mgr := newSessionManager()
 	sidA, _ := mgr.add(NewPodListCmd("", ""), 0)
 	sidB, _ := mgr.add(NewPodListCmd("", ""), time.Millisecond)
 

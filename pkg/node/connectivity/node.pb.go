@@ -20,7 +20,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type NodeInfo struct {
 	// Types that are valid to be assigned to Node:
-	//	*NodeInfo_Nodev1
+	//	*NodeInfo_NodeV1
 	Node                 isNodeInfo_Node `protobuf_oneof:"node"`
 	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
 	XXX_unrecognized     []byte          `json:"-"`
@@ -31,7 +31,7 @@ func (m *NodeInfo) Reset()         { *m = NodeInfo{} }
 func (m *NodeInfo) String() string { return proto.CompactTextString(m) }
 func (*NodeInfo) ProtoMessage()    {}
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_node_f37231eb5162aed8, []int{0}
+	return fileDescriptor_node_419b9859c73f560a, []int{0}
 }
 func (m *NodeInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeInfo.Unmarshal(m, b)
@@ -55,11 +55,11 @@ type isNodeInfo_Node interface {
 	isNodeInfo_Node()
 }
 
-type NodeInfo_Nodev1 struct {
-	Nodev1 []byte `protobuf:"bytes,1,opt,name=nodev1,proto3,oneof"`
+type NodeInfo_NodeV1 struct {
+	NodeV1 []byte `protobuf:"bytes,1,opt,name=node_v1,json=nodeV1,proto3,oneof"`
 }
 
-func (*NodeInfo_Nodev1) isNodeInfo_Node() {}
+func (*NodeInfo_NodeV1) isNodeInfo_Node() {}
 
 func (m *NodeInfo) GetNode() isNodeInfo_Node {
 	if m != nil {
@@ -68,9 +68,9 @@ func (m *NodeInfo) GetNode() isNodeInfo_Node {
 	return nil
 }
 
-func (m *NodeInfo) GetNodev1() []byte {
-	if x, ok := m.GetNode().(*NodeInfo_Nodev1); ok {
-		return x.Nodev1
+func (m *NodeInfo) GetNodeV1() []byte {
+	if x, ok := m.GetNode().(*NodeInfo_NodeV1); ok {
+		return x.NodeV1
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func (m *NodeInfo) GetNodev1() []byte {
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*NodeInfo) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _NodeInfo_OneofMarshaler, _NodeInfo_OneofUnmarshaler, _NodeInfo_OneofSizer, []interface{}{
-		(*NodeInfo_Nodev1)(nil),
+		(*NodeInfo_NodeV1)(nil),
 	}
 }
 
@@ -86,9 +86,9 @@ func _NodeInfo_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	m := msg.(*NodeInfo)
 	// node
 	switch x := m.Node.(type) {
-	case *NodeInfo_Nodev1:
+	case *NodeInfo_NodeV1:
 		b.EncodeVarint(1<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.Nodev1)
+		b.EncodeRawBytes(x.NodeV1)
 	case nil:
 	default:
 		return fmt.Errorf("NodeInfo.Node has unexpected type %T", x)
@@ -99,12 +99,12 @@ func _NodeInfo_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _NodeInfo_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*NodeInfo)
 	switch tag {
-	case 1: // node.nodev1
+	case 1: // node.node_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.Node = &NodeInfo_Nodev1{x}
+		m.Node = &NodeInfo_NodeV1{x}
 		return true, err
 	default:
 		return false, nil
@@ -115,10 +115,10 @@ func _NodeInfo_OneofSizer(msg proto.Message) (n int) {
 	m := msg.(*NodeInfo)
 	// node
 	switch x := m.Node.(type) {
-	case *NodeInfo_Nodev1:
+	case *NodeInfo_NodeV1:
 		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Nodev1)))
-		n += len(x.Nodev1)
+		n += proto.SizeVarint(uint64(len(x.NodeV1)))
+		n += len(x.NodeV1)
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -136,7 +136,7 @@ func (m *NodeCmd) Reset()         { *m = NodeCmd{} }
 func (m *NodeCmd) String() string { return proto.CompactTextString(m) }
 func (*NodeCmd) ProtoMessage()    {}
 func (*NodeCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_node_f37231eb5162aed8, []int{1}
+	return fileDescriptor_node_419b9859c73f560a, []int{1}
 }
 func (m *NodeCmd) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NodeCmd.Unmarshal(m, b)
@@ -161,15 +161,15 @@ func init() {
 	proto.RegisterType((*NodeCmd)(nil), "connectivity.NodeCmd")
 }
 
-func init() { proto.RegisterFile("node.proto", fileDescriptor_node_f37231eb5162aed8) }
+func init() { proto.RegisterFile("node.proto", fileDescriptor_node_419b9859c73f560a) }
 
-var fileDescriptor_node_f37231eb5162aed8 = []byte{
-	// 101 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_node_419b9859c73f560a = []byte{
+	// 105 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xca, 0xcb, 0x4f, 0x49,
 	0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x49, 0xce, 0xcf, 0xcb, 0x4b, 0x4d, 0x2e, 0xc9,
-	0x2c, 0xcb, 0x2c, 0xa9, 0x54, 0xd2, 0xe1, 0xe2, 0xf0, 0xcb, 0x4f, 0x49, 0xf5, 0xcc, 0x4b, 0xcb,
-	0x17, 0x92, 0xe0, 0x62, 0x03, 0xa9, 0x2b, 0x33, 0x94, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0xf1, 0x60,
-	0x08, 0x82, 0xf2, 0x9d, 0xd8, 0xb8, 0x58, 0x40, 0x2c, 0x25, 0x4e, 0x2e, 0x76, 0x90, 0x6a, 0xe7,
-	0xdc, 0x94, 0x24, 0x36, 0xb0, 0x69, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf4, 0xff, 0x74,
-	0xe4, 0x5b, 0x00, 0x00, 0x00,
+	0x2c, 0xcb, 0x2c, 0xa9, 0x54, 0xd2, 0xe5, 0xe2, 0xf0, 0xcb, 0x4f, 0x49, 0xf5, 0xcc, 0x4b, 0xcb,
+	0x17, 0x92, 0xe4, 0x62, 0x07, 0xa9, 0x8b, 0x2f, 0x33, 0x94, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0xf1,
+	0x60, 0x08, 0x62, 0x03, 0x09, 0x84, 0x19, 0x3a, 0xb1, 0x71, 0xb1, 0x80, 0x58, 0x4a, 0x9c, 0x5c,
+	0xec, 0x20, 0xe5, 0xce, 0xb9, 0x29, 0x49, 0x6c, 0x60, 0xe3, 0x8c, 0x01, 0x01, 0x00, 0x00, 0xff,
+	0xff, 0xd8, 0xfb, 0xb7, 0xf4, 0x5c, 0x00, 0x00, 0x00,
 }

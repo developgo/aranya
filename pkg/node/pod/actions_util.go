@@ -38,10 +38,10 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 
 		go func() {
 			for s.Scan() {
-				inputCh <- connectivitySrv.NewPodDataCmd(sid, false, s.Bytes())
+				inputCh <- connectivitySrv.NewContainerStdinDataCmd(sid, false, s.Bytes())
 			}
 
-			inputCh <- connectivitySrv.NewPodDataCmd(sid, true, nil)
+			inputCh <- connectivitySrv.NewContainerStdinDataCmd(sid, true, nil)
 		}()
 	}
 
@@ -93,7 +93,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
-			resizeCmd := connectivitySrv.NewPodResizeCmd(sid, size.Width, size.Height)
+			resizeCmd := connectivitySrv.NewContainerResizeCmd(sid, size.Width, size.Height)
 			_, err = m.remoteManager.PostCmd(resizeCmd, 0)
 			if err != nil {
 				return err

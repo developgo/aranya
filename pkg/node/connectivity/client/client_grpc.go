@@ -2,8 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
-	"sync"
+	"io"
 
 	"google.golang.org/grpc"
 
@@ -14,8 +13,6 @@ type GrpcClient struct {
 	baseClient
 	client     connectivity.ConnectivityClient
 	syncClient connectivity.Connectivity_SyncClient
-
-	mu sync.RWMutex
 }
 
 func NewGrpcClient(conn *grpc.ClientConn, options ...Option) (*GrpcClient, error) {
@@ -33,24 +30,18 @@ func NewGrpcClient(conn *grpc.ClientConn, options ...Option) (*GrpcClient, error
 }
 
 func (c *GrpcClient) Run(ctx context.Context) error {
-	err := func() error {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
+	if err := c.baseClient.onConnect(func() error {
 		if c.syncClient != nil {
-			return fmt.Errorf("client already started")
+			return ErrClientAlreadyConnected
 		}
 
 		syncClient, err := c.client.Sync(ctx)
 		if err != nil {
 			return err
 		}
-
 		c.syncClient = syncClient
 		return nil
-	}()
-
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -59,6 +50,9 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 		for {
 			cmd, err := c.syncClient.Recv()
 			if err != nil {
+				close(cmdCh)
+				if err != io.EOF {
+				}
 				return
 			}
 
@@ -66,13 +60,9 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 		}
 	}()
 
-	defer func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		close(cmdCh)
+	defer c.baseClient.onDisconnected(func() {
 		c.syncClient = nil
-	}()
+	})
 
 	for {
 		select {
@@ -80,7 +70,22 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 			if !more {
 				return nil
 			}
-			c.baseClient.handleCmd(cmd)
+			c.baseClient.onSrvCmd(cmd)
 		}
 	}
+}
+
+func (c *GrpcClient) PostMsg(msg *connectivity.Msg) error {
+	return c.baseClient.onPostMsg(msg, func(msg *connectivity.Msg) error {
+		if c.syncClient == nil {
+			return ErrClientNotConnected
+		}
+
+		err := c.syncClient.Send(msg)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

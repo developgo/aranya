@@ -14,8 +14,8 @@ func NewNodeInfoMsg(sid uint64, completed bool, node corev1.Node) *connectivity.
 		Completed: completed,
 		Msg: &connectivity.Msg_NodeInfo{
 			NodeInfo: &connectivity.NodeInfo{
-				Node: &connectivity.NodeInfo_Nodev1{
-					Nodev1: nodeBytes,
+				Node: &connectivity.NodeInfo_NodeV1{
+					NodeV1: nodeBytes,
 				},
 			},
 		},
@@ -43,8 +43,8 @@ func NewPodInfoMsg(sid uint64, completed bool, pod corev1.Pod) *connectivity.Msg
 		Completed: completed,
 		Msg: &connectivity.Msg_PodInfo{
 			PodInfo: &connectivity.PodInfo{
-				Pod: &connectivity.PodInfo_Podv1{
-					Podv1: podBytes,
+				Pod: &connectivity.PodInfo_PodV1{
+					PodV1: podBytes,
 				},
 			},
 		},

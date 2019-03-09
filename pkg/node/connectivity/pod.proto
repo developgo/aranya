@@ -5,13 +5,8 @@ package connectivity;
 message PodInfo {
     oneof pod {
         // protobuf bytes of corev1.Pod
-        bytes podv1 = 1;
+        bytes pod_v1 = 1;
     }
-}
-
-message PodIdentity {
-    string namespace = 1;
-    string name = 2;
 }
 
 message PodCmd {
@@ -27,8 +22,9 @@ message PodCmd {
         ResizeTty = 8;
     }
 
-    PodIdentity id = 1;
-    Action action = 2;
+    string namespace = 1;
+    string name = 2;
+    Action action = 3;
 
     oneof options {
         // used by create or update

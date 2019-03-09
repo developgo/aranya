@@ -96,9 +96,9 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 
 	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
-		connectivityManager = connectivitySrv.NewGrpcConnectivity(nodeObj.Name)
+		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
 	} else {
-		connectivityManager = connectivitySrv.NewMqttSrv(nodeObj.Name)
+		connectivityManager = connectivitySrv.NewMqttManager(nodeObj.Name)
 	}
 
 	podManager := pod.NewManager(podInformer.Lister(), basicPodManager, connectivityManager)
@@ -218,7 +218,7 @@ func (n *Node) Start() error {
 	if n.grpcListener != nil {
 		n.grpcSrv = grpc.NewServer()
 
-		connectivity.RegisterConnectivityServer(n.grpcSrv, n.connectivityManager.(*connectivitySrv.GrpcSrv))
+		connectivity.RegisterConnectivityServer(n.grpcSrv, n.connectivityManager.(*connectivitySrv.GrpcManager))
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {

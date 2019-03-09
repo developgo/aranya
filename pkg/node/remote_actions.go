@@ -10,14 +10,14 @@ import (
 func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
 		n.connectivityManager.WaitUntilDeviceConnected()
-		msgCh := n.connectivityManager.ConsumeOrphanedMessage()
+		msgCh := n.connectivityManager.ConsumeGlobalMsg()
 		for msg := range msgCh {
 			switch msg.GetMsg().(type) {
 			case *connectivity.Msg_NodeInfo:
 				nodeInfo := msg.GetNodeInfo()
 				// update node info
 				newNode := &corev1.Node{}
-				if err := newNode.Unmarshal(nodeInfo.GetNodev1()); err != nil {
+				if err := newNode.Unmarshal(nodeInfo.GetNodeV1()); err != nil {
 					n.log.Error(err, "unmarshal device status failed")
 					continue
 				}
@@ -38,7 +38,7 @@ func (n *Node) InitializeRemoteDevice() {
 			case *connectivity.Msg_PodInfo:
 				podInfo := msg.GetPodInfo()
 				pod := &corev1.Pod{}
-				if err := pod.Unmarshal(podInfo.GetPodv1()); err != nil {
+				if err := pod.Unmarshal(podInfo.GetPodV1()); err != nil {
 					n.log.Error(err, "unmarshal pod status failed")
 				}
 			case *connectivity.Msg_PodData:

@@ -6,20 +6,18 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewMqttSrv(name string) *MqttSrv {
-	return &MqttSrv{}
+func NewMqttManager(name string) Interface {
+	return &MqttSrv{
+		baseServer: newBaseServer(name),
+	}
 }
 
 type MqttSrv struct {
-}
-
-func (m *MqttSrv) ConsumeOrphanedMessage() <-chan *connectivity.Msg {
-	return nil
-}
-
-func (m *MqttSrv) WaitUntilDeviceConnected() {
+	baseServer
 }
 
 func (m *MqttSrv) PostCmd(c *connectivity.Cmd, timeout time.Duration) (ch <-chan *connectivity.Msg, err error) {
-	return nil, ErrDeviceNotConnected
+	return m.baseServer.onPostCmd(c, timeout, func(c *connectivity.Cmd) error {
+		return nil
+	})
 }

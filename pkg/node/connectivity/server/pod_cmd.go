@@ -8,17 +8,15 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewPodCreateOrUpdateCmd(pod *corev1.Pod) *connectivity.Cmd {
-	podSpecBytes, _ := pod.Status.Marshal()
+func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.PodSpec) *connectivity.Cmd {
+	podSpecBytes, _ := podSpec.Marshal()
 
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: pod.Namespace,
-					Name:      pod.Name,
-				},
-				Action: connectivity.PodCmd_CreateOrUpdate,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_CreateOrUpdate,
 				Options: &connectivity.PodCmd_CreateOptions{
 					CreateOptions: &connectivity.PodCreateOptions{
 						PodSpec: &connectivity.PodCreateOptions_PodSpecV1{
@@ -35,11 +33,9 @@ func NewPodDeleteCmd(namespace, name string, graceTime time.Duration) *connectiv
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_Delete,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_Delete,
 				Options: &connectivity.PodCmd_DeleteOptions{
 					DeleteOptions: &connectivity.PodDeleteOptions{
 						GraceTime: int64(graceTime),
@@ -54,11 +50,9 @@ func NewPodListCmd(namespace, name string) *connectivity.Cmd {
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_List,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_List,
 				Options: &connectivity.PodCmd_ListOptions{
 					ListOptions: &connectivity.PodListOptions{},
 				},
@@ -67,17 +61,15 @@ func NewPodListCmd(namespace, name string) *connectivity.Cmd {
 	}
 }
 
-func NewPodExecCmd(namespace, name string, options corev1.PodExecOptions) *connectivity.Cmd {
+func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) *connectivity.Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_Exec,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_Exec,
 				Options: &connectivity.PodCmd_ExecOptions{
 					ExecOptions: &connectivity.PodExecOptions{
 						ExecOptions: &connectivity.PodExecOptions_ExecOptionsV1{
@@ -96,11 +88,9 @@ func NewPodAttachCmd(namespace, name string, options corev1.PodExecOptions) *con
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_Attach,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_Attach,
 				Options: &connectivity.PodCmd_ExecOptions{
 					ExecOptions: &connectivity.PodExecOptions{
 						ExecOptions: &connectivity.PodExecOptions_ExecOptionsV1{
@@ -119,11 +109,9 @@ func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *c
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_Log,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_Log,
 				Options: &connectivity.PodCmd_LogOptions{
 					LogOptions: &connectivity.PodLogOptions{
 						LogOptions: &connectivity.PodLogOptions_LogOptionsV1{
@@ -142,11 +130,9 @@ func NewPodPortForwardCmd(namespace, name string, options corev1.PodPortForwardO
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Id: &connectivity.PodIdentity{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Action: connectivity.PodCmd_PortForward,
+				Namespace: namespace,
+				Name:      name,
+				Action:    connectivity.PodCmd_PortForward,
 				Options: &connectivity.PodCmd_PortForwardOptions{
 					PortForwardOptions: &connectivity.PodPortForwardOptions{
 						PortforwardOptions: &connectivity.PodPortForwardOptions_PortforwardOptionsV1{
@@ -159,7 +145,7 @@ func NewPodPortForwardCmd(namespace, name string, options corev1.PodPortForwardO
 	}
 }
 
-func NewPodDataCmd(sid uint64, completed bool, data []byte) *connectivity.Cmd {
+func NewContainerStdinDataCmd(sid uint64, completed bool, data []byte) *connectivity.Cmd {
 	return &connectivity.Cmd{
 		SessionId: sid,
 		Cmd: &connectivity.Cmd_PodCmd{
@@ -176,7 +162,7 @@ func NewPodDataCmd(sid uint64, completed bool, data []byte) *connectivity.Cmd {
 	}
 }
 
-func NewPodResizeCmd(sid uint64, cols uint16, rows uint16) *connectivity.Cmd {
+func NewContainerResizeCmd(sid uint64, cols uint16, rows uint16) *connectivity.Cmd {
 	return &connectivity.Cmd{
 		SessionId: sid,
 		Cmd: &connectivity.Cmd_PodCmd{

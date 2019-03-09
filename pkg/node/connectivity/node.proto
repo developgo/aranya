@@ -5,7 +5,7 @@ package connectivity;
 message NodeInfo {
     oneof node {
         // protobuf bytes of corev1.Node
-        bytes nodev1 = 1;
+        bytes node_v1 = 1;
     }
 }
 

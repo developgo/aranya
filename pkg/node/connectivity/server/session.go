@@ -84,7 +84,7 @@ func (s *sessionManager) del(sid uint64) {
 	}
 }
 
-func newSessionMap() *sessionManager {
+func newSessionManager() *sessionManager {
 	return &sessionManager{
 		m: make(map[uint64]*session),
 	}
