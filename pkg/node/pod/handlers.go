@@ -32,6 +32,7 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 		log.Error(err, "Get container log failed", "Pod.Namespace", namespace, "Pod.Name", podID, "Container.Name", container)
 		return
 	}
+	defer func() { _ = logReader.Close() }()
 
 	// read until EOF (err = nil)
 	w.WriteHeader(http.StatusOK)

@@ -9,6 +9,26 @@ service Connectivity {
     rpc Sync (stream Msg) returns (stream Cmd);
 }
 
+message Ack {
+    oneof hash {
+        // sha256 hex string
+        string sha256 = 1;
+    }
+}
+
+message Data {
+    enum Kind {
+        STDOUT = 0;
+        STDERR = 1;
+        OTHER = 2;
+    }
+
+    Kind kind = 1;
+
+    bytes data = 11;
+}
+
+
 message Msg {
     uint64 session_id = 1;
     bool completed = 2;
@@ -18,7 +38,9 @@ message Msg {
         // used by list and device active pod update
         PodInfo pod_info = 12;
         // messages
-        PodData pod_data = 13;
+        Data pod_data = 13;
+        // ack info
+        Ack ack = 14;
     }
 }
 

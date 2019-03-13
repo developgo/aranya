@@ -18,8 +18,8 @@ func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.PodSpec) *co
 				Name:      name,
 				Action:    connectivity.PodCmd_CreateOrUpdate,
 				Options: &connectivity.PodCmd_CreateOptions{
-					CreateOptions: &connectivity.PodCreateOptions{
-						PodSpec: &connectivity.PodCreateOptions_PodSpecV1{
+					CreateOptions: &connectivity.CreateOptions{
+						PodSpec: &connectivity.CreateOptions_PodSpecV1{
 							PodSpecV1: podSpecBytes,
 						},
 					},
@@ -37,7 +37,7 @@ func NewPodDeleteCmd(namespace, name string, graceTime time.Duration) *connectiv
 				Name:      name,
 				Action:    connectivity.PodCmd_Delete,
 				Options: &connectivity.PodCmd_DeleteOptions{
-					DeleteOptions: &connectivity.PodDeleteOptions{
+					DeleteOptions: &connectivity.DeleteOptions{
 						GraceTime: int64(graceTime),
 					},
 				},
@@ -54,7 +54,7 @@ func NewPodListCmd(namespace, name string) *connectivity.Cmd {
 				Name:      name,
 				Action:    connectivity.PodCmd_List,
 				Options: &connectivity.PodCmd_ListOptions{
-					ListOptions: &connectivity.PodListOptions{},
+					ListOptions: &connectivity.ListOptions{},
 				},
 			},
 		},
@@ -71,8 +71,8 @@ func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) 
 				Name:      name,
 				Action:    connectivity.PodCmd_Exec,
 				Options: &connectivity.PodCmd_ExecOptions{
-					ExecOptions: &connectivity.PodExecOptions{
-						ExecOptions: &connectivity.PodExecOptions_ExecOptionsV1{
+					ExecOptions: &connectivity.ExecOptions{
+						ExecOptions: &connectivity.ExecOptions_ExecOptionsV1{
 							ExecOptionsV1: optionBytes,
 						},
 					},
@@ -82,7 +82,7 @@ func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) 
 	}
 }
 
-func NewPodAttachCmd(namespace, name string, options corev1.PodExecOptions) *connectivity.Cmd {
+func NewContainerAttachCmd(namespace, name string, options corev1.PodExecOptions) *connectivity.Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &connectivity.Cmd{
@@ -92,8 +92,8 @@ func NewPodAttachCmd(namespace, name string, options corev1.PodExecOptions) *con
 				Name:      name,
 				Action:    connectivity.PodCmd_Attach,
 				Options: &connectivity.PodCmd_ExecOptions{
-					ExecOptions: &connectivity.PodExecOptions{
-						ExecOptions: &connectivity.PodExecOptions_ExecOptionsV1{
+					ExecOptions: &connectivity.ExecOptions{
+						ExecOptions: &connectivity.ExecOptions_ExecOptionsV1{
 							ExecOptionsV1: optionBytes,
 						},
 					},
@@ -113,8 +113,8 @@ func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *c
 				Name:      name,
 				Action:    connectivity.PodCmd_Log,
 				Options: &connectivity.PodCmd_LogOptions{
-					LogOptions: &connectivity.PodLogOptions{
-						LogOptions: &connectivity.PodLogOptions_LogOptionsV1{
+					LogOptions: &connectivity.LogOptions{
+						LogOptions: &connectivity.LogOptions_LogOptionsV1{
 							LogOptionsV1: optionBytes,
 						},
 					},
@@ -124,7 +124,7 @@ func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *c
 	}
 }
 
-func NewPodPortForwardCmd(namespace, name string, options corev1.PodPortForwardOptions) *connectivity.Cmd {
+func NewPortForwardCmd(namespace, name string, options corev1.PodPortForwardOptions) *connectivity.Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &connectivity.Cmd{
@@ -134,8 +134,8 @@ func NewPodPortForwardCmd(namespace, name string, options corev1.PodPortForwardO
 				Name:      name,
 				Action:    connectivity.PodCmd_PortForward,
 				Options: &connectivity.PodCmd_PortForwardOptions{
-					PortForwardOptions: &connectivity.PodPortForwardOptions{
-						PortforwardOptions: &connectivity.PodPortForwardOptions_PortforwardOptionsV1{
+					PortForwardOptions: &connectivity.PortForwardOptions{
+						PortForwardOptions: &connectivity.PortForwardOptions_PortforwardOptionsV1{
 							PortforwardOptionsV1: optionBytes,
 						},
 					},
@@ -145,15 +145,14 @@ func NewPodPortForwardCmd(namespace, name string, options corev1.PodPortForwardO
 	}
 }
 
-func NewContainerStdinDataCmd(sid uint64, completed bool, data []byte) *connectivity.Cmd {
+func NewContainerInputCmd(sid uint64, data []byte) *connectivity.Cmd {
 	return &connectivity.Cmd{
 		SessionId: sid,
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Action: connectivity.PodCmd_Data,
-				Options: &connectivity.PodCmd_DataOptions{
-					DataOptions: &connectivity.PodDataOptions{
-						Completed: completed,
+				Action: connectivity.PodCmd_Input,
+				Options: &connectivity.PodCmd_InputOptions{
+					InputOptions: &connectivity.InputOptions{
 						Data:      data,
 					},
 				},
@@ -162,7 +161,7 @@ func NewContainerStdinDataCmd(sid uint64, completed bool, data []byte) *connecti
 	}
 }
 
-func NewContainerResizeCmd(sid uint64, cols uint16, rows uint16) *connectivity.Cmd {
+func NewContainerTtyResizeCmd(sid uint64, cols uint16, rows uint16) *connectivity.Cmd {
 	return &connectivity.Cmd{
 		SessionId: sid,
 		Cmd: &connectivity.Cmd_PodCmd{

@@ -18,6 +18,7 @@ const (
 
 var (
 	ErrDeviceNotConnected = errors.New("error device not connected ")
+	ErrSessionNotValid    = errors.New("session must present in this Cmd ")
 )
 
 type Interface interface {
@@ -106,10 +107,36 @@ func (s baseServer) onPostCmd(cmd *connectivity.Cmd, timeout time.Duration, send
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	cmd.SessionId, ch = s.sessions.add(cmd, timeout)
+	var (
+		sid uint64
+		sessionMustPresent bool
+	)
+
+	switch c := cmd.GetCmd().(type) {
+	case *connectivity.Cmd_PodCmd:
+		switch c.PodCmd.GetAction() {
+		case connectivity.PodCmd_ResizeTty, connectivity.PodCmd_Input:
+			sessionMustPresent = true
+			if cmd.GetSessionId() == 0 {
+				return nil, ErrSessionNotValid
+			}
+		}
+	}
+
+	sid, ch = s.sessions.add(cmd, timeout)
+	defer func() {
+		if err != nil {
+			s.sessions.del(sid)
+		}
+	}()
+
+	if sessionMustPresent && sid != cmd.GetSessionId() {
+		return nil, ErrSessionNotValid
+	}
+
+	cmd.SessionId = sid
 
 	if err := sendCmd(cmd); err != nil {
-		s.sessions.del(cmd.SessionId)
 		return nil, err
 	}
 

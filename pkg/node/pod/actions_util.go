@@ -37,17 +37,15 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		s.Split(util.ScanAnyAvail)
 
 		go func() {
-			for s.Scan() {
-				inputCh <- connectivitySrv.NewContainerStdinDataCmd(sid, false, s.Bytes())
-			}
+			defer close(inputCh)
 
-			inputCh <- connectivitySrv.NewContainerStdinDataCmd(sid, true, nil)
+			for s.Scan() {
+				inputCh <- connectivitySrv.NewContainerInputCmd(sid, s.Bytes())
+			}
 		}()
 	}
 
 	defer func() {
-		close(inputCh)
-
 		// close out and stderr with best effort
 		_ = out.Close()
 
@@ -70,30 +68,32 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
-			targetOutput := out
-
 			// only PodData will be received in this session
-			data := msg.GetPodData()
-			switch data.GetKind() {
-			case connectivity.PodData_OTHER, connectivity.PodData_STDOUT:
-				targetOutput = out
-			case connectivity.PodData_STDERR:
-				if stderr != nil {
-					targetOutput = stderr
+			switch msg.GetMsg().(type) {
+			case *connectivity.Msg_PodData:
+				targetOutput := out
+				data := msg.GetPodData()
+				switch data.GetKind() {
+				case connectivity.Data_OTHER, connectivity.Data_STDOUT:
+					targetOutput = out
+				case connectivity.Data_STDERR:
+					if stderr != nil {
+						targetOutput = stderr
+					}
+				default:
+					return fmt.Errorf("data kind unknown")
 				}
-			default:
-				return fmt.Errorf("data kind unknown")
-			}
 
-			_, err = targetOutput.Write(data.GetData())
-			if err != nil {
-				return err
+				_, err = targetOutput.Write(data.GetData())
+				if err != nil {
+					return err
+				}
 			}
 		case size, more := <-resizeCh:
 			if !more {
 				return nil
 			}
-			resizeCmd := connectivitySrv.NewContainerResizeCmd(sid, size.Width, size.Height)
+			resizeCmd := connectivitySrv.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.remoteManager.PostCmd(resizeCmd, 0)
 			if err != nil {
 				return err

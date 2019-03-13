@@ -17,7 +17,7 @@ func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GrpcManager, stub
 	srv := grpc.NewServer()
 	connectivity.RegisterConnectivityServer(srv, connectivitySrv)
 
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}

@@ -21,7 +21,7 @@ func WithPodListHandler(f PodListHandler) Option {
 	}
 }
 
-func WithPodPortForwardHandler(f PodPortForwardHandler) Option {
+func WithPortForwardHandler(f PortForwardHandler) Option {
 	return func(c *baseClient) error {
 		c.podPortForwardHandler = f
 		return nil

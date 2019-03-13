@@ -24,13 +24,11 @@ func (s *sessionManager) add(cmd *connectivity.Cmd, timeout time.Duration) (sid 
 	defer s.mu.Unlock()
 
 	sid = cmd.SessionId
-	if sid == 0 {
-		sid = *(*uint64)(unsafe.Pointer(&cmd))
-	}
-
 	if oldSession, ok := s.m[sid]; ok {
 		ch = oldSession.msgCh
 	} else {
+		sid = *(*uint64)(unsafe.Pointer(&cmd))
+
 		ch = make(chan *connectivity.Msg, 1)
 		s.m[sid] = &session{
 			msgCh:   ch,

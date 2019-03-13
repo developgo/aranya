@@ -18,88 +18,78 @@ message PodCmd {
         Attach = 4;
         Log = 5;
         PortForward = 6;
-        Data = 7;
+        Input = 7;
         ResizeTty = 8;
     }
 
+    // pod namespace
     string namespace = 1;
+    // pod name
     string name = 2;
+    // action type
     Action action = 3;
 
+    // options for action
     oneof options {
         // used by create or update
-        PodCreateOptions create_options = 11;
+        CreateOptions create_options = 11;
         // used by delete
-        PodDeleteOptions delete_options = 12;
+        DeleteOptions delete_options = 12;
         // used by list
-        PodListOptions list_options = 13;
+        ListOptions list_options = 13;
         // used by log
-        PodLogOptions log_options = 14;
+        LogOptions log_options = 14;
         // used by exec and attach
-        PodExecOptions exec_options = 15;
+        ExecOptions exec_options = 15;
         // used by port forward
-        PodPortForwardOptions port_forward_options = 16;
-        // used in exec, attach, portforward session
-        PodDataOptions data_options = 17;
+        PortForwardOptions port_forward_options = 16;
+        // used in exec, attach, port_forward session
+        InputOptions input_options = 17;
         // used in exec, attach session
         TtyResizeOptions resize_options = 18;
     }
 }
 
-message PodCreateOptions {
+message CreateOptions {
     oneof pod_spec {
         // protobuf bytes of corev1.PodSpec
         bytes pod_spec_v1 = 1;
     }
 }
 
-message PodDeleteOptions {
+message DeleteOptions {
     int64 grace_time = 1;
 }
 
-message PodListOptions {
+message ListOptions {
 }
 
-message PodLogOptions {
+message LogOptions {
     oneof log_options {
-        // protobuf bytes of corev1.PodLogOptions
+        // protobuf bytes of corev1.LogOptions
         bytes log_options_v1 = 1;
     }
 }
 
-message PodExecOptions {
+message ExecOptions {
     oneof exec_options {
-        // protobuf bytes of corev1.PodExecOptions
+        // protobuf bytes of corev1.ExecOptions
         bytes exec_options_v1 = 1;
     }
 }
 
-message PodPortForwardOptions {
-    oneof portforward_options {
-        // protobuf bytes of corev1.PodPortForwardOptions
+message PortForwardOptions {
+    oneof port_forward_options {
+        // protobuf bytes of corev1.PortForwardOptions
         bytes portforward_options_v1 = 1;
     }
 }
 
-message PodDataOptions {
-    bool completed = 1;
-
-    bytes data = 11;
+message InputOptions {
+    bytes data = 1;
 }
 
 message TtyResizeOptions {
     uint32 cols = 1;
     uint32 rows = 2;
-}
-
-message PodData {
-    enum Kind {
-        STDOUT = 0;
-        STDERR = 1;
-        OTHER = 2;
-    }
-
-    Kind kind = 1;
-
-    bytes data = 11;
 }

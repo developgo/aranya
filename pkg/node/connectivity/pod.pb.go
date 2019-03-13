@@ -28,7 +28,7 @@ const (
 	PodCmd_Attach         PodCmd_Action = 4
 	PodCmd_Log            PodCmd_Action = 5
 	PodCmd_PortForward    PodCmd_Action = 6
-	PodCmd_Data           PodCmd_Action = 7
+	PodCmd_Input          PodCmd_Action = 7
 	PodCmd_ResizeTty      PodCmd_Action = 8
 )
 
@@ -40,7 +40,7 @@ var PodCmd_Action_name = map[int32]string{
 	4: "Attach",
 	5: "Log",
 	6: "PortForward",
-	7: "Data",
+	7: "Input",
 	8: "ResizeTty",
 }
 var PodCmd_Action_value = map[string]int32{
@@ -51,7 +51,7 @@ var PodCmd_Action_value = map[string]int32{
 	"Attach":         4,
 	"Log":            5,
 	"PortForward":    6,
-	"Data":           7,
+	"Input":          7,
 	"ResizeTty":      8,
 }
 
@@ -59,33 +59,7 @@ func (x PodCmd_Action) String() string {
 	return proto.EnumName(PodCmd_Action_name, int32(x))
 }
 func (PodCmd_Action) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{1, 0}
-}
-
-type PodData_Kind int32
-
-const (
-	PodData_STDOUT PodData_Kind = 0
-	PodData_STDERR PodData_Kind = 1
-	PodData_OTHER  PodData_Kind = 2
-)
-
-var PodData_Kind_name = map[int32]string{
-	0: "STDOUT",
-	1: "STDERR",
-	2: "OTHER",
-}
-var PodData_Kind_value = map[string]int32{
-	"STDOUT": 0,
-	"STDERR": 1,
-	"OTHER":  2,
-}
-
-func (x PodData_Kind) String() string {
-	return proto.EnumName(PodData_Kind_name, int32(x))
-}
-func (PodData_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{10, 0}
+	return fileDescriptor_pod_70828a3d003c07bd, []int{1, 0}
 }
 
 type PodInfo struct {
@@ -101,7 +75,7 @@ func (m *PodInfo) Reset()         { *m = PodInfo{} }
 func (m *PodInfo) String() string { return proto.CompactTextString(m) }
 func (*PodInfo) ProtoMessage()    {}
 func (*PodInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{0}
+	return fileDescriptor_pod_70828a3d003c07bd, []int{0}
 }
 func (m *PodInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PodInfo.Unmarshal(m, b)
@@ -197,9 +171,14 @@ func _PodInfo_OneofSizer(msg proto.Message) (n int) {
 }
 
 type PodCmd struct {
-	Namespace string        `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Name      string        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Action    PodCmd_Action `protobuf:"varint,3,opt,name=action,proto3,enum=connectivity.PodCmd_Action" json:"action,omitempty"`
+	// pod namespace
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// pod name
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// action type
+	Action PodCmd_Action `protobuf:"varint,3,opt,name=action,proto3,enum=connectivity.PodCmd_Action" json:"action,omitempty"`
+	// options for action
+	//
 	// Types that are valid to be assigned to Options:
 	//	*PodCmd_CreateOptions
 	//	*PodCmd_DeleteOptions
@@ -207,7 +186,7 @@ type PodCmd struct {
 	//	*PodCmd_LogOptions
 	//	*PodCmd_ExecOptions
 	//	*PodCmd_PortForwardOptions
-	//	*PodCmd_DataOptions
+	//	*PodCmd_InputOptions
 	//	*PodCmd_ResizeOptions
 	Options              isPodCmd_Options `protobuf_oneof:"options"`
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
@@ -219,7 +198,7 @@ func (m *PodCmd) Reset()         { *m = PodCmd{} }
 func (m *PodCmd) String() string { return proto.CompactTextString(m) }
 func (*PodCmd) ProtoMessage()    {}
 func (*PodCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{1}
+	return fileDescriptor_pod_70828a3d003c07bd, []int{1}
 }
 func (m *PodCmd) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PodCmd.Unmarshal(m, b)
@@ -265,31 +244,31 @@ type isPodCmd_Options interface {
 }
 
 type PodCmd_CreateOptions struct {
-	CreateOptions *PodCreateOptions `protobuf:"bytes,11,opt,name=create_options,json=createOptions,proto3,oneof"`
+	CreateOptions *CreateOptions `protobuf:"bytes,11,opt,name=create_options,json=createOptions,proto3,oneof"`
 }
 
 type PodCmd_DeleteOptions struct {
-	DeleteOptions *PodDeleteOptions `protobuf:"bytes,12,opt,name=delete_options,json=deleteOptions,proto3,oneof"`
+	DeleteOptions *DeleteOptions `protobuf:"bytes,12,opt,name=delete_options,json=deleteOptions,proto3,oneof"`
 }
 
 type PodCmd_ListOptions struct {
-	ListOptions *PodListOptions `protobuf:"bytes,13,opt,name=list_options,json=listOptions,proto3,oneof"`
+	ListOptions *ListOptions `protobuf:"bytes,13,opt,name=list_options,json=listOptions,proto3,oneof"`
 }
 
 type PodCmd_LogOptions struct {
-	LogOptions *PodLogOptions `protobuf:"bytes,14,opt,name=log_options,json=logOptions,proto3,oneof"`
+	LogOptions *LogOptions `protobuf:"bytes,14,opt,name=log_options,json=logOptions,proto3,oneof"`
 }
 
 type PodCmd_ExecOptions struct {
-	ExecOptions *PodExecOptions `protobuf:"bytes,15,opt,name=exec_options,json=execOptions,proto3,oneof"`
+	ExecOptions *ExecOptions `protobuf:"bytes,15,opt,name=exec_options,json=execOptions,proto3,oneof"`
 }
 
 type PodCmd_PortForwardOptions struct {
-	PortForwardOptions *PodPortForwardOptions `protobuf:"bytes,16,opt,name=port_forward_options,json=portForwardOptions,proto3,oneof"`
+	PortForwardOptions *PortForwardOptions `protobuf:"bytes,16,opt,name=port_forward_options,json=portForwardOptions,proto3,oneof"`
 }
 
-type PodCmd_DataOptions struct {
-	DataOptions *PodDataOptions `protobuf:"bytes,17,opt,name=data_options,json=dataOptions,proto3,oneof"`
+type PodCmd_InputOptions struct {
+	InputOptions *InputOptions `protobuf:"bytes,17,opt,name=input_options,json=inputOptions,proto3,oneof"`
 }
 
 type PodCmd_ResizeOptions struct {
@@ -308,7 +287,7 @@ func (*PodCmd_ExecOptions) isPodCmd_Options() {}
 
 func (*PodCmd_PortForwardOptions) isPodCmd_Options() {}
 
-func (*PodCmd_DataOptions) isPodCmd_Options() {}
+func (*PodCmd_InputOptions) isPodCmd_Options() {}
 
 func (*PodCmd_ResizeOptions) isPodCmd_Options() {}
 
@@ -319,51 +298,51 @@ func (m *PodCmd) GetOptions() isPodCmd_Options {
 	return nil
 }
 
-func (m *PodCmd) GetCreateOptions() *PodCreateOptions {
+func (m *PodCmd) GetCreateOptions() *CreateOptions {
 	if x, ok := m.GetOptions().(*PodCmd_CreateOptions); ok {
 		return x.CreateOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetDeleteOptions() *PodDeleteOptions {
+func (m *PodCmd) GetDeleteOptions() *DeleteOptions {
 	if x, ok := m.GetOptions().(*PodCmd_DeleteOptions); ok {
 		return x.DeleteOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetListOptions() *PodListOptions {
+func (m *PodCmd) GetListOptions() *ListOptions {
 	if x, ok := m.GetOptions().(*PodCmd_ListOptions); ok {
 		return x.ListOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetLogOptions() *PodLogOptions {
+func (m *PodCmd) GetLogOptions() *LogOptions {
 	if x, ok := m.GetOptions().(*PodCmd_LogOptions); ok {
 		return x.LogOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetExecOptions() *PodExecOptions {
+func (m *PodCmd) GetExecOptions() *ExecOptions {
 	if x, ok := m.GetOptions().(*PodCmd_ExecOptions); ok {
 		return x.ExecOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetPortForwardOptions() *PodPortForwardOptions {
+func (m *PodCmd) GetPortForwardOptions() *PortForwardOptions {
 	if x, ok := m.GetOptions().(*PodCmd_PortForwardOptions); ok {
 		return x.PortForwardOptions
 	}
 	return nil
 }
 
-func (m *PodCmd) GetDataOptions() *PodDataOptions {
-	if x, ok := m.GetOptions().(*PodCmd_DataOptions); ok {
-		return x.DataOptions
+func (m *PodCmd) GetInputOptions() *InputOptions {
+	if x, ok := m.GetOptions().(*PodCmd_InputOptions); ok {
+		return x.InputOptions
 	}
 	return nil
 }
@@ -384,7 +363,7 @@ func (*PodCmd) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error,
 		(*PodCmd_LogOptions)(nil),
 		(*PodCmd_ExecOptions)(nil),
 		(*PodCmd_PortForwardOptions)(nil),
-		(*PodCmd_DataOptions)(nil),
+		(*PodCmd_InputOptions)(nil),
 		(*PodCmd_ResizeOptions)(nil),
 	}
 }
@@ -423,9 +402,9 @@ func _PodCmd_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.PortForwardOptions); err != nil {
 			return err
 		}
-	case *PodCmd_DataOptions:
+	case *PodCmd_InputOptions:
 		b.EncodeVarint(17<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.DataOptions); err != nil {
+		if err := b.EncodeMessage(x.InputOptions); err != nil {
 			return err
 		}
 	case *PodCmd_ResizeOptions:
@@ -447,7 +426,7 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodCreateOptions)
+		msg := new(CreateOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_CreateOptions{msg}
 		return true, err
@@ -455,7 +434,7 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodDeleteOptions)
+		msg := new(DeleteOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_DeleteOptions{msg}
 		return true, err
@@ -463,7 +442,7 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodListOptions)
+		msg := new(ListOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_ListOptions{msg}
 		return true, err
@@ -471,7 +450,7 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodLogOptions)
+		msg := new(LogOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_LogOptions{msg}
 		return true, err
@@ -479,7 +458,7 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodExecOptions)
+		msg := new(ExecOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_ExecOptions{msg}
 		return true, err
@@ -487,17 +466,17 @@ func _PodCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer)
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodPortForwardOptions)
+		msg := new(PortForwardOptions)
 		err := b.DecodeMessage(msg)
 		m.Options = &PodCmd_PortForwardOptions{msg}
 		return true, err
-	case 17: // options.data_options
+	case 17: // options.input_options
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PodDataOptions)
+		msg := new(InputOptions)
 		err := b.DecodeMessage(msg)
-		m.Options = &PodCmd_DataOptions{msg}
+		m.Options = &PodCmd_InputOptions{msg}
 		return true, err
 	case 18: // options.resize_options
 		if wire != proto.WireBytes {
@@ -546,8 +525,8 @@ func _PodCmd_OneofSizer(msg proto.Message) (n int) {
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *PodCmd_DataOptions:
-		s := proto.Size(x.DataOptions)
+	case *PodCmd_InputOptions:
+		s := proto.Size(x.InputOptions)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -563,104 +542,104 @@ func _PodCmd_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PodCreateOptions struct {
+type CreateOptions struct {
 	// Types that are valid to be assigned to PodSpec:
-	//	*PodCreateOptions_PodSpecV1
-	PodSpec              isPodCreateOptions_PodSpec `protobuf_oneof:"pod_spec"`
-	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
-	XXX_unrecognized     []byte                     `json:"-"`
-	XXX_sizecache        int32                      `json:"-"`
+	//	*CreateOptions_PodSpecV1
+	PodSpec              isCreateOptions_PodSpec `protobuf_oneof:"pod_spec"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
-func (m *PodCreateOptions) Reset()         { *m = PodCreateOptions{} }
-func (m *PodCreateOptions) String() string { return proto.CompactTextString(m) }
-func (*PodCreateOptions) ProtoMessage()    {}
-func (*PodCreateOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{2}
+func (m *CreateOptions) Reset()         { *m = CreateOptions{} }
+func (m *CreateOptions) String() string { return proto.CompactTextString(m) }
+func (*CreateOptions) ProtoMessage()    {}
+func (*CreateOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{2}
 }
-func (m *PodCreateOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodCreateOptions.Unmarshal(m, b)
+func (m *CreateOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateOptions.Unmarshal(m, b)
 }
-func (m *PodCreateOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodCreateOptions.Marshal(b, m, deterministic)
+func (m *CreateOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodCreateOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodCreateOptions.Merge(dst, src)
+func (dst *CreateOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateOptions.Merge(dst, src)
 }
-func (m *PodCreateOptions) XXX_Size() int {
-	return xxx_messageInfo_PodCreateOptions.Size(m)
+func (m *CreateOptions) XXX_Size() int {
+	return xxx_messageInfo_CreateOptions.Size(m)
 }
-func (m *PodCreateOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodCreateOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodCreateOptions proto.InternalMessageInfo
-
-type isPodCreateOptions_PodSpec interface {
-	isPodCreateOptions_PodSpec()
+func (m *CreateOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateOptions.DiscardUnknown(m)
 }
 
-type PodCreateOptions_PodSpecV1 struct {
+var xxx_messageInfo_CreateOptions proto.InternalMessageInfo
+
+type isCreateOptions_PodSpec interface {
+	isCreateOptions_PodSpec()
+}
+
+type CreateOptions_PodSpecV1 struct {
 	PodSpecV1 []byte `protobuf:"bytes,1,opt,name=pod_spec_v1,json=podSpecV1,proto3,oneof"`
 }
 
-func (*PodCreateOptions_PodSpecV1) isPodCreateOptions_PodSpec() {}
+func (*CreateOptions_PodSpecV1) isCreateOptions_PodSpec() {}
 
-func (m *PodCreateOptions) GetPodSpec() isPodCreateOptions_PodSpec {
+func (m *CreateOptions) GetPodSpec() isCreateOptions_PodSpec {
 	if m != nil {
 		return m.PodSpec
 	}
 	return nil
 }
 
-func (m *PodCreateOptions) GetPodSpecV1() []byte {
-	if x, ok := m.GetPodSpec().(*PodCreateOptions_PodSpecV1); ok {
+func (m *CreateOptions) GetPodSpecV1() []byte {
+	if x, ok := m.GetPodSpec().(*CreateOptions_PodSpecV1); ok {
 		return x.PodSpecV1
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*PodCreateOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _PodCreateOptions_OneofMarshaler, _PodCreateOptions_OneofUnmarshaler, _PodCreateOptions_OneofSizer, []interface{}{
-		(*PodCreateOptions_PodSpecV1)(nil),
+func (*CreateOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _CreateOptions_OneofMarshaler, _CreateOptions_OneofUnmarshaler, _CreateOptions_OneofSizer, []interface{}{
+		(*CreateOptions_PodSpecV1)(nil),
 	}
 }
 
-func _PodCreateOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*PodCreateOptions)
+func _CreateOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*CreateOptions)
 	// pod_spec
 	switch x := m.PodSpec.(type) {
-	case *PodCreateOptions_PodSpecV1:
+	case *CreateOptions_PodSpecV1:
 		b.EncodeVarint(1<<3 | proto.WireBytes)
 		b.EncodeRawBytes(x.PodSpecV1)
 	case nil:
 	default:
-		return fmt.Errorf("PodCreateOptions.PodSpec has unexpected type %T", x)
+		return fmt.Errorf("CreateOptions.PodSpec has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _PodCreateOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*PodCreateOptions)
+func _CreateOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*CreateOptions)
 	switch tag {
 	case 1: // pod_spec.pod_spec_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.PodSpec = &PodCreateOptions_PodSpecV1{x}
+		m.PodSpec = &CreateOptions_PodSpecV1{x}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _PodCreateOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*PodCreateOptions)
+func _CreateOptions_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*CreateOptions)
 	// pod_spec
 	switch x := m.PodSpec.(type) {
-	case *PodCreateOptions_PodSpecV1:
+	case *CreateOptions_PodSpecV1:
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(len(x.PodSpecV1)))
 		n += len(x.PodSpecV1)
@@ -671,172 +650,172 @@ func _PodCreateOptions_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PodDeleteOptions struct {
+type DeleteOptions struct {
 	GraceTime            int64    `protobuf:"varint,1,opt,name=grace_time,json=graceTime,proto3" json:"grace_time,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *PodDeleteOptions) Reset()         { *m = PodDeleteOptions{} }
-func (m *PodDeleteOptions) String() string { return proto.CompactTextString(m) }
-func (*PodDeleteOptions) ProtoMessage()    {}
-func (*PodDeleteOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{3}
+func (m *DeleteOptions) Reset()         { *m = DeleteOptions{} }
+func (m *DeleteOptions) String() string { return proto.CompactTextString(m) }
+func (*DeleteOptions) ProtoMessage()    {}
+func (*DeleteOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{3}
 }
-func (m *PodDeleteOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodDeleteOptions.Unmarshal(m, b)
+func (m *DeleteOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DeleteOptions.Unmarshal(m, b)
 }
-func (m *PodDeleteOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodDeleteOptions.Marshal(b, m, deterministic)
+func (m *DeleteOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DeleteOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodDeleteOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodDeleteOptions.Merge(dst, src)
+func (dst *DeleteOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteOptions.Merge(dst, src)
 }
-func (m *PodDeleteOptions) XXX_Size() int {
-	return xxx_messageInfo_PodDeleteOptions.Size(m)
+func (m *DeleteOptions) XXX_Size() int {
+	return xxx_messageInfo_DeleteOptions.Size(m)
 }
-func (m *PodDeleteOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodDeleteOptions.DiscardUnknown(m)
+func (m *DeleteOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeleteOptions.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PodDeleteOptions proto.InternalMessageInfo
+var xxx_messageInfo_DeleteOptions proto.InternalMessageInfo
 
-func (m *PodDeleteOptions) GetGraceTime() int64 {
+func (m *DeleteOptions) GetGraceTime() int64 {
 	if m != nil {
 		return m.GraceTime
 	}
 	return 0
 }
 
-type PodListOptions struct {
+type ListOptions struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *PodListOptions) Reset()         { *m = PodListOptions{} }
-func (m *PodListOptions) String() string { return proto.CompactTextString(m) }
-func (*PodListOptions) ProtoMessage()    {}
-func (*PodListOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{4}
+func (m *ListOptions) Reset()         { *m = ListOptions{} }
+func (m *ListOptions) String() string { return proto.CompactTextString(m) }
+func (*ListOptions) ProtoMessage()    {}
+func (*ListOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{4}
 }
-func (m *PodListOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodListOptions.Unmarshal(m, b)
+func (m *ListOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListOptions.Unmarshal(m, b)
 }
-func (m *PodListOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodListOptions.Marshal(b, m, deterministic)
+func (m *ListOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodListOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodListOptions.Merge(dst, src)
+func (dst *ListOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListOptions.Merge(dst, src)
 }
-func (m *PodListOptions) XXX_Size() int {
-	return xxx_messageInfo_PodListOptions.Size(m)
+func (m *ListOptions) XXX_Size() int {
+	return xxx_messageInfo_ListOptions.Size(m)
 }
-func (m *PodListOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodListOptions.DiscardUnknown(m)
+func (m *ListOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListOptions.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PodListOptions proto.InternalMessageInfo
+var xxx_messageInfo_ListOptions proto.InternalMessageInfo
 
-type PodLogOptions struct {
+type LogOptions struct {
 	// Types that are valid to be assigned to LogOptions:
-	//	*PodLogOptions_LogOptionsV1
-	LogOptions           isPodLogOptions_LogOptions `protobuf_oneof:"log_options"`
-	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
-	XXX_unrecognized     []byte                     `json:"-"`
-	XXX_sizecache        int32                      `json:"-"`
+	//	*LogOptions_LogOptionsV1
+	LogOptions           isLogOptions_LogOptions `protobuf_oneof:"log_options"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
 }
 
-func (m *PodLogOptions) Reset()         { *m = PodLogOptions{} }
-func (m *PodLogOptions) String() string { return proto.CompactTextString(m) }
-func (*PodLogOptions) ProtoMessage()    {}
-func (*PodLogOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{5}
+func (m *LogOptions) Reset()         { *m = LogOptions{} }
+func (m *LogOptions) String() string { return proto.CompactTextString(m) }
+func (*LogOptions) ProtoMessage()    {}
+func (*LogOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{5}
 }
-func (m *PodLogOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodLogOptions.Unmarshal(m, b)
+func (m *LogOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LogOptions.Unmarshal(m, b)
 }
-func (m *PodLogOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodLogOptions.Marshal(b, m, deterministic)
+func (m *LogOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LogOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodLogOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodLogOptions.Merge(dst, src)
+func (dst *LogOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogOptions.Merge(dst, src)
 }
-func (m *PodLogOptions) XXX_Size() int {
-	return xxx_messageInfo_PodLogOptions.Size(m)
+func (m *LogOptions) XXX_Size() int {
+	return xxx_messageInfo_LogOptions.Size(m)
 }
-func (m *PodLogOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodLogOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodLogOptions proto.InternalMessageInfo
-
-type isPodLogOptions_LogOptions interface {
-	isPodLogOptions_LogOptions()
+func (m *LogOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogOptions.DiscardUnknown(m)
 }
 
-type PodLogOptions_LogOptionsV1 struct {
+var xxx_messageInfo_LogOptions proto.InternalMessageInfo
+
+type isLogOptions_LogOptions interface {
+	isLogOptions_LogOptions()
+}
+
+type LogOptions_LogOptionsV1 struct {
 	LogOptionsV1 []byte `protobuf:"bytes,1,opt,name=log_options_v1,json=logOptionsV1,proto3,oneof"`
 }
 
-func (*PodLogOptions_LogOptionsV1) isPodLogOptions_LogOptions() {}
+func (*LogOptions_LogOptionsV1) isLogOptions_LogOptions() {}
 
-func (m *PodLogOptions) GetLogOptions() isPodLogOptions_LogOptions {
+func (m *LogOptions) GetLogOptions() isLogOptions_LogOptions {
 	if m != nil {
 		return m.LogOptions
 	}
 	return nil
 }
 
-func (m *PodLogOptions) GetLogOptionsV1() []byte {
-	if x, ok := m.GetLogOptions().(*PodLogOptions_LogOptionsV1); ok {
+func (m *LogOptions) GetLogOptionsV1() []byte {
+	if x, ok := m.GetLogOptions().(*LogOptions_LogOptionsV1); ok {
 		return x.LogOptionsV1
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*PodLogOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _PodLogOptions_OneofMarshaler, _PodLogOptions_OneofUnmarshaler, _PodLogOptions_OneofSizer, []interface{}{
-		(*PodLogOptions_LogOptionsV1)(nil),
+func (*LogOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _LogOptions_OneofMarshaler, _LogOptions_OneofUnmarshaler, _LogOptions_OneofSizer, []interface{}{
+		(*LogOptions_LogOptionsV1)(nil),
 	}
 }
 
-func _PodLogOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*PodLogOptions)
+func _LogOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*LogOptions)
 	// log_options
 	switch x := m.LogOptions.(type) {
-	case *PodLogOptions_LogOptionsV1:
+	case *LogOptions_LogOptionsV1:
 		b.EncodeVarint(1<<3 | proto.WireBytes)
 		b.EncodeRawBytes(x.LogOptionsV1)
 	case nil:
 	default:
-		return fmt.Errorf("PodLogOptions.LogOptions has unexpected type %T", x)
+		return fmt.Errorf("LogOptions.LogOptions has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _PodLogOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*PodLogOptions)
+func _LogOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*LogOptions)
 	switch tag {
 	case 1: // log_options.log_options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.LogOptions = &PodLogOptions_LogOptionsV1{x}
+		m.LogOptions = &LogOptions_LogOptionsV1{x}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _PodLogOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*PodLogOptions)
+func _LogOptions_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*LogOptions)
 	// log_options
 	switch x := m.LogOptions.(type) {
-	case *PodLogOptions_LogOptionsV1:
+	case *LogOptions_LogOptionsV1:
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(len(x.LogOptionsV1)))
 		n += len(x.LogOptionsV1)
@@ -847,104 +826,104 @@ func _PodLogOptions_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PodExecOptions struct {
+type ExecOptions struct {
 	// Types that are valid to be assigned to ExecOptions:
-	//	*PodExecOptions_ExecOptionsV1
-	ExecOptions          isPodExecOptions_ExecOptions `protobuf_oneof:"exec_options"`
-	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
-	XXX_unrecognized     []byte                       `json:"-"`
-	XXX_sizecache        int32                        `json:"-"`
+	//	*ExecOptions_ExecOptionsV1
+	ExecOptions          isExecOptions_ExecOptions `protobuf_oneof:"exec_options"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
 }
 
-func (m *PodExecOptions) Reset()         { *m = PodExecOptions{} }
-func (m *PodExecOptions) String() string { return proto.CompactTextString(m) }
-func (*PodExecOptions) ProtoMessage()    {}
-func (*PodExecOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{6}
+func (m *ExecOptions) Reset()         { *m = ExecOptions{} }
+func (m *ExecOptions) String() string { return proto.CompactTextString(m) }
+func (*ExecOptions) ProtoMessage()    {}
+func (*ExecOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{6}
 }
-func (m *PodExecOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodExecOptions.Unmarshal(m, b)
+func (m *ExecOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecOptions.Unmarshal(m, b)
 }
-func (m *PodExecOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodExecOptions.Marshal(b, m, deterministic)
+func (m *ExecOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodExecOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodExecOptions.Merge(dst, src)
+func (dst *ExecOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecOptions.Merge(dst, src)
 }
-func (m *PodExecOptions) XXX_Size() int {
-	return xxx_messageInfo_PodExecOptions.Size(m)
+func (m *ExecOptions) XXX_Size() int {
+	return xxx_messageInfo_ExecOptions.Size(m)
 }
-func (m *PodExecOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodExecOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodExecOptions proto.InternalMessageInfo
-
-type isPodExecOptions_ExecOptions interface {
-	isPodExecOptions_ExecOptions()
+func (m *ExecOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecOptions.DiscardUnknown(m)
 }
 
-type PodExecOptions_ExecOptionsV1 struct {
+var xxx_messageInfo_ExecOptions proto.InternalMessageInfo
+
+type isExecOptions_ExecOptions interface {
+	isExecOptions_ExecOptions()
+}
+
+type ExecOptions_ExecOptionsV1 struct {
 	ExecOptionsV1 []byte `protobuf:"bytes,1,opt,name=exec_options_v1,json=execOptionsV1,proto3,oneof"`
 }
 
-func (*PodExecOptions_ExecOptionsV1) isPodExecOptions_ExecOptions() {}
+func (*ExecOptions_ExecOptionsV1) isExecOptions_ExecOptions() {}
 
-func (m *PodExecOptions) GetExecOptions() isPodExecOptions_ExecOptions {
+func (m *ExecOptions) GetExecOptions() isExecOptions_ExecOptions {
 	if m != nil {
 		return m.ExecOptions
 	}
 	return nil
 }
 
-func (m *PodExecOptions) GetExecOptionsV1() []byte {
-	if x, ok := m.GetExecOptions().(*PodExecOptions_ExecOptionsV1); ok {
+func (m *ExecOptions) GetExecOptionsV1() []byte {
+	if x, ok := m.GetExecOptions().(*ExecOptions_ExecOptionsV1); ok {
 		return x.ExecOptionsV1
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*PodExecOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _PodExecOptions_OneofMarshaler, _PodExecOptions_OneofUnmarshaler, _PodExecOptions_OneofSizer, []interface{}{
-		(*PodExecOptions_ExecOptionsV1)(nil),
+func (*ExecOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _ExecOptions_OneofMarshaler, _ExecOptions_OneofUnmarshaler, _ExecOptions_OneofSizer, []interface{}{
+		(*ExecOptions_ExecOptionsV1)(nil),
 	}
 }
 
-func _PodExecOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*PodExecOptions)
+func _ExecOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*ExecOptions)
 	// exec_options
 	switch x := m.ExecOptions.(type) {
-	case *PodExecOptions_ExecOptionsV1:
+	case *ExecOptions_ExecOptionsV1:
 		b.EncodeVarint(1<<3 | proto.WireBytes)
 		b.EncodeRawBytes(x.ExecOptionsV1)
 	case nil:
 	default:
-		return fmt.Errorf("PodExecOptions.ExecOptions has unexpected type %T", x)
+		return fmt.Errorf("ExecOptions.ExecOptions has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _PodExecOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*PodExecOptions)
+func _ExecOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*ExecOptions)
 	switch tag {
 	case 1: // exec_options.exec_options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.ExecOptions = &PodExecOptions_ExecOptionsV1{x}
+		m.ExecOptions = &ExecOptions_ExecOptionsV1{x}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _PodExecOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*PodExecOptions)
+func _ExecOptions_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*ExecOptions)
 	// exec_options
 	switch x := m.ExecOptions.(type) {
-	case *PodExecOptions_ExecOptionsV1:
+	case *ExecOptions_ExecOptionsV1:
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(len(x.ExecOptionsV1)))
 		n += len(x.ExecOptionsV1)
@@ -955,104 +934,104 @@ func _PodExecOptions_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PodPortForwardOptions struct {
-	// Types that are valid to be assigned to PortforwardOptions:
-	//	*PodPortForwardOptions_PortforwardOptionsV1
-	PortforwardOptions   isPodPortForwardOptions_PortforwardOptions `protobuf_oneof:"portforward_options"`
-	XXX_NoUnkeyedLiteral struct{}                                   `json:"-"`
-	XXX_unrecognized     []byte                                     `json:"-"`
-	XXX_sizecache        int32                                      `json:"-"`
+type PortForwardOptions struct {
+	// Types that are valid to be assigned to PortForwardOptions:
+	//	*PortForwardOptions_PortforwardOptionsV1
+	PortForwardOptions   isPortForwardOptions_PortForwardOptions `protobuf_oneof:"port_forward_options"`
+	XXX_NoUnkeyedLiteral struct{}                                `json:"-"`
+	XXX_unrecognized     []byte                                  `json:"-"`
+	XXX_sizecache        int32                                   `json:"-"`
 }
 
-func (m *PodPortForwardOptions) Reset()         { *m = PodPortForwardOptions{} }
-func (m *PodPortForwardOptions) String() string { return proto.CompactTextString(m) }
-func (*PodPortForwardOptions) ProtoMessage()    {}
-func (*PodPortForwardOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{7}
+func (m *PortForwardOptions) Reset()         { *m = PortForwardOptions{} }
+func (m *PortForwardOptions) String() string { return proto.CompactTextString(m) }
+func (*PortForwardOptions) ProtoMessage()    {}
+func (*PortForwardOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{7}
 }
-func (m *PodPortForwardOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodPortForwardOptions.Unmarshal(m, b)
+func (m *PortForwardOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PortForwardOptions.Unmarshal(m, b)
 }
-func (m *PodPortForwardOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodPortForwardOptions.Marshal(b, m, deterministic)
+func (m *PortForwardOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PortForwardOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodPortForwardOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodPortForwardOptions.Merge(dst, src)
+func (dst *PortForwardOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PortForwardOptions.Merge(dst, src)
 }
-func (m *PodPortForwardOptions) XXX_Size() int {
-	return xxx_messageInfo_PodPortForwardOptions.Size(m)
+func (m *PortForwardOptions) XXX_Size() int {
+	return xxx_messageInfo_PortForwardOptions.Size(m)
 }
-func (m *PodPortForwardOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodPortForwardOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodPortForwardOptions proto.InternalMessageInfo
-
-type isPodPortForwardOptions_PortforwardOptions interface {
-	isPodPortForwardOptions_PortforwardOptions()
+func (m *PortForwardOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_PortForwardOptions.DiscardUnknown(m)
 }
 
-type PodPortForwardOptions_PortforwardOptionsV1 struct {
+var xxx_messageInfo_PortForwardOptions proto.InternalMessageInfo
+
+type isPortForwardOptions_PortForwardOptions interface {
+	isPortForwardOptions_PortForwardOptions()
+}
+
+type PortForwardOptions_PortforwardOptionsV1 struct {
 	PortforwardOptionsV1 []byte `protobuf:"bytes,1,opt,name=portforward_options_v1,json=portforwardOptionsV1,proto3,oneof"`
 }
 
-func (*PodPortForwardOptions_PortforwardOptionsV1) isPodPortForwardOptions_PortforwardOptions() {}
+func (*PortForwardOptions_PortforwardOptionsV1) isPortForwardOptions_PortForwardOptions() {}
 
-func (m *PodPortForwardOptions) GetPortforwardOptions() isPodPortForwardOptions_PortforwardOptions {
+func (m *PortForwardOptions) GetPortForwardOptions() isPortForwardOptions_PortForwardOptions {
 	if m != nil {
-		return m.PortforwardOptions
+		return m.PortForwardOptions
 	}
 	return nil
 }
 
-func (m *PodPortForwardOptions) GetPortforwardOptionsV1() []byte {
-	if x, ok := m.GetPortforwardOptions().(*PodPortForwardOptions_PortforwardOptionsV1); ok {
+func (m *PortForwardOptions) GetPortforwardOptionsV1() []byte {
+	if x, ok := m.GetPortForwardOptions().(*PortForwardOptions_PortforwardOptionsV1); ok {
 		return x.PortforwardOptionsV1
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*PodPortForwardOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _PodPortForwardOptions_OneofMarshaler, _PodPortForwardOptions_OneofUnmarshaler, _PodPortForwardOptions_OneofSizer, []interface{}{
-		(*PodPortForwardOptions_PortforwardOptionsV1)(nil),
+func (*PortForwardOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _PortForwardOptions_OneofMarshaler, _PortForwardOptions_OneofUnmarshaler, _PortForwardOptions_OneofSizer, []interface{}{
+		(*PortForwardOptions_PortforwardOptionsV1)(nil),
 	}
 }
 
-func _PodPortForwardOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*PodPortForwardOptions)
-	// portforward_options
-	switch x := m.PortforwardOptions.(type) {
-	case *PodPortForwardOptions_PortforwardOptionsV1:
+func _PortForwardOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*PortForwardOptions)
+	// port_forward_options
+	switch x := m.PortForwardOptions.(type) {
+	case *PortForwardOptions_PortforwardOptionsV1:
 		b.EncodeVarint(1<<3 | proto.WireBytes)
 		b.EncodeRawBytes(x.PortforwardOptionsV1)
 	case nil:
 	default:
-		return fmt.Errorf("PodPortForwardOptions.PortforwardOptions has unexpected type %T", x)
+		return fmt.Errorf("PortForwardOptions.PortForwardOptions has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _PodPortForwardOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*PodPortForwardOptions)
+func _PortForwardOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*PortForwardOptions)
 	switch tag {
-	case 1: // portforward_options.portforward_options_v1
+	case 1: // port_forward_options.portforward_options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.PortforwardOptions = &PodPortForwardOptions_PortforwardOptionsV1{x}
+		m.PortForwardOptions = &PortForwardOptions_PortforwardOptionsV1{x}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _PodPortForwardOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*PodPortForwardOptions)
-	// portforward_options
-	switch x := m.PortforwardOptions.(type) {
-	case *PodPortForwardOptions_PortforwardOptionsV1:
+func _PortForwardOptions_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*PortForwardOptions)
+	// port_forward_options
+	switch x := m.PortForwardOptions.(type) {
+	case *PortForwardOptions_PortforwardOptionsV1:
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(len(x.PortforwardOptionsV1)))
 		n += len(x.PortforwardOptionsV1)
@@ -1063,46 +1042,38 @@ func _PodPortForwardOptions_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PodDataOptions struct {
-	Completed            bool     `protobuf:"varint,1,opt,name=completed,proto3" json:"completed,omitempty"`
-	Data                 []byte   `protobuf:"bytes,11,opt,name=data,proto3" json:"data,omitempty"`
+type InputOptions struct {
+	Data                 []byte   `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *PodDataOptions) Reset()         { *m = PodDataOptions{} }
-func (m *PodDataOptions) String() string { return proto.CompactTextString(m) }
-func (*PodDataOptions) ProtoMessage()    {}
-func (*PodDataOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{8}
+func (m *InputOptions) Reset()         { *m = InputOptions{} }
+func (m *InputOptions) String() string { return proto.CompactTextString(m) }
+func (*InputOptions) ProtoMessage()    {}
+func (*InputOptions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_pod_70828a3d003c07bd, []int{8}
 }
-func (m *PodDataOptions) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodDataOptions.Unmarshal(m, b)
+func (m *InputOptions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_InputOptions.Unmarshal(m, b)
 }
-func (m *PodDataOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodDataOptions.Marshal(b, m, deterministic)
+func (m *InputOptions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_InputOptions.Marshal(b, m, deterministic)
 }
-func (dst *PodDataOptions) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodDataOptions.Merge(dst, src)
+func (dst *InputOptions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_InputOptions.Merge(dst, src)
 }
-func (m *PodDataOptions) XXX_Size() int {
-	return xxx_messageInfo_PodDataOptions.Size(m)
+func (m *InputOptions) XXX_Size() int {
+	return xxx_messageInfo_InputOptions.Size(m)
 }
-func (m *PodDataOptions) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodDataOptions.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodDataOptions proto.InternalMessageInfo
-
-func (m *PodDataOptions) GetCompleted() bool {
-	if m != nil {
-		return m.Completed
-	}
-	return false
+func (m *InputOptions) XXX_DiscardUnknown() {
+	xxx_messageInfo_InputOptions.DiscardUnknown(m)
 }
 
-func (m *PodDataOptions) GetData() []byte {
+var xxx_messageInfo_InputOptions proto.InternalMessageInfo
+
+func (m *InputOptions) GetData() []byte {
 	if m != nil {
 		return m.Data
 	}
@@ -1121,7 +1092,7 @@ func (m *TtyResizeOptions) Reset()         { *m = TtyResizeOptions{} }
 func (m *TtyResizeOptions) String() string { return proto.CompactTextString(m) }
 func (*TtyResizeOptions) ProtoMessage()    {}
 func (*TtyResizeOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{9}
+	return fileDescriptor_pod_70828a3d003c07bd, []int{9}
 }
 func (m *TtyResizeOptions) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TtyResizeOptions.Unmarshal(m, b)
@@ -1155,113 +1126,60 @@ func (m *TtyResizeOptions) GetRows() uint32 {
 	return 0
 }
 
-type PodData struct {
-	Kind                 PodData_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=connectivity.PodData_Kind" json:"kind,omitempty"`
-	Data                 []byte       `protobuf:"bytes,11,opt,name=data,proto3" json:"data,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
-	XXX_unrecognized     []byte       `json:"-"`
-	XXX_sizecache        int32        `json:"-"`
-}
-
-func (m *PodData) Reset()         { *m = PodData{} }
-func (m *PodData) String() string { return proto.CompactTextString(m) }
-func (*PodData) ProtoMessage()    {}
-func (*PodData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_pod_a871b7a25879325b, []int{10}
-}
-func (m *PodData) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_PodData.Unmarshal(m, b)
-}
-func (m *PodData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_PodData.Marshal(b, m, deterministic)
-}
-func (dst *PodData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PodData.Merge(dst, src)
-}
-func (m *PodData) XXX_Size() int {
-	return xxx_messageInfo_PodData.Size(m)
-}
-func (m *PodData) XXX_DiscardUnknown() {
-	xxx_messageInfo_PodData.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PodData proto.InternalMessageInfo
-
-func (m *PodData) GetKind() PodData_Kind {
-	if m != nil {
-		return m.Kind
-	}
-	return PodData_STDOUT
-}
-
-func (m *PodData) GetData() []byte {
-	if m != nil {
-		return m.Data
-	}
-	return nil
-}
-
 func init() {
 	proto.RegisterType((*PodInfo)(nil), "connectivity.PodInfo")
 	proto.RegisterType((*PodCmd)(nil), "connectivity.PodCmd")
-	proto.RegisterType((*PodCreateOptions)(nil), "connectivity.PodCreateOptions")
-	proto.RegisterType((*PodDeleteOptions)(nil), "connectivity.PodDeleteOptions")
-	proto.RegisterType((*PodListOptions)(nil), "connectivity.PodListOptions")
-	proto.RegisterType((*PodLogOptions)(nil), "connectivity.PodLogOptions")
-	proto.RegisterType((*PodExecOptions)(nil), "connectivity.PodExecOptions")
-	proto.RegisterType((*PodPortForwardOptions)(nil), "connectivity.PodPortForwardOptions")
-	proto.RegisterType((*PodDataOptions)(nil), "connectivity.PodDataOptions")
+	proto.RegisterType((*CreateOptions)(nil), "connectivity.CreateOptions")
+	proto.RegisterType((*DeleteOptions)(nil), "connectivity.DeleteOptions")
+	proto.RegisterType((*ListOptions)(nil), "connectivity.ListOptions")
+	proto.RegisterType((*LogOptions)(nil), "connectivity.LogOptions")
+	proto.RegisterType((*ExecOptions)(nil), "connectivity.ExecOptions")
+	proto.RegisterType((*PortForwardOptions)(nil), "connectivity.PortForwardOptions")
+	proto.RegisterType((*InputOptions)(nil), "connectivity.InputOptions")
 	proto.RegisterType((*TtyResizeOptions)(nil), "connectivity.TtyResizeOptions")
-	proto.RegisterType((*PodData)(nil), "connectivity.PodData")
 	proto.RegisterEnum("connectivity.PodCmd_Action", PodCmd_Action_name, PodCmd_Action_value)
-	proto.RegisterEnum("connectivity.PodData_Kind", PodData_Kind_name, PodData_Kind_value)
 }
 
-func init() { proto.RegisterFile("pod.proto", fileDescriptor_pod_a871b7a25879325b) }
+func init() { proto.RegisterFile("pod.proto", fileDescriptor_pod_70828a3d003c07bd) }
 
-var fileDescriptor_pod_a871b7a25879325b = []byte{
-	// 679 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x94, 0x5f, 0x6f, 0xd3, 0x30,
-	0x14, 0xc5, 0xd7, 0xb5, 0x4d, 0x9b, 0xdb, 0x26, 0x33, 0x97, 0x0d, 0x2a, 0x18, 0xa8, 0x0a, 0x12,
-	0xea, 0x5e, 0x2a, 0x75, 0x93, 0x78, 0xe0, 0x01, 0xb1, 0xd2, 0x8d, 0x01, 0x93, 0x36, 0x79, 0x59,
-	0x79, 0xac, 0x82, 0xed, 0x95, 0x88, 0x36, 0x8e, 0x12, 0x6b, 0x7f, 0xe0, 0x6b, 0xf1, 0x01, 0x91,
-	0x9d, 0xd1, 0xb8, 0x6b, 0xf7, 0x66, 0xdf, 0x9c, 0xfe, 0x7c, 0xea, 0x7b, 0x7c, 0xc1, 0x4d, 0x25,
-	0xef, 0xa7, 0x99, 0x54, 0x12, 0xdb, 0x4c, 0x26, 0x89, 0x60, 0x2a, 0xbe, 0x8e, 0xd5, 0x5d, 0xb0,
-	0x07, 0x8d, 0x73, 0xc9, 0xbf, 0x24, 0x57, 0x12, 0x9f, 0x83, 0x93, 0x4a, 0x3e, 0xb9, 0x1e, 0x74,
-	0x2a, 0xdd, 0x4a, 0xaf, 0x7d, 0xb2, 0x41, 0xeb, 0xa9, 0xe4, 0xe3, 0xc1, 0xb0, 0x0e, 0xd5, 0x54,
-	0xf2, 0xe0, 0xaf, 0x03, 0xce, 0xb9, 0xe4, 0x9f, 0xe6, 0x1c, 0x77, 0xc1, 0x4d, 0xa2, 0xb9, 0xc8,
-	0xd3, 0x88, 0x09, 0xa3, 0x76, 0x69, 0x59, 0x40, 0x84, 0x9a, 0xde, 0x74, 0x36, 0xcd, 0x07, 0xb3,
-	0xc6, 0x03, 0x70, 0x22, 0xa6, 0x62, 0x99, 0x74, 0xaa, 0xdd, 0x4a, 0xcf, 0xdf, 0x7f, 0xd9, 0xb7,
-	0x6d, 0xf4, 0x0b, 0x6e, 0xff, 0xd0, 0x48, 0xe8, 0xbd, 0x14, 0x3f, 0x83, 0xcf, 0x32, 0x11, 0x29,
-	0x31, 0x91, 0xa9, 0x2e, 0xe4, 0x9d, 0x56, 0xb7, 0xd2, 0x6b, 0xed, 0xbf, 0x5e, 0xfd, 0xb1, 0x91,
-	0x9d, 0x15, 0xaa, 0x93, 0x0d, 0xea, 0x31, 0xbb, 0xa0, 0x41, 0x5c, 0xcc, 0x84, 0x05, 0x6a, 0x3f,
-	0x02, 0x1a, 0x19, 0x99, 0x05, 0xe2, 0x76, 0x01, 0x0f, 0xa1, 0x3d, 0x8b, 0x73, 0xb5, 0xc0, 0x78,
-	0x06, 0xb3, 0xbb, 0x82, 0x39, 0x8d, 0x73, 0x55, 0x42, 0x5a, 0xb3, 0x72, 0x8b, 0x1f, 0xa0, 0x35,
-	0x93, 0xd3, 0x05, 0xc1, 0x37, 0x84, 0xd5, 0xeb, 0x38, 0x95, 0xd3, 0x12, 0x00, 0xb3, 0xc5, 0x4e,
-	0x5b, 0x10, 0xb7, 0x82, 0x2d, 0x00, 0x5b, 0x8f, 0x58, 0x38, 0xba, 0x15, 0xcc, 0xb2, 0x20, 0xca,
-	0x2d, 0x7e, 0x87, 0xed, 0x54, 0x66, 0x6a, 0x72, 0x25, 0xb3, 0x9b, 0x28, 0xe3, 0x0b, 0x14, 0x31,
-	0xa8, 0x37, 0x2b, 0xa8, 0x73, 0x99, 0xa9, 0xe3, 0x42, 0x5b, 0x12, 0x31, 0x5d, 0xa9, 0x6a, 0x6f,
-	0x3c, 0x52, 0xd1, 0x02, 0xf8, 0xe4, 0x11, 0x6f, 0xa3, 0x48, 0x45, 0x96, 0x37, 0x5e, 0x6e, 0x75,
-	0xab, 0x32, 0x91, 0xc7, 0xbf, 0xcb, 0x56, 0xe1, 0xba, 0x56, 0x85, 0xea, 0x8e, 0x1a, 0x99, 0xd5,
-	0xaa, 0xcc, 0x2e, 0x04, 0x7f, 0xc0, 0x29, 0xe2, 0x84, 0x08, 0xfe, 0x7d, 0x3e, 0xb2, 0xcb, 0x94,
-	0x47, 0x4a, 0x90, 0x0d, 0x04, 0x70, 0x8a, 0x56, 0x93, 0x0a, 0x36, 0xa1, 0xa6, 0xfb, 0x45, 0x36,
-	0xf5, 0x4a, 0x5f, 0x1b, 0xa9, 0xea, 0xef, 0x87, 0x4a, 0x45, 0xec, 0x27, 0xa9, 0x61, 0x03, 0xaa,
-	0xa7, 0x72, 0x4a, 0xea, 0xb8, 0x05, 0x2d, 0xeb, 0x2a, 0x88, 0xa3, 0xf5, 0xfa, 0xaf, 0x90, 0x06,
-	0x7a, 0xe0, 0x16, 0x7e, 0x42, 0x75, 0x47, 0x9a, 0x43, 0x17, 0x1a, 0xf7, 0xf6, 0x83, 0x8f, 0x40,
-	0x1e, 0x06, 0x14, 0xbb, 0xd0, 0xd2, 0x4f, 0x2d, 0x4f, 0x05, 0xb3, 0xdf, 0x9b, 0x7e, 0xa5, 0x17,
-	0xa9, 0x60, 0xe3, 0xc1, 0x10, 0xa0, 0xf9, 0x5f, 0x11, 0x0c, 0x0c, 0x61, 0x29, 0x99, 0xf8, 0x0a,
-	0x60, 0x9a, 0x45, 0x4c, 0x4c, 0x54, 0x3c, 0x2f, 0x9e, 0x60, 0x95, 0xba, 0xa6, 0x12, 0xc6, 0x73,
-	0x11, 0x10, 0xf0, 0x97, 0x53, 0x18, 0x1c, 0x83, 0xb7, 0x94, 0x2a, 0x7c, 0x0b, 0xbe, 0x95, 0x43,
-	0xdb, 0x46, 0xbb, 0x4c, 0xdb, 0x78, 0x30, 0xf4, 0x96, 0xf2, 0x1a, 0x7c, 0x35, 0x64, 0x2b, 0x5c,
-	0xd8, 0x83, 0x2d, 0x3b, 0x90, 0x36, 0xc9, 0xb3, 0x52, 0x37, 0x1e, 0x0c, 0xfd, 0xe5, 0xe8, 0x06,
-	0x57, 0xb0, 0xb3, 0x36, 0x5d, 0xf8, 0x0e, 0x9e, 0xe9, 0x74, 0x3d, 0xc8, 0xa7, 0x4d, 0xde, 0xb6,
-	0xbe, 0x97, 0x07, 0xec, 0xc0, 0xd3, 0x35, 0xbf, 0x0b, 0x86, 0xc6, 0xb3, 0x15, 0x3a, 0x3d, 0xc0,
-	0x98, 0x9c, 0xa7, 0xfa, 0x46, 0xb9, 0x61, 0x36, 0x69, 0x59, 0xd0, 0x03, 0x4c, 0x47, 0xd2, 0x4c,
-	0x9b, 0x36, 0x35, 0xeb, 0xe0, 0x3d, 0x90, 0x87, 0x99, 0xd3, 0x3a, 0x26, 0x67, 0xb9, 0x01, 0x78,
-	0xd4, 0xac, 0x75, 0x2d, 0x93, 0x37, 0xb9, 0x19, 0x7e, 0x1e, 0x35, 0xeb, 0xe0, 0xd6, 0x0c, 0x59,
-	0x7d, 0x3e, 0xf6, 0xa1, 0xf6, 0x2b, 0x4e, 0x8a, 0x33, 0xfd, 0xfd, 0x17, 0x6b, 0x5f, 0x46, 0xff,
-	0x5b, 0x9c, 0x70, 0x6a, 0x74, 0x6b, 0xad, 0xec, 0x41, 0x4d, 0x2b, 0x74, 0x46, 0x2f, 0xc2, 0xd1,
-	0xd9, 0x65, 0x58, 0xe4, 0xf9, 0x22, 0x1c, 0x1d, 0x51, 0x4a, 0x2a, 0xe8, 0x42, 0xfd, 0x2c, 0x3c,
-	0x39, 0xa2, 0x64, 0xf3, 0x87, 0x63, 0x66, 0xfe, 0xc1, 0xbf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x6d,
-	0x13, 0xcb, 0x5e, 0x00, 0x06, 0x00, 0x00,
+var fileDescriptor_pod_70828a3d003c07bd = []byte{
+	// 608 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x94, 0x5d, 0x6b, 0xdb, 0x3c,
+	0x14, 0xc7, 0x9b, 0xa6, 0x71, 0xea, 0xe3, 0x97, 0xfa, 0x39, 0x94, 0x3e, 0xd9, 0x2b, 0x41, 0x17,
+	0x23, 0xbb, 0x09, 0x64, 0x85, 0x5d, 0x6c, 0x6c, 0xd0, 0xb4, 0x5b, 0x5b, 0x28, 0xac, 0x78, 0x59,
+	0x6e, 0x83, 0x27, 0xa9, 0x99, 0xc1, 0xb1, 0x84, 0xad, 0xf5, 0x65, 0xec, 0xdb, 0xec, 0x8b, 0x0e,
+	0xc9, 0x5d, 0x24, 0xa7, 0xbd, 0x3b, 0xe7, 0xf8, 0x7f, 0x7e, 0x92, 0x75, 0xfe, 0x12, 0xf8, 0x52,
+	0xb0, 0xb1, 0xac, 0x84, 0x12, 0x18, 0x52, 0x51, 0x96, 0x9c, 0xaa, 0xfc, 0x3a, 0x57, 0x77, 0xe4,
+	0x35, 0xf4, 0x2f, 0x05, 0x3b, 0x2f, 0xaf, 0x04, 0xfe, 0x0f, 0x9e, 0x14, 0x6c, 0x71, 0x3d, 0x19,
+	0x74, 0x86, 0x9d, 0x51, 0x78, 0xb6, 0x95, 0xf6, 0xa4, 0x60, 0xf3, 0xc9, 0xb4, 0x07, 0x5d, 0x29,
+	0x18, 0xf9, 0xe3, 0x81, 0x77, 0x29, 0xd8, 0xf1, 0x8a, 0xe1, 0x73, 0xf0, 0xcb, 0x6c, 0xc5, 0x6b,
+	0x99, 0x51, 0x6e, 0xd4, 0x7e, 0x6a, 0x0b, 0x88, 0xb0, 0xa3, 0x93, 0xc1, 0xb6, 0xf9, 0x60, 0x62,
+	0x3c, 0x04, 0x2f, 0xa3, 0x2a, 0x17, 0xe5, 0xa0, 0x3b, 0xec, 0x8c, 0xe2, 0x37, 0xcf, 0xc6, 0xee,
+	0x36, 0xc6, 0x0d, 0x77, 0x7c, 0x64, 0x24, 0xe9, 0xbd, 0x14, 0x4f, 0x20, 0xa6, 0x15, 0xcf, 0x14,
+	0x5f, 0x08, 0xa9, 0x0b, 0xf5, 0x20, 0x18, 0x76, 0x46, 0xc1, 0x66, 0xf3, 0xb1, 0xd1, 0x7c, 0x69,
+	0x24, 0x67, 0x5b, 0x69, 0x44, 0xdd, 0x82, 0xa6, 0x30, 0x5e, 0x70, 0x87, 0x12, 0x3e, 0x46, 0x39,
+	0x31, 0x1a, 0x87, 0xc2, 0xdc, 0x02, 0x7e, 0x84, 0xb0, 0xc8, 0x6b, 0xb5, 0x66, 0x44, 0x86, 0xf1,
+	0xa4, 0xcd, 0xb8, 0xc8, 0x6b, 0x65, 0x09, 0x41, 0x61, 0x53, 0x7c, 0x0f, 0x41, 0x21, 0x96, 0xeb,
+	0xf6, 0xd8, 0xb4, 0x0f, 0x36, 0xda, 0xc5, 0xd2, 0x76, 0x43, 0xb1, 0xce, 0xf4, 0xe2, 0xfc, 0x96,
+	0xd3, 0x75, 0xf7, 0xde, 0x63, 0x8b, 0x7f, 0xba, 0xe5, 0xd4, 0x59, 0x9c, 0xdb, 0x14, 0x67, 0xb0,
+	0x2f, 0x45, 0xa5, 0x16, 0x57, 0xa2, 0xba, 0xc9, 0x2a, 0xb6, 0xe6, 0x24, 0x86, 0x33, 0xdc, 0x9c,
+	0x45, 0xa5, 0x3e, 0x37, 0x42, 0x8b, 0x43, 0xf9, 0xa0, 0x8a, 0x47, 0x10, 0xe5, 0xa5, 0xfc, 0x69,
+	0xcf, 0xe4, 0x3f, 0x83, 0x7b, 0xda, 0xc6, 0x9d, 0x6b, 0x89, 0x05, 0x85, 0xb9, 0x93, 0xe3, 0x29,
+	0xc4, 0x15, 0xaf, 0xf3, 0x5f, 0x76, 0x36, 0x68, 0x18, 0x2f, 0xdb, 0x8c, 0x99, 0xba, 0x4b, 0x8d,
+	0xcc, 0x19, 0x4f, 0xe5, 0x16, 0xc8, 0x6f, 0xf0, 0x1a, 0xf3, 0x20, 0x42, 0x7c, 0x6f, 0x88, 0xea,
+	0x9b, 0x64, 0x99, 0xe2, 0xc9, 0x16, 0x02, 0x78, 0xcd, 0x78, 0x93, 0x0e, 0xee, 0xc2, 0x8e, 0x1e,
+	0x53, 0xb2, 0xad, 0x23, 0x7d, 0x66, 0x49, 0x57, 0x7f, 0x3f, 0x52, 0x2a, 0xa3, 0x3f, 0x92, 0x1d,
+	0xec, 0x43, 0xf7, 0x42, 0x2c, 0x93, 0x1e, 0xee, 0x41, 0xe0, 0x1c, 0x45, 0xe2, 0xa1, 0x0f, 0x3d,
+	0xf3, 0x33, 0x49, 0x1f, 0x23, 0xf0, 0x9b, 0x0d, 0xcd, 0xd4, 0x5d, 0xb2, 0x3b, 0xf5, 0xa1, 0x7f,
+	0xbf, 0x7f, 0xf2, 0x01, 0xa2, 0x96, 0x1f, 0x71, 0x08, 0x81, 0xbe, 0x56, 0xb5, 0xe4, 0xd4, 0xbd,
+	0x5b, 0xfa, 0x46, 0x7e, 0x95, 0x9c, 0xce, 0x27, 0x53, 0x80, 0xdd, 0x7f, 0x0a, 0x32, 0x86, 0xa8,
+	0x65, 0x44, 0x7c, 0x01, 0xb0, 0xac, 0x32, 0xca, 0x17, 0x2a, 0x5f, 0x35, 0x77, 0xad, 0x9b, 0xfa,
+	0xa6, 0x32, 0xcb, 0x57, 0x9c, 0x44, 0x10, 0x38, 0xa6, 0x23, 0xc7, 0x00, 0xd6, 0x44, 0xf8, 0x0a,
+	0x62, 0xc7, 0x73, 0xee, 0xea, 0xa1, 0x35, 0xd7, 0x7c, 0x32, 0x8d, 0x5a, 0xde, 0x24, 0xa7, 0x10,
+	0x38, 0x5e, 0xc2, 0x11, 0xec, 0xb9, 0xe6, 0x73, 0x31, 0x91, 0x63, 0xb2, 0xf9, 0x64, 0x1a, 0xb7,
+	0x6d, 0x4a, 0x18, 0xe0, 0x43, 0x33, 0xe1, 0x5b, 0x38, 0xd0, 0x66, 0xda, 0xf0, 0xa2, 0x8b, 0xdd,
+	0x77, 0xbe, 0x5b, 0xfa, 0xc1, 0xe3, 0x26, 0x26, 0x04, 0x42, 0xd7, 0x63, 0xfa, 0xf9, 0x61, 0x99,
+	0xca, 0x1a, 0x5a, 0x6a, 0x62, 0xf2, 0x0e, 0x92, 0x4d, 0x0f, 0x69, 0x1d, 0x15, 0x45, 0x6d, 0x74,
+	0x51, 0x6a, 0x62, 0x5d, 0xab, 0xc4, 0x4d, 0x6d, 0x9e, 0xae, 0x28, 0x35, 0xf1, 0x77, 0xcf, 0xbc,
+	0x9b, 0x87, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x63, 0x49, 0xf7, 0x9c, 0x44, 0x05, 0x00, 0x00,
 }

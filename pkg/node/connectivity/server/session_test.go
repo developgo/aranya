@@ -10,7 +10,7 @@ import (
 func TestSessionManager_Add(t *testing.T) {
 	mgr := newSessionManager()
 	sidA, chA := mgr.add(NewPodListCmd("", ""), 0)
-	sidB, chB := mgr.add(NewContainerResizeCmd(sidA, 0, 0), 0)
+	sidB, chB := mgr.add(NewContainerTtyResizeCmd(sidA, 0, 0), 0)
 	sidC, chC := mgr.add(NewPodListCmd("", ""), time.Millisecond)
 
 	assert.NotEqual(t, nil, sidA)

@@ -62,7 +62,7 @@ func (m *Manager) AttachContainer(name string, uid types.UID, container string, 
 		Container: container,
 	}
 
-	attachCmd := connectivitySrv.NewPodAttachCmd("", name, options)
+	attachCmd := connectivitySrv.NewContainerAttachCmd("", name, options)
 	return m.handleBidirectionalStream(attachCmd, 0, stdin, stdout, stderr, resize)
 }
 
@@ -72,7 +72,7 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	options := corev1.PodPortForwardOptions{
 		Ports: []int32{port},
 	}
-	portForwardCmd := connectivitySrv.NewPodPortForwardCmd("", name, options)
+	portForwardCmd := connectivitySrv.NewPortForwardCmd("", name, options)
 	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
 }
 
