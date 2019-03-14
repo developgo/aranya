@@ -62,3 +62,7 @@ codegen:
 proto_gen:
 	$(shell scripts/pb.sh)
 	@echo "proto files generated"
+
+.PHONY: check_log
+check_log:
+	$(shell scripts/log.sh)
