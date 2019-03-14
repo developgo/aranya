@@ -51,7 +51,7 @@ func (m *Manager) SyncPodInDevice(pod *corev1.Pod) error {
 		return nil
 	}
 
-	if err := m.CreateOrUpdatePodInDevice(pod); err != nil {
+	if err := m.CreatePodInDevice(pod); err != nil {
 		syncLog.Error(err, "failed to sync edge pod")
 		return err
 	}

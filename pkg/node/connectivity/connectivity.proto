@@ -2,17 +2,21 @@
 
 package connectivity;
 
-import public "pod.proto";
-import public "node.proto";
-
 service Connectivity {
     rpc Sync (stream Msg) returns (stream Cmd);
 }
 
 message Ack {
-    oneof hash {
-        // sha256 hex string
-        string sha256 = 1;
+    message Hash {
+        oneof hash {
+            // sha256 hex string
+            string sha256 = 1;
+        }
+    }
+
+    oneof resp {
+        Hash hash = 1;
+        string error = 2;
     }
 }
 
@@ -28,17 +32,47 @@ message Data {
     bytes data = 11;
 }
 
+message Pod {
+    message CriContainerStatusV1alpha2 {
+        repeated bytes v1alpha2 = 1;
+    }
+
+    message CriPodStatusV1alpha2 {
+        repeated bytes v1alpha2 = 1;
+    }
+
+    string namespace = 1;
+    string name = 2;
+    string uid = 3;
+    string ip = 4;
+
+    oneof cri_pod_status {
+        CriPodStatusV1alpha2 pod_status_v1alpha2 = 11;
+    }
+
+    oneof cri_container_status {
+        CriContainerStatusV1alpha2 container_status_v1alpha2 = 21;
+    }
+}
+
+
+message Node {
+    oneof node {
+        // protobuf bytes of corev1.Node
+        bytes node_v1 = 1;
+    }
+}
 
 message Msg {
     uint64 session_id = 1;
     bool completed = 2;
 
     oneof msg {
-        NodeInfo node_info = 11;
+        Node node = 11;
         // used by list and device active pod update
-        PodInfo pod_info = 12;
+        Pod pod = 12;
         // messages
-        Data pod_data = 13;
+        Data data = 13;
         // ack info
         Ack ack = 14;
     }
@@ -51,4 +85,98 @@ message Cmd {
         NodeCmd node_cmd = 11;
         PodCmd pod_cmd = 12;
     }
+}
+
+message NodeCmd {
+}
+
+message PodCmd {
+    enum Action {
+        Create = 0;
+        Delete = 1;
+        List = 2;
+        Exec = 3;
+        Attach = 4;
+        Log = 5;
+        PortForward = 6;
+        Input = 7;
+        ResizeTty = 8;
+    }
+
+    // pod namespace
+    string namespace = 1;
+    // pod name
+    string name = 2;
+    // action type
+    Action action = 3;
+
+    // options for action
+    oneof options {
+        // used by create or update
+        CreateOptions create_options = 11;
+        // used by delete
+        DeleteOptions delete_options = 12;
+        // used by list
+        ListOptions list_options = 13;
+        // used by log
+        LogOptions log_options = 14;
+        // used by exec and attach
+        ExecOptions exec_options = 15;
+        // used by port forward
+        PortForwardOptions port_forward_options = 16;
+        // used in exec, attach, port_forward session
+        InputOptions input_options = 17;
+        // used in exec, attach session
+        TtyResizeOptions resize_options = 18;
+    }
+}
+
+message CreateOptions {
+    message PodV1 {
+        // protobuf bytes of corev1.Pod
+        bytes pod = 1;
+        // protobuf []bytes of []corev1.Secret
+        repeated bytes pull_secret = 2;
+    }
+
+    oneof pod {
+        PodV1 pod_v1 = 1;
+    }
+}
+
+message DeleteOptions {
+    int64 grace_time = 1;
+}
+
+message ListOptions {
+}
+
+message LogOptions {
+    oneof options {
+        // protobuf bytes of corev1.LogOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message ExecOptions {
+    oneof options {
+        // protobuf bytes of corev1.ExecOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message PortForwardOptions {
+    oneof options {
+        // protobuf bytes of corev1.PortForwardOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message InputOptions {
+    bytes data = 1;
+}
+
+message TtyResizeOptions {
+    uint32 cols = 1;
+    uint32 rows = 2;
 }

@@ -69,11 +69,10 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 				return nil
 			}
 			// only PodData will be received in this session
-			switch msg.GetMsg().(type) {
-			case *connectivity.Msg_PodData:
+			switch m := msg.GetMsg().(type) {
+			case *connectivity.Msg_Data:
 				targetOutput := out
-				data := msg.GetPodData()
-				switch data.GetKind() {
+				switch m.Data.GetKind() {
 				case connectivity.Data_OTHER, connectivity.Data_STDOUT:
 					targetOutput = out
 				case connectivity.Data_STDERR:
@@ -84,7 +83,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 					return fmt.Errorf("data kind unknown")
 				}
 
-				_, err = targetOutput.Write(data.GetData())
+				_, err = targetOutput.Write(m.Data.GetData())
 				if err != nil {
 					return err
 				}

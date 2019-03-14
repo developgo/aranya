@@ -23,10 +23,13 @@ func NewGrpcClient(conn *grpc.ClientConn, options ...Option) (*GrpcClient, error
 		}
 	}
 
-	return &GrpcClient{
+	client := &GrpcClient{
 		baseClient: base,
 		client:     connectivity.NewConnectivityClient(conn),
-	}, nil
+	}
+
+	(&client.baseClient).postMsgFunc = client.PostMsg
+	return client, nil
 }
 
 func (c *GrpcClient) Run(ctx context.Context) error {

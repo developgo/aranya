@@ -26,7 +26,7 @@ const (
 	BackOffPeriod = time.Second * 10
 )
 
-func NewRuntimeAgent(ctx context.Context, containerdEndpoint string, dialTimeout time.Duration) (*Runtime, error) {
+func NewRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time.Duration) (*Runtime, error) {
 	runtimeScvConn, err := dialSvcEndpoint(containerdEndpoint, dialTimeout)
 	if err != nil {
 		return nil, err

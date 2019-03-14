@@ -8,7 +8,7 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
+func NewPodCreateCmd(namespace, name string, podSpec corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
 	podSpecBytes, _ := podSpec.Marshal()
 	secrets := make([][]byte, 0, len(pullSecrets))
 	for _, secret := range pullSecrets {
@@ -21,11 +21,11 @@ func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.Pod, pullSec
 			PodCmd: &connectivity.PodCmd{
 				Namespace: namespace,
 				Name:      name,
-				Action:    connectivity.PodCmd_CreateOrUpdate,
+				Action:    connectivity.PodCmd_Create,
 				Options: &connectivity.PodCmd_CreateOptions{
 					CreateOptions: &connectivity.CreateOptions{
-						Pod: &connectivity.CreateOptions_PodV1{
-							PodV1: &connectivity.PodV1{
+						Pod: &connectivity.CreateOptions_PodV1_{
+							PodV1: &connectivity.CreateOptions_PodV1{
 								Pod:        podSpecBytes,
 								PullSecret: secrets,
 							},
@@ -80,8 +80,8 @@ func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) 
 				Action:    connectivity.PodCmd_Exec,
 				Options: &connectivity.PodCmd_ExecOptions{
 					ExecOptions: &connectivity.ExecOptions{
-						ExecOptions: &connectivity.ExecOptions_ExecOptionsV1{
-							ExecOptionsV1: optionBytes,
+						Options: &connectivity.ExecOptions_OptionsV1{
+							OptionsV1: optionBytes,
 						},
 					},
 				},
@@ -101,8 +101,8 @@ func NewContainerAttachCmd(namespace, name string, options corev1.PodExecOptions
 				Action:    connectivity.PodCmd_Attach,
 				Options: &connectivity.PodCmd_ExecOptions{
 					ExecOptions: &connectivity.ExecOptions{
-						ExecOptions: &connectivity.ExecOptions_ExecOptionsV1{
-							ExecOptionsV1: optionBytes,
+						Options: &connectivity.ExecOptions_OptionsV1{
+							OptionsV1: optionBytes,
 						},
 					},
 				},
@@ -122,8 +122,8 @@ func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *c
 				Action:    connectivity.PodCmd_Log,
 				Options: &connectivity.PodCmd_LogOptions{
 					LogOptions: &connectivity.LogOptions{
-						LogOptions: &connectivity.LogOptions_LogOptionsV1{
-							LogOptionsV1: optionBytes,
+						Options: &connectivity.LogOptions_OptionsV1{
+							OptionsV1: optionBytes,
 						},
 					},
 				},
@@ -143,8 +143,8 @@ func NewPortForwardCmd(namespace, name string, options corev1.PodPortForwardOpti
 				Action:    connectivity.PodCmd_PortForward,
 				Options: &connectivity.PodCmd_PortForwardOptions{
 					PortForwardOptions: &connectivity.PortForwardOptions{
-						PortForwardOptions: &connectivity.PortForwardOptions_PortforwardOptionsV1{
-							PortforwardOptionsV1: optionBytes,
+						Options: &connectivity.PortForwardOptions_OptionsV1{
+							OptionsV1: optionBytes,
 						},
 					},
 				},

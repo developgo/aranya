@@ -12,32 +12,32 @@ var (
 	ErrClientNotConnected     = errors.New("client not connected ")
 )
 
-type PodCreateOrUpdateHandler func(sid uint64, namespace, name string, options *connectivity.CreateOptions)
-type PodDeleteHandler func(sid uint64, namespace, name string, options *connectivity.DeleteOptions)
-type PodListHandler func(sid uint64, namespace, name string, options *connectivity.ListOptions)
-type PortForwardHandler func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions)
-
-type ContainerLogHandler func(sid uint64, namespace, name string, options *connectivity.LogOptions)
-type ContainerExecHandler func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
-type ContainerAttachHandler func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
-type ContainerInputHandler func(sid uint64, options *connectivity.InputOptions)
-type ContainerTtyResizeHandler func(sid uint64, options *connectivity.TtyResizeOptions)
+type (
+	PodCreateHandler          func(sid uint64, namespace, name string, options *connectivity.CreateOptions) (pod *connectivity.Pod, err error)
+	PodDeleteHandler          func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error)
+	PodListHandler            func(sid uint64, namespace, name string, options *connectivity.ListOptions) (pods []*connectivity.Pod, err error)
+	PortForwardHandler        func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions)
+	ContainerLogHandler       func(sid uint64, namespace, name string, options *connectivity.LogOptions)
+	ContainerExecHandler      func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
+	ContainerAttachHandler    func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
+	ContainerInputHandler     func(sid uint64, options *connectivity.InputOptions)
+	ContainerTtyResizeHandler func(sid uint64, options *connectivity.TtyResizeOptions)
+)
 
 type Option func(*baseClient) error
 
 type baseClient struct {
-	podCreateOrUpdateHandler PodCreateOrUpdateHandler
-	podDeleteHandler         PodDeleteHandler
-	podListHandler           PodListHandler
-	podPortForwardHandler    PortForwardHandler
-
+	podCreateHandler          PodCreateHandler
+	podDeleteHandler          PodDeleteHandler
+	podListHandler            PodListHandler
+	podPortForwardHandler     PortForwardHandler
 	containerLogHandler       ContainerLogHandler
 	containerExecHandler      ContainerExecHandler
 	containerAttachHandler    ContainerAttachHandler
 	containerInputHandler     ContainerInputHandler
 	containerTtyResizeHandler ContainerTtyResizeHandler
 
-	globalMsgCh chan *connectivity.Msg
+	postMsgFunc func(msg *connectivity.Msg) error
 	mu          sync.RWMutex
 }
 
@@ -74,8 +74,8 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		switch cm.PodCmd.GetAction() {
 
 		// pod scope commands
-		case connectivity.PodCmd_CreateOrUpdate:
-			c.podCreateOrUpdate(sid, ns, name, cm.PodCmd.GetCreateOptions())
+		case connectivity.PodCmd_Create:
+			c.podCreate(sid, ns, name, cm.PodCmd.GetCreateOptions())
 		case connectivity.PodCmd_Delete:
 			c.podDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
 		case connectivity.PodCmd_List:
@@ -98,21 +98,54 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 	}
 }
 
-func (c *baseClient) podCreateOrUpdate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
-	if c.podCreateOrUpdateHandler != nil {
-		c.podCreateOrUpdateHandler(sid, namespace, name, options)
+func (c *baseClient) sendError(sid uint64, e error) {
+	if err := c.postMsgFunc(NewErrorMsg(sid, e)); err != nil {
+		// TODO: log error
+	}
+}
+
+func (c *baseClient) podCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
+	if c.podCreateHandler != nil {
+		podResp, err := c.podCreateHandler(sid, namespace, name, options)
+		if err != nil {
+			c.sendError(sid, err)
+			return
+		}
+
+		if err := c.postMsgFunc(NewPodMsg(sid, true, podResp)); err != nil {
+			// TODO: log error
+		}
 	}
 }
 
 func (c *baseClient) podDelete(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
 	if c.podDeleteHandler != nil {
-		c.podDeleteHandler(sid, namespace, name, options)
+		podDeleted, err := c.podDeleteHandler(sid, namespace, name, options)
+		if err != nil {
+			c.sendError(sid, err)
+			return
+		}
+
+		if err := c.postMsgFunc(NewPodMsg(sid, true, podDeleted)); err != nil {
+			// TODO: log error
+		}
 	}
 }
 
 func (c *baseClient) podList(sid uint64, namespace, name string, options *connectivity.ListOptions) {
 	if c.podListHandler != nil {
-		c.podListHandler(sid, namespace, name, options)
+		pods, err := c.podListHandler(sid, namespace, name, options)
+		if err != nil {
+			c.sendError(sid, err)
+			return
+		}
+
+		size := len(pods)
+		for i, pod := range pods {
+			if err := c.postMsgFunc(NewPodMsg(sid, i == size-1, pod)); err != nil {
+				// TODO: log error
+			}
+		}
 	}
 }
 

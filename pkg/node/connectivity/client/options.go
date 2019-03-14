@@ -1,8 +1,8 @@
 package client
 
-func WithPodCreateOrUpdateHandler(f PodCreateOrUpdateHandler) Option {
+func WithPodCreateHandler(f PodCreateHandler) Option {
 	return func(c *baseClient) error {
-		c.podCreateOrUpdateHandler = f
+		c.podCreateHandler = f
 		return nil
 	}
 }

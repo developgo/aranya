@@ -25,7 +25,7 @@ func (m *Manager) GetContainerLogs(namespace, pod, container string, options cor
 		defer func() { _ = writer.Close() }()
 
 		for msg := range msgCh {
-			_, err := writer.Write(msg.GetPodData().GetData())
+			_, err := writer.Write(msg.GetData().GetData())
 			if err != nil {
 				return
 			}
@@ -76,15 +76,15 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
 }
 
-func (m *Manager) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivitySrv.NewPodCreateOrUpdateCmd(pod.Namespace, pod.Name, *pod, nil)
+func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
+	cmd := connectivitySrv.NewPodCreateCmd(pod.Namespace, pod.Name, *pod, nil)
 	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err
 	}
 
 	for msg := range msgCh {
-		createdPod := msg.GetPodInfo()
+		createdPod := msg.GetPod()
 		_ = createdPod
 	}
 
@@ -99,7 +99,7 @@ func (m *Manager) DeletePodInDevice(namespace, name string) error {
 	}
 
 	for msg := range msgCh {
-		_ = msg.GetPodInfo()
+		_ = msg.GetPod()
 	}
 	return nil
 }

@@ -5,19 +5,20 @@ import (
 	"encoding/hex"
 
 	corev1 "k8s.io/api/core/v1"
+	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewNodeInfoMsg(sid uint64, completed bool, node corev1.Node) *connectivity.Msg {
+func NewNodeMsg(sid uint64, completed bool, node corev1.Node) *connectivity.Msg {
 	nodeBytes, _ := node.Marshal()
 
 	return &connectivity.Msg{
 		SessionId: sid,
 		Completed: completed,
-		Msg: &connectivity.Msg_NodeInfo{
-			NodeInfo: &connectivity.NodeInfo{
-				Node: &connectivity.NodeInfo_NodeV1{
+		Msg: &connectivity.Msg_Node{
+			Node: &connectivity.Node{
+				Node: &connectivity.Node_NodeV1{
 					NodeV1: nodeBytes,
 				},
 			},
@@ -25,12 +26,12 @@ func NewNodeInfoMsg(sid uint64, completed bool, node corev1.Node) *connectivity.
 	}
 }
 
-func NewPodDataMsg(sid uint64, completed bool, kind connectivity.Data_Kind, data []byte) *connectivity.Msg {
+func NewDataMsg(sid uint64, completed bool, kind connectivity.Data_Kind, data []byte) *connectivity.Msg {
 	return &connectivity.Msg{
 		SessionId: sid,
 		Completed: completed,
-		Msg: &connectivity.Msg_PodData{
-			PodData: &connectivity.Data{
+		Msg: &connectivity.Msg_Data{
+			Data: &connectivity.Data{
 				Kind: kind,
 				Data: data,
 			},
@@ -38,18 +39,42 @@ func NewPodDataMsg(sid uint64, completed bool, kind connectivity.Data_Kind, data
 	}
 }
 
-func NewPodInfoMsg(sid uint64, completed bool, pod corev1.Pod) *connectivity.Msg {
-	podBytes, _ := pod.Marshal()
+func NewPod(pod corev1.Pod, ip string, podStatuses []*criRuntime.PodSandboxStatus, containerStatuses []*criRuntime.ContainerStatus) *connectivity.Pod {
+	podStatusBytes := make([][]byte, len(podStatuses))
+	for i, podStatus := range podStatuses {
+		podStatusBytes[i], _ = podStatus.Marshal()
+	}
 
+	containerStatusBytes := make([][]byte, len(containerStatuses))
+	for i, containerStatus := range containerStatuses {
+		containerStatusBytes[i], _ = containerStatus.Marshal()
+	}
+
+	return &connectivity.Pod{
+		Namespace: pod.Namespace,
+		Name:      pod.Name,
+		Uid:       string(pod.UID),
+		Ip:        ip,
+
+		CriContainerStatus: &connectivity.Pod_ContainerStatusV1Alpha2{
+			ContainerStatusV1Alpha2: &connectivity.Pod_CriContainerStatusV1Alpha2{
+				V1Alpha2: containerStatusBytes,
+			},
+		},
+		CriPodStatus: &connectivity.Pod_PodStatusV1Alpha2{
+			PodStatusV1Alpha2: &connectivity.Pod_CriPodStatusV1Alpha2{
+				V1Alpha2: podStatusBytes,
+			},
+		},
+	}
+}
+
+func NewPodMsg(sid uint64, completed bool, pod *connectivity.Pod) *connectivity.Msg {
 	return &connectivity.Msg{
 		SessionId: sid,
 		Completed: completed,
-		Msg: &connectivity.Msg_PodInfo{
-			PodInfo: &connectivity.PodInfo{
-				Pod: &connectivity.PodInfo_PodV1{
-					PodV1: podBytes,
-				},
-			},
+		Msg: &connectivity.Msg_Pod{
+			Pod: pod,
 		},
 	}
 }
@@ -61,11 +86,29 @@ func NewAckSha256Msg(sid uint64, receivedData []byte) *connectivity.Msg {
 
 	return &connectivity.Msg{
 		SessionId: sid,
-		Completed: false,
+		Completed: true,
 		Msg: &connectivity.Msg_Ack{
 			Ack: &connectivity.Ack{
-				Hash: &connectivity.Ack_Sha256{
-					Sha256: hash,
+				Resp: &connectivity.Ack_Hash_{
+					Hash: &connectivity.Ack_Hash{
+						Hash: &connectivity.Ack_Hash_Sha256{
+							Sha256: hash,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func NewErrorMsg(sid uint64, err error) *connectivity.Msg {
+	return &connectivity.Msg{
+		SessionId: sid,
+		Completed: true,
+		Msg: &connectivity.Msg_Ack{
+			Ack: &connectivity.Ack{
+				Resp: &connectivity.Ack_Error{
+					Error: err.Error(),
 				},
 			},
 		},

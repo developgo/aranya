@@ -18,9 +18,9 @@ import (
 var (
 	expectedPodDataMsgList = func() []*connectivity.Msg {
 		return []*connectivity.Msg{
-			NewPodDataMsg(0, false, connectivity.Data_STDOUT, []byte("foo")),
-			NewPodDataMsg(0, false, connectivity.Data_STDERR, []byte("foo")),
-			NewPodDataMsg(0, true, connectivity.Data_STDOUT, []byte("bar")),
+			NewDataMsg(0, false, connectivity.Data_STDOUT, []byte("foo")),
+			NewDataMsg(0, false, connectivity.Data_STDERR, []byte("foo")),
+			NewDataMsg(0, true, connectivity.Data_STDOUT, []byte("bar")),
 		}
 	}
 )
@@ -63,8 +63,7 @@ func TestNewGrpcClient(t *testing.T) {
 		srvStop func()
 		client  *GrpcClient
 
-		podSpecReq = corev1.PodSpec{NodeName: "foo"}
-		podReq     = corev1.Pod{Spec: podSpecReq}
+		podReq = corev1.Pod{Spec: corev1.PodSpec{NodeName: "foo"}}
 	)
 
 	sendPodDataMsgAll := func(sid uint64) {
@@ -77,29 +76,26 @@ func TestNewGrpcClient(t *testing.T) {
 	}
 
 	opts := []Option{
-		WithPodCreateOrUpdateHandler(func(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
+		WithPodCreateHandler(func(sid uint64, namespace, name string, options *connectivity.CreateOptions) (*connectivity.Pod, error) {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 
-			podSpec := &corev1.PodSpec{}
-			err := podSpec.Unmarshal(options.GetPodSpecV1())
+			pod := &corev1.Pod{}
+			err := pod.Unmarshal(options.GetPodV1().GetPod())
 			assert.NoError(t, err)
 
-			err = client.PostMsg(NewPodInfoMsg(sid, true, corev1.Pod{Spec: *podSpec}))
-			assert.NoError(t, err)
+			return NewPod(*pod, "", nil, nil), nil
 		}),
-		WithPodDeleteHandler(func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
-			assert.Equal(t, "foo", namespace)
-			assert.Equal(t, "bar", name)
-			err := client.PostMsg(NewPodInfoMsg(sid, true, podReq))
-			assert.NoError(t, err)
-		}),
-		WithPodListHandler(func(sid uint64, namespace, name string, options *connectivity.ListOptions) {
+		WithPodDeleteHandler(func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 
-			err := client.PostMsg(NewPodInfoMsg(sid, true, podReq))
-			assert.NoError(t, err)
+			return nil, nil
+		}),
+		WithPodListHandler(func(sid uint64, namespace, name string, options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
+			assert.Equal(t, "foo", namespace)
+			assert.Equal(t, "bar", name)
+			return nil, nil
 		}),
 		WithPortForwardHandler(func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
 			assert.Equal(t, "foo", namespace)
@@ -139,7 +135,7 @@ func TestNewGrpcClient(t *testing.T) {
 	mgr, srvStop, client = newGrpcTestServerAndClient(opts)
 	defer srvStop()
 
-	err := client.PostMsg(NewNodeInfoMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
+	err := client.PostMsg(NewNodeMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
 	assert.Error(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -160,7 +156,7 @@ func TestNewGrpcClient(t *testing.T) {
 		<-mgr.WaitUntilDeviceConnected()
 
 		for msg := range mgr.ConsumeGlobalMsg() {
-			msg.GetNodeInfo()
+			msg.GetNode()
 		}
 	}()
 
@@ -170,16 +166,16 @@ func TestNewGrpcClient(t *testing.T) {
 		<-mgr.WaitUntilDeviceConnected()
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			server.NewPodCreateOrUpdateCmd("foo", "bar", podReq, nil),
-			*NewPodInfoMsg(0, true, podReq))
+			server.NewPodCreateCmd("foo", "bar", podReq, nil),
+			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			server.NewPodListCmd("foo", "bar"),
-			*NewPodInfoMsg(0, true, podReq))
+			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			server.NewPodDeleteCmd("foo", "bar", time.Second),
-			*NewPodInfoMsg(0, true, podReq))
+			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
 			server.NewPortForwardCmd("foo", "bar",
@@ -264,21 +260,21 @@ func assertMsgEqual(t *testing.T, expectedMsg, msg connectivity.Msg) {
 	assert.Equal(t, expectedMsg.GetCompleted(), msg.GetCompleted())
 	assert.Equal(t, expectedMsg.GetSessionId(), msg.GetSessionId())
 
-	if expectedMsg.GetPodInfo() == nil {
-		assert.Nil(t, msg.GetPodInfo())
+	if expectedMsg.GetPod() == nil {
+		assert.Nil(t, msg.GetPod())
 	} else {
-		assert.Equal(t, *expectedMsg.GetPodInfo(), *msg.GetPodInfo())
+		assert.Equal(t, *expectedMsg.GetPod(), *msg.GetPod())
 	}
 
-	if expectedMsg.GetPodData() == nil {
-		assert.Nil(t, msg.GetPodData())
+	if expectedMsg.GetData() == nil {
+		assert.Nil(t, msg.GetData())
 	} else {
-		assert.Equal(t, *expectedMsg.GetPodData(), *msg.GetPodData())
+		assert.Equal(t, *expectedMsg.GetData(), *msg.GetData())
 	}
 
-	if expectedMsg.GetNodeInfo() == nil {
-		assert.Nil(t, msg.GetNodeInfo())
+	if expectedMsg.GetNode() == nil {
+		assert.Nil(t, msg.GetNode())
 	} else {
-		assert.Equal(t, *expectedMsg.GetNodeInfo(), *msg.GetNodeInfo())
+		assert.Equal(t, *expectedMsg.GetNode(), *msg.GetNode())
 	}
 }

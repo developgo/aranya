@@ -1,23 +1,57 @@
 package node
 
 import (
+	"sync"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
+	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/node/connectivity/server"
 )
 
 func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
+		wg := &sync.WaitGroup{}
+
 		n.connectivityManager.WaitUntilDeviceConnected()
-		msgCh := n.connectivityManager.ConsumeGlobalMsg()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Wait()
+
+			n.handleGlobalMsg(n.connectivityManager.ConsumeGlobalMsg())
+		}()
+
+		podListCmd := server.NewPodListCmd("", "")
+		msgCh, err := n.connectivityManager.PostCmd(podListCmd, 0)
+		if err != nil {
+			// log error
+		}
+		var podsInDevice []*kubeletContainer.PodStatus
 		for msg := range msgCh {
-			switch msg.GetMsg().(type) {
-			case *connectivity.Msg_NodeInfo:
-				nodeInfo := msg.GetNodeInfo()
+			msg.GetPod()
+
+			podStatus := connectivity.TranslatePodToPodStatus(msg.GetPod())
+			podsInDevice = append(podsInDevice, podStatus)
+		}
+		// TODO: update pods according podsInDevice
+
+		wg.Wait()
+	}
+}
+
+func (n *Node) handleGlobalMsg(msgCh <-chan *connectivity.Msg) {
+	for msg := range msgCh {
+		switch m := msg.GetMsg().(type) {
+		case *connectivity.Msg_Node:
+			switch node := m.Node.GetNode().(type) {
+			case *connectivity.Node_NodeV1:
 				// update node info
 				newNode := &corev1.Node{}
-				if err := newNode.Unmarshal(nodeInfo.GetNodeV1()); err != nil {
+				if err := newNode.Unmarshal(node.NodeV1); err != nil {
 					n.log.Error(err, "unmarshal device status failed")
 					continue
 				}
@@ -35,15 +69,46 @@ func (n *Node) InitializeRemoteDevice() {
 					return
 				}
 				_ = updatedMe
-			case *connectivity.Msg_PodInfo:
-				podInfo := msg.GetPodInfo()
-				pod := &corev1.Pod{}
-				if err := pod.Unmarshal(podInfo.GetPodV1()); err != nil {
-					n.log.Error(err, "unmarshal pod status failed")
-				}
-			case *connectivity.Msg_PodData:
-				// we don't know how to handle this kind of message, discard
 			}
+		case *connectivity.Msg_Pod:
+			_ = m.Pod.GetName()
+			_ = m.Pod.GetNamespace()
+			_ = m.Pod.GetIp()
+			_ = m.Pod.GetUid()
+
+			switch containerStatus := m.Pod.GetCriContainerStatus().(type) {
+			case *connectivity.Pod_ContainerStatusV1Alpha2:
+				allBytes := containerStatus.ContainerStatusV1Alpha2.GetV1Alpha2()
+
+				containerStatuses := make([]*criRuntime.ContainerStatus, len(allBytes))
+				for i, statusBytes := range allBytes {
+					status := &criRuntime.ContainerStatus{}
+					err := status.Unmarshal(statusBytes)
+					if err != nil {
+						continue
+					}
+
+					containerStatuses[i] = status
+				}
+			}
+
+			switch podStatus := m.Pod.GetCriPodStatus().(type) {
+			case *connectivity.Pod_PodStatusV1Alpha2:
+				allBytes := podStatus.PodStatusV1Alpha2.GetV1Alpha2()
+
+				podStatuses := make([]*criRuntime.PodSandboxStatus, len(allBytes))
+				for i, statusBytes := range allBytes {
+					status := &criRuntime.PodSandboxStatus{}
+					err := status.Unmarshal(statusBytes)
+					if err != nil {
+						continue
+					}
+
+					podStatuses[i] = status
+				}
+			}
+		case *connectivity.Msg_Data:
+			// we don't know how to handle this kind of message, discard
 		}
 	}
 }
