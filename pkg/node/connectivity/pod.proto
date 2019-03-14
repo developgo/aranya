@@ -51,10 +51,15 @@ message PodCmd {
 }
 
 message CreateOptions {
-    oneof pod_spec {
-        // protobuf bytes of corev1.PodSpec
-        bytes pod_spec_v1 = 1;
+    oneof pod {
+        // protobuf bytes of corev1.Pod
+        PodV1 pod_v1 = 1;
     }
+}
+
+message PodV1 {
+    bytes pod = 1;
+    repeated bytes pull_secret = 2;
 }
 
 message DeleteOptions {

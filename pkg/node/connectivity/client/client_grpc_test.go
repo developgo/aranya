@@ -170,7 +170,7 @@ func TestNewGrpcClient(t *testing.T) {
 		<-mgr.WaitUntilDeviceConnected()
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			server.NewPodCreateOrUpdateCmd("foo", "bar", podSpecReq),
+			server.NewPodCreateOrUpdateCmd("foo", "bar", podReq, nil),
 			*NewPodInfoMsg(0, true, podReq))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,

@@ -77,7 +77,7 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 }
 
 func (m *Manager) CreateOrUpdatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivitySrv.NewPodCreateOrUpdateCmd(pod.Namespace, pod.Name, pod.Spec)
+	cmd := connectivitySrv.NewPodCreateOrUpdateCmd(pod.Namespace, pod.Name, *pod, nil)
 	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err

@@ -108,7 +108,7 @@ func (s baseServer) onPostCmd(cmd *connectivity.Cmd, timeout time.Duration, send
 	defer s.mu.RUnlock()
 
 	var (
-		sid uint64
+		sid                uint64
 		sessionMustPresent bool
 	)
 

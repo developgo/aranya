@@ -8,8 +8,13 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.PodSpec) *connectivity.Cmd {
+func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
 	podSpecBytes, _ := podSpec.Marshal()
+	secrets := make([][]byte, 0, len(pullSecrets))
+	for _, secret := range pullSecrets {
+		secretBytes, _ := secret.Marshal()
+		secrets = append(secrets, secretBytes)
+	}
 
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
@@ -19,8 +24,11 @@ func NewPodCreateOrUpdateCmd(namespace, name string, podSpec corev1.PodSpec) *co
 				Action:    connectivity.PodCmd_CreateOrUpdate,
 				Options: &connectivity.PodCmd_CreateOptions{
 					CreateOptions: &connectivity.CreateOptions{
-						PodSpec: &connectivity.CreateOptions_PodSpecV1{
-							PodSpecV1: podSpecBytes,
+						Pod: &connectivity.CreateOptions_PodV1{
+							PodV1: &connectivity.PodV1{
+								Pod:        podSpecBytes,
+								PullSecret: secrets,
+							},
 						},
 					},
 				},
@@ -153,7 +161,7 @@ func NewContainerInputCmd(sid uint64, data []byte) *connectivity.Cmd {
 				Action: connectivity.PodCmd_Input,
 				Options: &connectivity.PodCmd_InputOptions{
 					InputOptions: &connectivity.InputOptions{
-						Data:      data,
+						Data: data,
 					},
 				},
 			},
