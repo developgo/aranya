@@ -27,38 +27,75 @@ func (n *Node) InitializeRemoteDevice() {
 			}
 		}()
 
-		podListCmd := server.NewPodListCmd("", "")
-		msgCh, err := n.connectivityManager.PostCmd(podListCmd, 0)
-		if err != nil {
-			n.log.Error(err, "post cmd to device failed")
+		if err := n.generateCacheForPods(); err != nil {
+			n.log.Error(err, "generate pods cache failed")
 			goto waitForDeviceDisconnect
 		}
 
-		{
-			// initialize pod cache for remote device
-			var podStatuses []*kubeletContainer.PodStatus
-			for msg := range msgCh {
-				if err := msg.Error(); err != nil {
-					n.log.Error(err, "list pod failed")
-					goto waitForDeviceDisconnect
-				}
-
-				podStatuses = append(podStatuses, msg.GetPod().GetResolvedKubePodStatus())
-			}
-
-			for _, podStatus := range podStatuses {
-				apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
-				if err != nil {
-					n.log.Error(err, "get mirror pod failed")
-					goto waitForDeviceDisconnect
-				}
-
-				n.podCache.Update(apiPod, podStatus)
-			}
+		if err := n.generateCacheForNode(); err != nil {
+			n.log.Error(err, "generate node cache failed")
+			goto waitForDeviceDisconnect
 		}
+
 	waitForDeviceDisconnect:
 		wg.Wait()
 	}
+}
+
+// generate in cluster pod cache for remote device
+func (n *Node) generateCacheForPods() error {
+	msgCh, err := n.connectivityManager.PostCmd(server.NewPodListCmd("", ""), 0)
+	if err != nil {
+		return err
+	}
+
+	var podStatuses []*kubeletContainer.PodStatus
+	for msg := range msgCh {
+		if err := msg.Error(); err != nil {
+			return err
+		}
+
+		podStatus, err := msg.GetPod().GetResolvedKubePodStatus()
+		if err != nil {
+			return err
+		}
+		podStatuses = append(podStatuses, podStatus)
+	}
+
+	for _, podStatus := range podStatuses {
+		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
+		if err != nil {
+			return err
+		}
+
+		n.podCache.Update(apiPod, podStatus)
+	}
+
+	return nil
+}
+
+// generate in cluster node cache for remote device
+func (n *Node) generateCacheForNode() error {
+	msgCh, err := n.connectivityManager.PostCmd(server.NewNodeCmd(), 0)
+	if err != nil {
+		return err
+	}
+
+	var node *corev1.Node
+	for msg := range msgCh {
+		if err := msg.Error(); err != nil {
+			return err
+		}
+
+		node, err = msg.GetResolvedCoreV1Node()
+		if err != nil {
+			return err
+		}
+	}
+	// TODO: store node cache
+	_ = node
+
+	return nil
 }
 
 func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
@@ -68,7 +105,6 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 		case *connectivity.Ack_Error:
 			n.log.Error(msg.Error(), "received error from remote device")
 		}
-
 	case *connectivity.Msg_Node:
 		switch node := m.Node.GetNode().(type) {
 		case *connectivity.Node_NodeV1:
@@ -94,7 +130,12 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 			_ = updatedMe
 		}
 	case *connectivity.Msg_Pod:
-		podStatus := m.Pod.GetResolvedKubePodStatus()
+		podStatus, err := m.Pod.GetResolvedKubePodStatus()
+		if err != nil {
+			n.log.Error(err, "resolve kube pod status failed")
+			return
+		}
+
 		_ = podStatus
 		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
 		if err != nil {

@@ -8,6 +8,14 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
+func NewNodeCmd() *connectivity.Cmd {
+	return &connectivity.Cmd{
+		Cmd: &connectivity.Cmd_NodeCmd{
+			NodeCmd: &connectivity.NodeCmd{},
+		},
+	}
+}
+
 func NewPodCreateCmd(pod corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
 	podBytes, _ := pod.Marshal()
 

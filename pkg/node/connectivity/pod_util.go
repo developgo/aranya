@@ -8,18 +8,28 @@ import (
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 )
 
-func (m *Pod) GetResolvedKubePodStatus() *kubeletContainer.PodStatus {
+func (m *Pod) GetResolvedKubePodStatus() (*kubeletContainer.PodStatus, error) {
+	containerStatuses, err := m.getResolvedKubeContainerStatuses()
+	if err != nil {
+		return nil, err
+	}
+
+	sandboxStatuses, err := m.getResolvedV1Alpha2SandboxStatuses()
+	if err != nil {
+		return nil, err
+	}
+
 	return &kubeletContainer.PodStatus{
 		Namespace:         m.Namespace,
 		Name:              m.Name,
 		ID:                types.UID(m.Uid),
 		IP:                m.Ip,
-		ContainerStatuses: m.getResolvedKubeContainerStatuses(),
-		SandboxStatuses:   m.getResolvedV1Alpha2SandboxStatuses(),
-	}
+		ContainerStatuses: containerStatuses,
+		SandboxStatuses:   sandboxStatuses,
+	}, nil
 }
 
-func (m *Pod) getResolvedV1Alpha2SandboxStatuses() []*criRuntime.PodSandboxStatus {
+func (m *Pod) getResolvedV1Alpha2SandboxStatuses() ([]*criRuntime.PodSandboxStatus, error) {
 	allBytes := m.GetSandboxV1Alpha2().GetV1Alpha2()
 	podStatuses := make([]*criRuntime.PodSandboxStatus, len(allBytes))
 
@@ -27,37 +37,40 @@ func (m *Pod) getResolvedV1Alpha2SandboxStatuses() []*criRuntime.PodSandboxStatu
 		status := &criRuntime.PodSandboxStatus{}
 		err := status.Unmarshal(statusBytes)
 		if err != nil {
-			continue
+			return nil, err
 		}
 
 		podStatuses[i] = status
 	}
 
-	return podStatuses
+	return podStatuses, nil
 }
 
-func (m *Pod) getResolvedV1Alpha2ContainerStatuses() []*criRuntime.ContainerStatus {
+func (m *Pod) getResolvedV1Alpha2ContainerStatuses() ([]*criRuntime.ContainerStatus, error) {
 	allBytes := m.GetContainerV1Alpha2().GetV1Alpha2()
 	containerStatuses := make([]*criRuntime.ContainerStatus, len(allBytes))
 	for i, statusBytes := range allBytes {
 		status := &criRuntime.ContainerStatus{}
 		err := status.Unmarshal(statusBytes)
 		if err != nil {
-			continue
+			return nil, err
 		}
 
 		containerStatuses[i] = status
 	}
 
-	return containerStatuses
+	return containerStatuses, nil
 }
 
-func (m *Pod) getResolvedKubeContainerStatuses() []*kubeletContainer.ContainerStatus {
+func (m *Pod) getResolvedKubeContainerStatuses() ([]*kubeletContainer.ContainerStatus, error) {
 	var kubeContainerStatuses []*kubeletContainer.ContainerStatus
 
 	switch m.GetContainerStatus().(type) {
 	case *Pod_ContainerV1Alpha2:
-		criContainerStatuses := m.getResolvedV1Alpha2ContainerStatuses()
+		criContainerStatuses, err := m.getResolvedV1Alpha2ContainerStatuses()
+		if err != nil {
+			return nil, err
+		}
 		for _, status := range criContainerStatuses {
 			kubeContainerStatuses = append(kubeContainerStatuses, &kubeletContainer.ContainerStatus{
 				ID:         kubeletContainer.ParseContainerID(status.GetId()),
@@ -78,5 +91,5 @@ func (m *Pod) getResolvedKubeContainerStatuses() []*kubeletContainer.ContainerSt
 		}
 	}
 
-	return kubeContainerStatuses
+	return kubeContainerStatuses, nil
 }
