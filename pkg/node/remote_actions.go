@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -22,94 +21,89 @@ func (n *Node) InitializeRemoteDevice() {
 		go func() {
 			defer wg.Wait()
 
-			n.handleGlobalMsg(n.connectivityManager.ConsumeGlobalMsg())
+			globalMsgCh := n.connectivityManager.ConsumeGlobalMsg()
+			for msg := range globalMsgCh {
+				n.handleGlobalMsg(msg)
+			}
 		}()
 
 		podListCmd := server.NewPodListCmd("", "")
 		msgCh, err := n.connectivityManager.PostCmd(podListCmd, 0)
 		if err != nil {
-			// log error
+			n.log.Error(err, "post cmd to device failed")
+			goto waitForDeviceDisconnect
 		}
-		var podsInDevice []*kubeletContainer.PodStatus
-		for msg := range msgCh {
-			msg.GetPod()
 
-			podStatus := connectivity.TranslatePodToPodStatus(msg.GetPod())
-			podsInDevice = append(podsInDevice, podStatus)
+		{
+			// initialize pod cache for remote device
+			var podStatuses []*kubeletContainer.PodStatus
+			for msg := range msgCh {
+				if err := msg.Error(); err != nil {
+					n.log.Error(err, "list pod failed")
+					goto waitForDeviceDisconnect
+				}
+
+				podStatuses = append(podStatuses, msg.GetPod().GetResolvedKubePodStatus())
+			}
+
+			for _, podStatus := range podStatuses {
+				apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
+				if err != nil {
+					n.log.Error(err, "get mirror pod failed")
+					goto waitForDeviceDisconnect
+				}
+
+				n.podCache.Update(apiPod, podStatus)
+			}
 		}
-		// TODO: update pods according podsInDevice
-
+	waitForDeviceDisconnect:
 		wg.Wait()
 	}
 }
 
-func (n *Node) handleGlobalMsg(msgCh <-chan *connectivity.Msg) {
-	for msg := range msgCh {
-		switch m := msg.GetMsg().(type) {
-		case *connectivity.Msg_Node:
-			switch node := m.Node.GetNode().(type) {
-			case *connectivity.Node_NodeV1:
-				// update node info
-				newNode := &corev1.Node{}
-				if err := newNode.Unmarshal(node.NodeV1); err != nil {
-					n.log.Error(err, "unmarshal device status failed")
-					continue
-				}
-
-				me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
-				if err != nil {
-					n.log.Error(err, "get self node info failed")
-					continue
-				}
-
-				resolveDeviceStatus(me.Status, newNode.Status)
-				updatedMe, err := n.nodeClient.UpdateStatus(me)
-				if err != nil {
-					n.log.Error(err, "update node status failed")
-					return
-				}
-				_ = updatedMe
-			}
-		case *connectivity.Msg_Pod:
-			_ = m.Pod.GetName()
-			_ = m.Pod.GetNamespace()
-			_ = m.Pod.GetIp()
-			_ = m.Pod.GetUid()
-
-			switch containerStatus := m.Pod.GetCriContainerStatus().(type) {
-			case *connectivity.Pod_ContainerStatusV1Alpha2:
-				allBytes := containerStatus.ContainerStatusV1Alpha2.GetV1Alpha2()
-
-				containerStatuses := make([]*criRuntime.ContainerStatus, len(allBytes))
-				for i, statusBytes := range allBytes {
-					status := &criRuntime.ContainerStatus{}
-					err := status.Unmarshal(statusBytes)
-					if err != nil {
-						continue
-					}
-
-					containerStatuses[i] = status
-				}
-			}
-
-			switch podStatus := m.Pod.GetCriPodStatus().(type) {
-			case *connectivity.Pod_PodStatusV1Alpha2:
-				allBytes := podStatus.PodStatusV1Alpha2.GetV1Alpha2()
-
-				podStatuses := make([]*criRuntime.PodSandboxStatus, len(allBytes))
-				for i, statusBytes := range allBytes {
-					status := &criRuntime.PodSandboxStatus{}
-					err := status.Unmarshal(statusBytes)
-					if err != nil {
-						continue
-					}
-
-					podStatuses[i] = status
-				}
-			}
-		case *connectivity.Msg_Data:
-			// we don't know how to handle this kind of message, discard
+func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
+	switch m := msg.GetMsg().(type) {
+	case *connectivity.Msg_Ack:
+		switch m.Ack.GetValue().(type) {
+		case *connectivity.Ack_Error:
+			n.log.Error(msg.Error(), "received error from remote device")
 		}
+
+	case *connectivity.Msg_Node:
+		switch node := m.Node.GetNode().(type) {
+		case *connectivity.Node_NodeV1:
+			// update node info
+			newNode := &corev1.Node{}
+			if err := newNode.Unmarshal(node.NodeV1); err != nil {
+				n.log.Error(err, "unmarshal device status failed")
+				return
+			}
+
+			me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
+			if err != nil {
+				n.log.Error(err, "get self node info failed")
+				return
+			}
+
+			resolveDeviceStatus(me.Status, newNode.Status)
+			updatedMe, err := n.nodeClient.UpdateStatus(me)
+			if err != nil {
+				n.log.Error(err, "update node status failed")
+				return
+			}
+			_ = updatedMe
+		}
+	case *connectivity.Msg_Pod:
+		podStatus := m.Pod.GetResolvedKubePodStatus()
+		_ = podStatus
+		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
+		if err != nil {
+			n.log.Error(err, "get mirror pod failed")
+			return
+		}
+		n.podCache.Update(apiPod, podStatus)
+	case *connectivity.Msg_Data:
+		// we don't know how to handle this kind of message, discard
 	}
 }
 

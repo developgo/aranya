@@ -14,7 +14,7 @@ message Ack {
         }
     }
 
-    oneof resp {
+    oneof value {
         Hash hash = 1;
         string error = 2;
     }
@@ -33,11 +33,11 @@ message Data {
 }
 
 message Pod {
-    message CriContainerStatusV1alpha2 {
+    message ContainerStatusV1alpha2 {
         repeated bytes v1alpha2 = 1;
     }
 
-    message CriPodStatusV1alpha2 {
+    message SandboxStatusV1alpha2 {
         repeated bytes v1alpha2 = 1;
     }
 
@@ -46,12 +46,12 @@ message Pod {
     string uid = 3;
     string ip = 4;
 
-    oneof cri_pod_status {
-        CriPodStatusV1alpha2 pod_status_v1alpha2 = 11;
+    oneof sandbox_status {
+        SandboxStatusV1alpha2 sandbox_status_v1alpha2 = 11;
     }
 
-    oneof cri_container_status {
-        CriContainerStatusV1alpha2 container_status_v1alpha2 = 21;
+    oneof container_status {
+        ContainerStatusV1alpha2 container_status_v1alpha2 = 21;
     }
 }
 

@@ -56,13 +56,13 @@ func NewPod(pod corev1.Pod, ip string, podStatuses []*criRuntime.PodSandboxStatu
 		Uid:       string(pod.UID),
 		Ip:        ip,
 
-		CriContainerStatus: &connectivity.Pod_ContainerStatusV1Alpha2{
-			ContainerStatusV1Alpha2: &connectivity.Pod_CriContainerStatusV1Alpha2{
+		ContainerStatus: &connectivity.Pod_ContainerStatusV1Alpha2_{
+			ContainerStatusV1Alpha2: &connectivity.Pod_ContainerStatusV1Alpha2{
 				V1Alpha2: containerStatusBytes,
 			},
 		},
-		CriPodStatus: &connectivity.Pod_PodStatusV1Alpha2{
-			PodStatusV1Alpha2: &connectivity.Pod_CriPodStatusV1Alpha2{
+		SandboxStatus: &connectivity.Pod_SandboxStatusV1Alpha2_{
+			SandboxStatusV1Alpha2: &connectivity.Pod_SandboxStatusV1Alpha2{
 				V1Alpha2: podStatusBytes,
 			},
 		},
@@ -89,7 +89,7 @@ func NewAckSha256Msg(sid uint64, receivedData []byte) *connectivity.Msg {
 		Completed: true,
 		Msg: &connectivity.Msg_Ack{
 			Ack: &connectivity.Ack{
-				Resp: &connectivity.Ack_Hash_{
+				Value: &connectivity.Ack_Hash_{
 					Hash: &connectivity.Ack_Hash{
 						Hash: &connectivity.Ack_Hash_Sha256{
 							Sha256: hash,
@@ -107,7 +107,7 @@ func NewErrorMsg(sid uint64, err error) *connectivity.Msg {
 		Completed: true,
 		Msg: &connectivity.Msg_Ack{
 			Ack: &connectivity.Ack{
-				Resp: &connectivity.Ack_Error{
+				Value: &connectivity.Ack_Error{
 					Error: err.Error(),
 				},
 			},

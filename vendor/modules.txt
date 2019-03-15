@@ -683,18 +683,18 @@ k8s.io/klog
 k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
 # k8s.io/kubernetes v1.13.3
-k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2
 k8s.io/kubernetes/pkg/kubelet/configmap
+k8s.io/kubernetes/pkg/kubelet/container
 k8s.io/kubernetes/pkg/kubelet/pod
 k8s.io/kubernetes/pkg/kubelet/secret
 k8s.io/kubernetes/pkg/kubelet/status
 k8s.io/kubernetes/pkg/kubelet/util
 k8s.io/kubernetes/pkg/util/node
+k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2
 k8s.io/kubernetes/pkg/credentialprovider
 k8s.io/kubernetes/pkg/credentialprovider/secrets
 k8s.io/kubernetes/pkg/features
 k8s.io/kubernetes/pkg/kubelet/cm
-k8s.io/kubernetes/pkg/kubelet/container
 k8s.io/kubernetes/pkg/kubelet/images
 k8s.io/kubernetes/pkg/kubelet/kuberuntime
 k8s.io/kubernetes/pkg/kubelet/types
@@ -714,6 +714,8 @@ k8s.io/kubernetes/pkg/apis/core/v1/validation
 k8s.io/kubernetes/pkg/api/v1/pod
 k8s.io/kubernetes/pkg/apis/core/v1
 k8s.io/kubernetes/pkg/kubelet/util/manager
+k8s.io/kubernetes/pkg/util/hash
+k8s.io/kubernetes/third_party/forked/golang/expansion
 k8s.io/kubernetes/pkg/kubelet/checkpoint
 k8s.io/kubernetes/pkg/kubelet/checkpointmanager
 k8s.io/kubernetes/pkg/util/pod
@@ -740,8 +742,6 @@ k8s.io/kubernetes/pkg/util/mount
 k8s.io/kubernetes/pkg/util/oom
 k8s.io/kubernetes/pkg/util/procfs
 k8s.io/kubernetes/pkg/util/sysctl
-k8s.io/kubernetes/pkg/util/hash
-k8s.io/kubernetes/third_party/forked/golang/expansion
 k8s.io/kubernetes/pkg/kubelet/util/sliceutils
 k8s.io/kubernetes/pkg/kubelet/kuberuntime/logs
 k8s.io/kubernetes/pkg/kubelet/prober/results
