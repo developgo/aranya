@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -12,6 +13,7 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	"k8s.io/kubernetes/pkg/kubelet/kuberuntime"
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -24,6 +26,8 @@ const (
 	// error. It is also used as the base period for the exponential backoff
 	// container restarts and image pulls.
 	BackOffPeriod = time.Second * 10
+	// The api version of kubelet runtime api
+	KubeRuntimeAPIVersion = "0.1.0"
 )
 
 func NewRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time.Duration) (*Runtime, error) {
@@ -37,7 +41,7 @@ func NewRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time
 		return nil, err
 	}
 
-	return &Runtime{
+	runtime := &Runtime{
 		ctx:         ctx,
 		runtimeName: "default",
 
@@ -51,7 +55,25 @@ func NewRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time
 		imageSvcClient:   criRuntime.NewImageServiceClient(imageSvcConn),
 
 		containerRefManager: kubeletContainer.NewRefManager(),
-	}, nil
+	}
+
+	typedVersion, err := runtime.remoteVersion(KubeRuntimeAPIVersion)
+	if err != nil {
+		return nil, err
+	}
+	if typedVersion.RuntimeApiVersion != KubeRuntimeAPIVersion {
+		return nil, kuberuntime.ErrVersionNotSupported
+	}
+	runtime.runtimeName = typedVersion.RuntimeName
+
+	// ensure pod log dir exists
+	if _, err := os.Stat(podLogsRootDirectory); os.IsNotExist(err) {
+		if err := os.MkdirAll(podLogsRootDirectory, 0755); err != nil {
+			// TODO: log error
+		}
+	}
+
+	return runtime, nil
 }
 
 type Runtime struct {
@@ -70,9 +92,9 @@ type Runtime struct {
 	containerRefManager *kubeletContainer.RefManager
 }
 
-func (r *Runtime) CreateOrUpdatePod(sid uint64, namespace, name string, options *connectivity.CreateOptions) error {
+func (r *Runtime) CreatePod(sid uint64, namespace, name string, options *connectivity.CreateOptions) error {
 	switch opt := options.GetPod().(type) {
-	case *connectivity.CreateOptions_PodV1:
+	case *connectivity.CreateOptions_PodV1_:
 		var (
 			err error
 

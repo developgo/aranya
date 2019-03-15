@@ -2,63 +2,63 @@ package client
 
 func WithPodCreateHandler(f PodCreateHandler) Option {
 	return func(c *baseClient) error {
-		c.podCreateHandler = f
+		c.doPodCreate = f
 		return nil
 	}
 }
 
 func WithPodDeleteHandler(f PodDeleteHandler) Option {
 	return func(c *baseClient) error {
-		c.podDeleteHandler = f
+		c.doPodDelete = f
 		return nil
 	}
 }
 
 func WithPodListHandler(f PodListHandler) Option {
 	return func(c *baseClient) error {
-		c.podListHandler = f
+		c.doPodList = f
 		return nil
 	}
 }
 
 func WithPortForwardHandler(f PortForwardHandler) Option {
 	return func(c *baseClient) error {
-		c.podPortForwardHandler = f
+		c.doPodPortForward = f
 		return nil
 	}
 }
 
 func WithContainerLogHandler(f ContainerLogHandler) Option {
 	return func(c *baseClient) error {
-		c.containerLogHandler = f
+		c.doContainerLog = f
 		return nil
 	}
 }
 
 func WithContainerExecHandler(f ContainerExecHandler) Option {
 	return func(c *baseClient) error {
-		c.containerExecHandler = f
+		c.doContainerExec = f
 		return nil
 	}
 }
 
 func WithContainerAttachHandler(f ContainerAttachHandler) Option {
 	return func(c *baseClient) error {
-		c.containerAttachHandler = f
+		c.doContainerAttach = f
 		return nil
 	}
 }
 
 func WithContainerInputHandler(f ContainerInputHandler) Option {
 	return func(c *baseClient) error {
-		c.containerInputHandler = f
+		c.doContainerInput = f
 		return nil
 	}
 }
 
 func WithContainerTtyResizeHandler(f ContainerTtyResizeHandler) Option {
 	return func(c *baseClient) error {
-		c.containerTtyResizeHandler = f
+		c.doContainerTtyResize = f
 		return nil
 	}
 }

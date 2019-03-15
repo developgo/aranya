@@ -97,38 +97,44 @@ func TestNewGrpcClient(t *testing.T) {
 			assert.Equal(t, "bar", name)
 			return nil, nil
 		}),
-		WithPortForwardHandler(func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
+		WithPortForwardHandler(func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) error {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 			sendPodDataMsgAll(sid)
+			return nil
 		}),
 
 		// stream cmd
-		WithContainerAttachHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
+		WithContainerAttachHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 			sendPodDataMsgAll(sid)
+			return nil
 		}),
 		// stream cmd
-		WithContainerExecHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
+		WithContainerExecHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 			sendPodDataMsgAll(sid)
+			return nil
 		}),
 		// stream/onetime cmd
-		WithContainerLogHandler(func(sid uint64, namespace, name string, options *connectivity.LogOptions) {
+		WithContainerLogHandler(func(sid uint64, namespace, name string, options *connectivity.LogOptions) error {
 			assert.Equal(t, "foo", namespace)
 			assert.Equal(t, "bar", name)
 			sendPodDataMsgAll(sid)
+			return nil
 		}),
 		// onetime cmd (no reply, best effort)
-		WithContainerInputHandler(func(sid uint64, options *connectivity.InputOptions) {
+		WithContainerInputHandler(func(sid uint64, options *connectivity.InputOptions) error {
 			assert.Equal(t, "foo", string(options.GetData()))
+			return nil
 		}),
 		// onetime cmd (on reply, best effort)
-		WithContainerTtyResizeHandler(func(sid uint64, options *connectivity.TtyResizeOptions) {
+		WithContainerTtyResizeHandler(func(sid uint64, options *connectivity.TtyResizeOptions) error {
 			assert.Equal(t, 10, options.GetCols())
 			assert.Equal(t, 10, options.GetRows())
+			return nil
 		}),
 	}
 

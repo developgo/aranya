@@ -10,32 +10,33 @@ import (
 var (
 	ErrClientAlreadyConnected = errors.New("client already connected ")
 	ErrClientNotConnected     = errors.New("client not connected ")
+	ErrMethodNotImplemented   = errors.New("method not implemented ")
 )
 
 type (
 	PodCreateHandler          func(sid uint64, namespace, name string, options *connectivity.CreateOptions) (pod *connectivity.Pod, err error)
 	PodDeleteHandler          func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error)
 	PodListHandler            func(sid uint64, namespace, name string, options *connectivity.ListOptions) (pods []*connectivity.Pod, err error)
-	PortForwardHandler        func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions)
-	ContainerLogHandler       func(sid uint64, namespace, name string, options *connectivity.LogOptions)
-	ContainerExecHandler      func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
-	ContainerAttachHandler    func(sid uint64, namespace, name string, options *connectivity.ExecOptions)
-	ContainerInputHandler     func(sid uint64, options *connectivity.InputOptions)
-	ContainerTtyResizeHandler func(sid uint64, options *connectivity.TtyResizeOptions)
+	PortForwardHandler        func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) error
+	ContainerLogHandler       func(sid uint64, namespace, name string, options *connectivity.LogOptions) error
+	ContainerExecHandler      func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error
+	ContainerAttachHandler    func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error
+	ContainerInputHandler     func(sid uint64, options *connectivity.InputOptions) error
+	ContainerTtyResizeHandler func(sid uint64, options *connectivity.TtyResizeOptions) error
 )
 
 type Option func(*baseClient) error
 
 type baseClient struct {
-	podCreateHandler          PodCreateHandler
-	podDeleteHandler          PodDeleteHandler
-	podListHandler            PodListHandler
-	podPortForwardHandler     PortForwardHandler
-	containerLogHandler       ContainerLogHandler
-	containerExecHandler      ContainerExecHandler
-	containerAttachHandler    ContainerAttachHandler
-	containerInputHandler     ContainerInputHandler
-	containerTtyResizeHandler ContainerTtyResizeHandler
+	doPodCreate          PodCreateHandler
+	doPodDelete          PodDeleteHandler
+	doPodList            PodListHandler
+	doPodPortForward     PortForwardHandler
+	doContainerLog       ContainerLogHandler
+	doContainerExec      ContainerExecHandler
+	doContainerAttach    ContainerAttachHandler
+	doContainerInput     ContainerInputHandler
+	doContainerTtyResize ContainerTtyResizeHandler
 
 	postMsgFunc func(msg *connectivity.Msg) error
 	mu          sync.RWMutex
@@ -87,7 +88,7 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		case connectivity.PodCmd_Exec:
 			c.containerExec(sid, ns, name, cm.PodCmd.GetExecOptions())
 		case connectivity.PodCmd_Attach:
-			c.containerAttachHandler(sid, ns, name, cm.PodCmd.GetExecOptions())
+			c.containerAttach(sid, ns, name, cm.PodCmd.GetExecOptions())
 		case connectivity.PodCmd_Log:
 			c.containerLog(sid, ns, name, cm.PodCmd.GetLogOptions())
 		case connectivity.PodCmd_Input:
@@ -98,89 +99,140 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 	}
 }
 
-func (c *baseClient) sendError(sid uint64, e error) {
+func (c *baseClient) handleError(sid uint64, e error) {
 	if err := c.postMsgFunc(NewErrorMsg(sid, e)); err != nil {
 		// TODO: log error
 	}
 }
 
 func (c *baseClient) podCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
-	if c.podCreateHandler != nil {
-		podResp, err := c.podCreateHandler(sid, namespace, name, options)
-		if err != nil {
-			c.sendError(sid, err)
-			return
-		}
+	if c.doPodCreate == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
 
-		if err := c.postMsgFunc(NewPodMsg(sid, true, podResp)); err != nil {
-			// TODO: log error
-		}
+	podResp, err := c.doPodCreate(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	if err := c.postMsgFunc(NewPodMsg(sid, true, podResp)); err != nil {
+		// TODO: log error
 	}
 }
 
 func (c *baseClient) podDelete(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
-	if c.podDeleteHandler != nil {
-		podDeleted, err := c.podDeleteHandler(sid, namespace, name, options)
-		if err != nil {
-			c.sendError(sid, err)
-			return
-		}
+	if c.doPodDelete == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
 
-		if err := c.postMsgFunc(NewPodMsg(sid, true, podDeleted)); err != nil {
-			// TODO: log error
-		}
+	podDeleted, err := c.doPodDelete(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	if err := c.postMsgFunc(NewPodMsg(sid, true, podDeleted)); err != nil {
+		// TODO: log error
 	}
 }
 
 func (c *baseClient) podList(sid uint64, namespace, name string, options *connectivity.ListOptions) {
-	if c.podListHandler != nil {
-		pods, err := c.podListHandler(sid, namespace, name, options)
-		if err != nil {
-			c.sendError(sid, err)
-			return
-		}
+	if c.doPodList == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
 
-		size := len(pods)
-		for i, pod := range pods {
-			if err := c.postMsgFunc(NewPodMsg(sid, i == size-1, pod)); err != nil {
-				// TODO: log error
-			}
+	pods, err := c.doPodList(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	size := len(pods)
+	for i, pod := range pods {
+		if err := c.postMsgFunc(NewPodMsg(sid, i == size-1, pod)); err != nil {
+			// TODO: log error
 		}
 	}
 }
 
 func (c *baseClient) podPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
-	if c.podPortForwardHandler != nil {
-		c.podPortForwardHandler(sid, namespace, name, options)
+	if c.doPodPortForward == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doPodPortForward(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
 func (c *baseClient) containerLog(sid uint64, namespace, name string, options *connectivity.LogOptions) {
-	if c.containerLogHandler != nil {
-		c.containerLogHandler(sid, namespace, name, options)
+	if c.doContainerLog == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doContainerLog(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
 func (c *baseClient) containerExec(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
-	if c.containerExecHandler != nil {
-		c.containerExecHandler(sid, namespace, name, options)
+	if c.doContainerExec == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doContainerExec(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
 func (c *baseClient) containerAttach(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
-	if c.containerAttachHandler != nil {
-		c.containerAttachHandler(sid, namespace, name, options)
+	if c.doContainerAttach == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doContainerAttach(sid, namespace, name, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
 func (c *baseClient) containerInput(sid uint64, options *connectivity.InputOptions) {
-	if c.containerInputHandler != nil {
-		c.containerInputHandler(sid, options)
+	if c.doContainerInput == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doContainerInput(sid, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
 func (c *baseClient) containerTtyResize(sid uint64, options *connectivity.TtyResizeOptions) {
-	if c.containerTtyResizeHandler != nil {
-		c.containerTtyResizeHandler(sid, options)
+	if c.doContainerTtyResize == nil {
+		c.handleError(sid, ErrMethodNotImplemented)
+		return
+	}
+
+	err := c.doContainerTtyResize(sid, options)
+	if err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
