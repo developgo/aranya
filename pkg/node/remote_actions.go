@@ -15,7 +15,7 @@ func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
 		wg := &sync.WaitGroup{}
 
-		n.connectivityManager.WaitUntilDeviceConnected()
+		<-n.connectivityManager.WaitUntilDeviceConnected()
 
 		wg.Add(1)
 		go func() {
