@@ -78,6 +78,9 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 }
 
 func (s *baseServer) onDeviceMsg(msg *connectivity.Msg) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if ch, ok := s.sessions.get(msg.GetSessionId()); ok {
 		ch <- msg
 

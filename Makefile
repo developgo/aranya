@@ -9,7 +9,8 @@ aranya:
 	CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -o build/aranya cmd/aranya/*.go
 
 test:
-	CGO_ENABLED=1 GO111MODULE=on go test -v -race -mod=vendor ./pkg/node/connectivity/...
+	CGO_ENABLED=1 GO111MODULE=on go test -v -race -mod=vendor \
+		./pkg/node/connectivity/client ./pkg/node/connectivity/server
 
 .PHONY: build-image
 build-image:

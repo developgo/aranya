@@ -55,6 +55,7 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 			if err != nil {
 				close(cmdCh)
 				if err != io.EOF {
+					// TODO: log error
 				}
 				return
 			}

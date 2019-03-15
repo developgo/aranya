@@ -73,7 +73,7 @@ func TestGrpcSrv(t *testing.T) {
 		for msg := range srv.ConsumeGlobalMsg() {
 			i++
 			assert.NotEmpty(t, msg)
-			assert.Equal(t, []byte("foo"), msg.GetNodeInfo().GetNodeV1())
+			assert.Equal(t, []byte("foo"), msg.GetNode().GetNodeV1())
 		}
 
 		assert.Equal(t, orphanedMsgCount, i)
@@ -93,7 +93,7 @@ func TestGrpcSrv(t *testing.T) {
 		assert.True(t, more)
 		assert.NotEmpty(t, msg)
 		assert.Equal(t, cmd.GetSessionId(), msg.GetSessionId())
-		assert.Equal(t, "foo", string(msg.GetPodInfo().GetPodV1()))
+		assert.Equal(t, "foo", msg.GetPod().GetName())
 
 		_, more = <-msgCh
 		assert.False(t, more)
@@ -112,11 +112,9 @@ func TestGrpcSrv(t *testing.T) {
 		err = syncClient.Send(&connectivity.Msg{
 			SessionId: cmdRecv.GetSessionId(),
 			Completed: true,
-			Msg: &connectivity.Msg_PodInfo{
-				PodInfo: &connectivity.PodInfo{
-					Pod: &connectivity.PodInfo_PodV1{
-						PodV1: []byte("foo"),
-					},
+			Msg: &connectivity.Msg_Pod{
+				Pod: &connectivity.Pod{
+					Name: "foo",
 				},
 			},
 		})
@@ -124,9 +122,9 @@ func TestGrpcSrv(t *testing.T) {
 
 		for i := 0; i < orphanedMsgCount; i++ {
 			err = syncClient.Send(&connectivity.Msg{
-				Msg: &connectivity.Msg_NodeInfo{
-					NodeInfo: &connectivity.NodeInfo{
-						Node: &connectivity.NodeInfo_NodeV1{
+				Msg: &connectivity.Msg_Node{
+					Node: &connectivity.Node{
+						Node: &connectivity.Node_NodeV1{
 							NodeV1: []byte("foo"),
 						},
 					},

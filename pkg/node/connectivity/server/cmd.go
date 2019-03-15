@@ -8,8 +8,9 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func NewPodCreateCmd(namespace, name string, podSpec corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
-	podSpecBytes, _ := podSpec.Marshal()
+func NewPodCreateCmd(pod corev1.Pod, pullSecrets []corev1.Secret) *connectivity.Cmd {
+	podBytes, _ := pod.Marshal()
+
 	secrets := make([][]byte, 0, len(pullSecrets))
 	for _, secret := range pullSecrets {
 		secretBytes, _ := secret.Marshal()
@@ -19,14 +20,14 @@ func NewPodCreateCmd(namespace, name string, podSpec corev1.Pod, pullSecrets []c
 	return &connectivity.Cmd{
 		Cmd: &connectivity.Cmd_PodCmd{
 			PodCmd: &connectivity.PodCmd{
-				Namespace: namespace,
-				Name:      name,
+				Namespace: pod.Namespace,
+				Name:      pod.Name,
 				Action:    connectivity.PodCmd_Create,
 				Options: &connectivity.PodCmd_CreateOptions{
 					CreateOptions: &connectivity.CreateOptions{
 						Pod: &connectivity.CreateOptions_PodV1_{
 							PodV1: &connectivity.CreateOptions_PodV1{
-								Pod:        podSpecBytes,
+								Pod:        podBytes,
 								PullSecret: secrets,
 							},
 						},
