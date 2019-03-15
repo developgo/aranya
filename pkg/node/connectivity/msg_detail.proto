@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package connectivity;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.messagename_all) = true;
+
+message Node {
+    oneof node {
+        // protobuf bytes of corev1.Node
+        bytes node_v1 = 1;
+    }
+}
+
+message Pod {
+    message ContainerStatusV1alpha2 {
+        repeated bytes v1alpha2 = 1;
+    }
+
+    message SandboxStatusV1alpha2 {
+        repeated bytes v1alpha2 = 1;
+    }
+
+    string namespace = 1;
+    string name = 2;
+    string uid = 3;
+    string ip = 4;
+
+    oneof sandbox_status {
+        SandboxStatusV1alpha2 sandbox_v1alpha2 = 11;
+    }
+
+    oneof container_status {
+        ContainerStatusV1alpha2 container_v1alpha2 = 21;
+    }
+}
+
+message Data {
+    enum Kind {
+        STDOUT = 0;
+        STDERR = 1;
+        OTHER = 2;
+    }
+
+    Kind kind = 1;
+
+    bytes data = 11;
+}
+
+message Ack {
+    message Hash {
+        oneof hash {
+            // sha256 hex string
+            string sha256 = 1;
+        }
+    }
+
+    oneof value {
+        Hash hash = 1;
+        string error = 2;
+    }
+}

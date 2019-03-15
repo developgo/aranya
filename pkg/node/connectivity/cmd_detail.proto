@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package connectivity;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.messagename_all) = true;
+
+message NodeCmd {
+}
+
+enum PodAction {
+    // We do not have Pod Update action, and we will always
+    // recreate the pod when a update required,
+    // also, any pod update action will be resolved in aranya to generate
+    // Create and Delete action for remote device.
+    //
+    // This behavior can keep this project simple and easy to extend.
+
+    // Create a new pod in device
+    Create = 0;
+    // Delete a existing pod in device
+    Delete = 1;
+    // List all managed pod in device
+    List = 3;
+
+    // Execute commands in existing container
+    Exec = 11;
+    // Attach to existing container
+    Attach = 12;
+    // Get container/node log
+    Log = 13;
+    // Port forward in pod
+    PortForward = 14;
+    // user input or application data to
+    // usually this action happens in Exec, Attach, PortForward session
+    Input = 15;
+    // user tty resize
+    // usually this action happens in Exec, Attach session when tty is enabled
+    ResizeTty = 16;
+}
+
+message PodCmd {
+
+    // pod namespace
+    string namespace = 1;
+    // pod name
+    string name = 2;
+    // action type
+    PodAction action = 3;
+
+    // options for action
+    oneof options {
+        // used by create or update
+        CreateOptions create_options = 11;
+        // used by delete
+        DeleteOptions delete_options = 12;
+        // used by list
+        ListOptions list_options = 13;
+        // used by log
+        LogOptions log_options = 14;
+        // used by exec and attach
+        ExecOptions exec_options = 15;
+        // used by port forward
+        PortForwardOptions port_forward_options = 16;
+        // used in exec, attach, port_forward session
+        InputOptions input_options = 17;
+        // used in exec, attach session
+        TtyResizeOptions resize_options = 18;
+    }
+}
+
+message PodV1 {
+    // protobuf bytes of corev1.Pod
+    bytes pod = 1;
+    // protobuf []bytes of []corev1.Secret
+    repeated bytes pull_secret = 2;
+}
+
+message CreateOptions {
+    oneof pod {
+        PodV1 pod_v1 = 1;
+    }
+}
+
+message DeleteOptions {
+    int64 grace_time = 1;
+}
+
+message ListOptions {
+}
+
+message LogOptions {
+    oneof options {
+        // protobuf bytes of corev1.LogOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message ExecOptions {
+    oneof options {
+        // protobuf bytes of corev1.ExecOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message PortForwardOptions {
+    oneof options {
+        // protobuf bytes of corev1.PortForwardOptions
+        bytes options_v1 = 1;
+    }
+}
+
+message InputOptions {
+    bytes data = 1;
+}
+
+message TtyResizeOptions {
+    uint32 cols = 1;
+    uint32 rows = 2;
+}

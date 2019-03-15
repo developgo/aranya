@@ -75,25 +75,25 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		switch cm.PodCmd.GetAction() {
 
 		// pod scope commands
-		case connectivity.PodCmd_Create:
+		case connectivity.Create:
 			c.podCreate(sid, ns, name, cm.PodCmd.GetCreateOptions())
-		case connectivity.PodCmd_Delete:
+		case connectivity.Delete:
 			c.podDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
-		case connectivity.PodCmd_List:
+		case connectivity.List:
 			c.podList(sid, ns, name, cm.PodCmd.GetListOptions())
-		case connectivity.PodCmd_PortForward:
+		case connectivity.PortForward:
 			c.podPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions())
 
 		// container scope commands
-		case connectivity.PodCmd_Exec:
+		case connectivity.Exec:
 			c.containerExec(sid, ns, name, cm.PodCmd.GetExecOptions())
-		case connectivity.PodCmd_Attach:
+		case connectivity.Attach:
 			c.containerAttach(sid, ns, name, cm.PodCmd.GetExecOptions())
-		case connectivity.PodCmd_Log:
+		case connectivity.Log:
 			c.containerLog(sid, ns, name, cm.PodCmd.GetLogOptions())
-		case connectivity.PodCmd_Input:
+		case connectivity.Input:
 			c.containerInput(sid, cm.PodCmd.GetInputOptions())
-		case connectivity.PodCmd_ResizeTty:
+		case connectivity.ResizeTty:
 			c.containerTtyResize(sid, cm.PodCmd.GetResizeOptions())
 		}
 	}

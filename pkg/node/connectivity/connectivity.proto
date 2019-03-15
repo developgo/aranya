@@ -1,66 +1,23 @@
- syntax = "proto3";
+syntax = "proto3";
 
 package connectivity;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "cmd_detail.proto";
+import "msg_detail.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
 service Connectivity {
     rpc Sync (stream Msg) returns (stream Cmd);
-}
-
-message Ack {
-    message Hash {
-        oneof hash {
-            // sha256 hex string
-            string sha256 = 1;
-        }
-    }
-
-    oneof value {
-        Hash hash = 1;
-        string error = 2;
-    }
-}
-
-message Data {
-    enum Kind {
-        STDOUT = 0;
-        STDERR = 1;
-        OTHER = 2;
-    }
-
-    Kind kind = 1;
-
-    bytes data = 11;
-}
-
-message Pod {
-    message ContainerStatusV1alpha2 {
-        repeated bytes v1alpha2 = 1;
-    }
-
-    message SandboxStatusV1alpha2 {
-        repeated bytes v1alpha2 = 1;
-    }
-
-    string namespace = 1;
-    string name = 2;
-    string uid = 3;
-    string ip = 4;
-
-    oneof sandbox_status {
-        SandboxStatusV1alpha2 sandbox_status_v1alpha2 = 11;
-    }
-
-    oneof container_status {
-        ContainerStatusV1alpha2 container_status_v1alpha2 = 21;
-    }
-}
-
-
-message Node {
-    oneof node {
-        // protobuf bytes of corev1.Node
-        bytes node_v1 = 1;
-    }
 }
 
 message Msg {
@@ -85,117 +42,4 @@ message Cmd {
         NodeCmd node_cmd = 11;
         PodCmd pod_cmd = 12;
     }
-}
-
-message NodeCmd {
-}
-
-message PodCmd {
-    enum Action {
-        // We do not have Pod Update action, and we will always
-        // recreate the pod when a update required,
-        // also, any pod update action will be resolved in aranya to generate
-        // Create and Delete action for remote device.
-        //
-        // This behavior can keep this project simple and easy to extend.
-
-        // Create a new pod in device
-        Create = 0;
-        // Delete a existing pod in device
-        Delete = 1;
-        // List all managed pod in device
-        List = 3;
-
-        // Execute commands in existing container
-        Exec = 11;
-        // Attach to existing container
-        Attach = 12;
-        // Get container/node log
-        Log = 13;
-        // Port forward in pod
-        PortForward = 14;
-        // user input or application data to
-        // usually this action happens in Exec, Attach, PortForward session
-        Input = 15;
-        // user tty resize
-        // usually this action happens in Exec, Attach session when tty is enabled
-        ResizeTty = 16;
-    }
-
-    // pod namespace
-    string namespace = 1;
-    // pod name
-    string name = 2;
-    // action type
-    Action action = 3;
-
-    // options for action
-    oneof options {
-        // used by create or update
-        CreateOptions create_options = 11;
-        // used by delete
-        DeleteOptions delete_options = 12;
-        // used by list
-        ListOptions list_options = 13;
-        // used by log
-        LogOptions log_options = 14;
-        // used by exec and attach
-        ExecOptions exec_options = 15;
-        // used by port forward
-        PortForwardOptions port_forward_options = 16;
-        // used in exec, attach, port_forward session
-        InputOptions input_options = 17;
-        // used in exec, attach session
-        TtyResizeOptions resize_options = 18;
-    }
-}
-
-message CreateOptions {
-    message PodV1 {
-        // protobuf bytes of corev1.Pod
-        bytes pod = 1;
-        // protobuf []bytes of []corev1.Secret
-        repeated bytes pull_secret = 2;
-    }
-
-    oneof pod {
-        PodV1 pod_v1 = 1;
-    }
-}
-
-message DeleteOptions {
-    int64 grace_time = 1;
-}
-
-message ListOptions {
-}
-
-message LogOptions {
-    oneof options {
-        // protobuf bytes of corev1.LogOptions
-        bytes options_v1 = 1;
-    }
-}
-
-message ExecOptions {
-    oneof options {
-        // protobuf bytes of corev1.ExecOptions
-        bytes options_v1 = 1;
-    }
-}
-
-message PortForwardOptions {
-    oneof options {
-        // protobuf bytes of corev1.PortForwardOptions
-        bytes options_v1 = 1;
-    }
-}
-
-message InputOptions {
-    bytes data = 1;
-}
-
-message TtyResizeOptions {
-    uint32 cols = 1;
-    uint32 rows = 2;
 }

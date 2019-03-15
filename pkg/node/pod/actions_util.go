@@ -73,9 +73,9 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			case *connectivity.Msg_Data:
 				targetOutput := out
 				switch m.Data.GetKind() {
-				case connectivity.Data_OTHER, connectivity.Data_STDOUT:
+				case connectivity.OTHER, connectivity.STDOUT:
 					targetOutput = out
-				case connectivity.Data_STDERR:
+				case connectivity.STDERR:
 					if stderr != nil {
 						targetOutput = stderr
 					}

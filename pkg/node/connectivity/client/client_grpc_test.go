@@ -19,9 +19,9 @@ import (
 var (
 	expectedDataMsgList = func() []*connectivity.Msg {
 		return []*connectivity.Msg{
-			NewDataMsg(0, false, connectivity.Data_STDOUT, []byte("foo")),
-			NewDataMsg(0, false, connectivity.Data_STDERR, []byte("foo")),
-			NewDataMsg(0, true, connectivity.Data_STDOUT, []byte("bar")),
+			NewDataMsg(0, false, connectivity.STDOUT, []byte("foo")),
+			NewDataMsg(0, false, connectivity.STDERR, []byte("foo")),
+			NewDataMsg(0, true, connectivity.STDOUT, []byte("bar")),
 		}
 	}
 )

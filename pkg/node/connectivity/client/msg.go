@@ -56,13 +56,13 @@ func NewPod(pod corev1.Pod, ip string, podStatuses []*criRuntime.PodSandboxStatu
 		Uid:       string(pod.UID),
 		Ip:        ip,
 
-		ContainerStatus: &connectivity.Pod_ContainerStatusV1Alpha2_{
-			ContainerStatusV1Alpha2: &connectivity.Pod_ContainerStatusV1Alpha2{
+		ContainerStatus: &connectivity.Pod_ContainerV1Alpha2{
+			ContainerV1Alpha2: &connectivity.Pod_ContainerStatusV1Alpha2{
 				V1Alpha2: containerStatusBytes,
 			},
 		},
-		SandboxStatus: &connectivity.Pod_SandboxStatusV1Alpha2_{
-			SandboxStatusV1Alpha2: &connectivity.Pod_SandboxStatusV1Alpha2{
+		SandboxStatus: &connectivity.Pod_SandboxV1Alpha2{
+			SandboxV1Alpha2: &connectivity.Pod_SandboxStatusV1Alpha2{
 				V1Alpha2: podStatusBytes,
 			},
 		},

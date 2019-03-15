@@ -84,7 +84,8 @@ func (s *baseServer) onDeviceMsg(msg *connectivity.Msg) {
 	if ch, ok := s.sessions.get(msg.GetSessionId()); ok {
 		ch <- msg
 
-		if msg.GetCompleted() {
+		// close session when error happened on device or session complete
+		if msg.GetCompleted() || msg.Error() != nil {
 			s.sessions.del(msg.GetSessionId())
 		}
 	} else {
@@ -118,7 +119,7 @@ func (s baseServer) onPostCmd(cmd *connectivity.Cmd, timeout time.Duration, send
 	switch c := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_PodCmd:
 		switch c.PodCmd.GetAction() {
-		case connectivity.PodCmd_ResizeTty, connectivity.PodCmd_Input:
+		case connectivity.ResizeTty, connectivity.Input:
 			sessionMustPresent = true
 			if cmd.GetSessionId() == 0 {
 				return nil, ErrSessionNotValid
