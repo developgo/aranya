@@ -1,17 +1,14 @@
 module arhat.dev/aranya
 
-replace (
-	github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.4.0
-	github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
-)
+replace github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
 
 require (
 	cloud.google.com/go v0.36.0 // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/Rican7/retry v0.1.0 // indirect
-	github.com/Sirupsen/logrus v1.4.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/aws/aws-sdk-go v1.18.2 // indirect
@@ -28,7 +25,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.13.1 // indirect
+	github.com/docker/docker v0.7.3-0.20190315021241-05e7d000f2fc // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
@@ -65,10 +62,12 @@ require (
 	github.com/mistifyio/go-zfs v2.1.1+incompatible // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
+	github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c // indirect
 	github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618 // indirect
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
+	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.0-rc6 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opencontainers/selinux v1.0.0 // indirect
@@ -106,16 +105,17 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20190202010724-74b699b93c15
-	k8s.io/apiextensions-apiserver v0.0.0-20190202013456-d4288ab64945 // indirect
-	k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
-	k8s.io/apiserver v0.0.0-20190202011929-26bc712632e1
-	k8s.io/client-go v2.0.0-alpha.0.0.20190202011228-6e4752048fde+incompatible
-	k8s.io/cloud-provider v0.0.0-20190223141949-e954a34baf43 // indirect
-	k8s.io/csi-api v0.0.0-20190223140843-b4e64dae0b19 // indirect
+	gotest.tools v0.0.0-20181223230014-1083505acf35 // indirect
+	k8s.io/api v0.0.0-20190222213804-5cb15d344471
+	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236 // indirect
+	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
+	k8s.io/apiserver v0.0.0-20190228174905-79427f02047f
+	k8s.io/client-go v2.0.0-alpha.0.0.20190228174230-b40b2a5939e4+incompatible
+	k8s.io/cloud-provider v0.0.0-20190228181926-f531db154915 // indirect
+	k8s.io/csi-api v0.0.0-20190228180745-64f278f73b48 // indirect
 	k8s.io/klog v0.2.0
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
-	k8s.io/kubernetes v1.13.3
+	k8s.io/kubernetes v1.13.4
 	k8s.io/utils v0.0.0-20190221042446-c2654d5206da
 	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
