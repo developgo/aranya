@@ -8,7 +8,6 @@ import (
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/server"
 )
 
 func (n *Node) InitializeRemoteDevice() {
@@ -44,7 +43,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 // generate in cluster pod cache for remote device
 func (n *Node) generateCacheForPods() error {
-	msgCh, err := n.connectivityManager.PostCmd(server.NewPodListCmd("", ""), 0)
+	msgCh, err := n.connectivityManager.PostCmd(connectivity.NewPodListCmd("", ""), 0)
 	if err != nil {
 		return err
 	}
@@ -76,7 +75,7 @@ func (n *Node) generateCacheForPods() error {
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNode() error {
-	msgCh, err := n.connectivityManager.PostCmd(server.NewNodeCmd(), 0)
+	msgCh, err := n.connectivityManager.PostCmd(connectivity.NewNodeCmd(), 0)
 	if err != nil {
 		return err
 	}
