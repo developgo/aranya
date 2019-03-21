@@ -14,7 +14,7 @@ func (m *Pod) GetResolvedKubePodStatus() (*kubeletContainer.PodStatus, error) {
 		return nil, err
 	}
 
-	sandboxStatuses, err := m.getResolvedV1Alpha2SandboxStatuses()
+	sandboxStatus, err := m.getResolvedV1Alpha2SandboxStatuses()
 	if err != nil {
 		return nil, err
 	}
@@ -25,25 +25,18 @@ func (m *Pod) GetResolvedKubePodStatus() (*kubeletContainer.PodStatus, error) {
 		ID:                types.UID(m.Uid),
 		IP:                m.Ip,
 		ContainerStatuses: containerStatuses,
-		SandboxStatuses:   sandboxStatuses,
+		SandboxStatuses:   []*criRuntime.PodSandboxStatus{sandboxStatus},
 	}, nil
 }
 
-func (m *Pod) getResolvedV1Alpha2SandboxStatuses() ([]*criRuntime.PodSandboxStatus, error) {
-	allBytes := m.GetSandboxV1Alpha2().GetV1Alpha2()
-	podStatuses := make([]*criRuntime.PodSandboxStatus, len(allBytes))
-
-	for i, statusBytes := range allBytes {
-		status := &criRuntime.PodSandboxStatus{}
-		err := status.Unmarshal(statusBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		podStatuses[i] = status
+func (m *Pod) getResolvedV1Alpha2SandboxStatuses() (*criRuntime.PodSandboxStatus, error) {
+	status := &criRuntime.PodSandboxStatus{}
+	err := status.Unmarshal(m.GetSandboxV1Alpha2())
+	if err != nil {
+		return nil, err
 	}
 
-	return podStatuses, nil
+	return status, nil
 }
 
 func (m *Pod) getResolvedV1Alpha2ContainerStatuses() ([]*criRuntime.ContainerStatus, error) {

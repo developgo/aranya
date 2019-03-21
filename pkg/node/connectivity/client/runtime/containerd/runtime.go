@@ -1,4 +1,4 @@
-package runtime
+package containerd
 
 import (
 	"context"
@@ -30,7 +30,7 @@ const (
 	KubeRuntimeAPIVersion = "0.1.0"
 )
 
-func NewRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time.Duration) (*Runtime, error) {
+func NewContainerdRuntime(ctx context.Context, containerdEndpoint string, dialTimeout time.Duration) (*Runtime, error) {
 	runtimeScvConn, err := dialSvcEndpoint(containerdEndpoint, dialTimeout)
 	if err != nil {
 		return nil, err

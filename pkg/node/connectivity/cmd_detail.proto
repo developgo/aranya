@@ -49,8 +49,10 @@ message PodCmd {
     string namespace = 1;
     // pod name
     string name = 2;
+    // pod uid
+    string uid = 3;
     // action type
-    PodAction action = 3;
+    PodAction action = 4;
 
     // options for action
     oneof options {
@@ -73,15 +75,19 @@ message PodCmd {
     }
 }
 
-message PodV1 {
-    // protobuf bytes of corev1.Pod
-    bytes pod = 1;
-    // protobuf []bytes of []corev1.Secret
-    repeated bytes pull_secret = 2;
-}
-
 message CreateOptions {
-    oneof pod {
+    message PodV1 {
+        // protobuf bytes of corev1.PodSpec
+        bytes pod_spec = 1;
+        // ImageName -> bytes of criRuntime.AuthConfig
+        // used to pull private images
+        map<string, bytes> auth_config = 2;
+        // VolumeName -> bytes (for ConfigMap)
+        // used to populate files in pods
+        map<string, bytes> volume_data = 3;
+    }
+
+    oneof options {
         PodV1 pod_v1 = 1;
     }
 }

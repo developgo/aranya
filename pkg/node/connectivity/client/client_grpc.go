@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 )
 
 type GrpcClient struct {
@@ -15,20 +16,13 @@ type GrpcClient struct {
 	syncClient connectivity.Connectivity_SyncClient
 }
 
-func NewGrpcClient(conn *grpc.ClientConn, options ...Option) (*GrpcClient, error) {
-	base := baseClient{}
-	for _, setOption := range options {
-		if err := setOption(&base); err != nil {
-			return nil, err
-		}
-	}
-
+func NewGrpcClient(conn *grpc.ClientConn, rt runtime.Interface) (*GrpcClient, error) {
 	client := &GrpcClient{
-		baseClient: base,
+		baseClient: newBaseClient(rt),
 		client:     connectivity.NewConnectivityClient(conn),
 	}
 
-	(&client.baseClient).postMsgFunc = client.PostMsg
+	(&client.baseClient).doPostMsg = client.PostMsg
 	return client, nil
 }
 

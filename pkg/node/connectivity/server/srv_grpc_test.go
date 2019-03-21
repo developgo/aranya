@@ -55,7 +55,7 @@ func TestGrpcSrv(t *testing.T) {
 	srvStop, srv, stub := newTestGrpcSrvAndStub()
 	defer srvStop()
 
-	cmd := NewPodListCmd("foo", "bar")
+	cmd := connectivity.NewPodListCmd("foo", "bar")
 
 	msgCh, err := srv.PostCmd(cmd, 0)
 	assert.Error(t, err)

@@ -82,6 +82,27 @@ func (s *sessionManager) del(sid uint64) {
 	}
 }
 
+func (s *sessionManager) cleanup() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	keys := make([]uint64, len(s.m))
+	i := 0
+	for key, session := range s.m {
+		if session.timer != nil {
+			session.timer.Stop()
+		}
+		close(session.msgCh)
+
+		keys[i] = key
+		i++
+	}
+
+	for _, k := range keys {
+		delete(s.m, k)
+	}
+}
+
 func newSessionManager() *sessionManager {
 	return &sessionManager{
 		m: make(map[uint64]*session),

@@ -1,45 +1,89 @@
 package client
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"sync"
 
+	"k8s.io/client-go/tools/remotecommand"
+
+	"arhat.dev/aranya/pkg/node/util"
+
 	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 )
 
 var (
 	ErrClientAlreadyConnected = errors.New("client already connected ")
 	ErrClientNotConnected     = errors.New("client not connected ")
-	ErrMethodNotImplemented   = errors.New("method not implemented ")
-)
-
-type (
-	PodCreateHandler          func(sid uint64, namespace, name string, options *connectivity.CreateOptions) (pod *connectivity.Pod, err error)
-	PodDeleteHandler          func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error)
-	PodListHandler            func(sid uint64, namespace, name string, options *connectivity.ListOptions) (pods []*connectivity.Pod, err error)
-	PortForwardHandler        func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) error
-	ContainerLogHandler       func(sid uint64, namespace, name string, options *connectivity.LogOptions) error
-	ContainerExecHandler      func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error
-	ContainerAttachHandler    func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error
-	ContainerInputHandler     func(sid uint64, options *connectivity.InputOptions) error
-	ContainerTtyResizeHandler func(sid uint64, options *connectivity.TtyResizeOptions) error
+	ErrStreamSessionClosed    = errors.New("stream session closed ")
 )
 
 type Option func(*baseClient) error
 
-type baseClient struct {
-	doPodCreate          PodCreateHandler
-	doPodDelete          PodDeleteHandler
-	doPodList            PodListHandler
-	doPodPortForward     PortForwardHandler
-	doContainerLog       ContainerLogHandler
-	doContainerExec      ContainerExecHandler
-	doContainerAttach    ContainerAttachHandler
-	doContainerInput     ContainerInputHandler
-	doContainerTtyResize ContainerTtyResizeHandler
+type streamSession struct {
+	inputCh  map[uint64]chan []byte
+	resizeCh map[uint64]chan remotecommand.TerminalSize
+	mu       sync.RWMutex
+}
 
-	postMsgFunc func(msg *connectivity.Msg) error
-	mu          sync.RWMutex
+func (s *streamSession) add(sid uint64, dataCh chan []byte, resizeCh chan remotecommand.TerminalSize) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if oldInputCh, ok := s.inputCh[sid]; ok {
+		close(oldInputCh)
+	}
+
+	if oldResizeCh, ok := s.resizeCh[sid]; ok {
+		close(oldResizeCh)
+	}
+
+	s.inputCh[sid] = dataCh
+	s.resizeCh[sid] = resizeCh
+}
+
+func (s *streamSession) getInputChan(sid uint64) (chan []byte, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ch, ok := s.inputCh[sid]
+	return ch, ok
+}
+
+func (s *streamSession) getResizeChan(sid uint64) (chan remotecommand.TerminalSize, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ch, ok := s.resizeCh[sid]
+	return ch, ok
+}
+
+func (s *streamSession) del(sid uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.inputCh, sid)
+	delete(s.resizeCh, sid)
+}
+
+func newBaseClient(rt runtime.Interface) baseClient {
+	return baseClient{
+		runtime: rt,
+		openedStreams: streamSession{
+			inputCh:  make(map[uint64]chan []byte),
+			resizeCh: make(map[uint64]chan remotecommand.TerminalSize),
+		},
+	}
+}
+
+type baseClient struct {
+	doPostMsg func(msg *connectivity.Msg) error
+
+	openedStreams streamSession
+	mu            sync.RWMutex
+	runtime       runtime.Interface
 }
 
 func (c *baseClient) onConnect(connect func() error) error {
@@ -71,168 +115,305 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		sid := cmd.GetSessionId()
 		ns := cm.PodCmd.GetNamespace()
 		name := cm.PodCmd.GetName()
+		uid := cm.PodCmd.GetUid()
 
 		switch cm.PodCmd.GetAction() {
 
 		// pod scope commands
 		case connectivity.Create:
-			c.podCreate(sid, ns, name, cm.PodCmd.GetCreateOptions())
+			c.doPodCreate(sid, ns, name, uid, cm.PodCmd.GetCreateOptions())
 		case connectivity.Delete:
-			c.podDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
+			c.doPodDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
 		case connectivity.List:
-			c.podList(sid, ns, name, cm.PodCmd.GetListOptions())
+			c.doPodList(sid, ns)
 		case connectivity.PortForward:
-			c.podPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions())
+			c.doPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions())
 
 		// container scope commands
 		case connectivity.Exec:
-			c.containerExec(sid, ns, name, cm.PodCmd.GetExecOptions())
+			inputCh := make(chan []byte, 1)
+			resizeCh := make(chan remotecommand.TerminalSize, 1)
+			c.openedStreams.add(sid, inputCh, resizeCh)
+
+			c.doContainerExec(sid, ns, name, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Attach:
-			c.containerAttach(sid, ns, name, cm.PodCmd.GetExecOptions())
+			inputCh := make(chan []byte, 1)
+			resizeCh := make(chan remotecommand.TerminalSize, 1)
+			c.openedStreams.add(sid, inputCh, resizeCh)
+
+			c.doContainerAttach(sid, ns, name, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Log:
-			c.containerLog(sid, ns, name, cm.PodCmd.GetLogOptions())
+			c.doContainerLog(sid, ns, name, cm.PodCmd.GetLogOptions())
 		case connectivity.Input:
-			c.containerInput(sid, cm.PodCmd.GetInputOptions())
+			inputCh, ok := c.openedStreams.getInputChan(sid)
+			if !ok {
+				c.handleError(sid, ErrStreamSessionClosed)
+				return
+			}
+
+			inputCh <- cm.PodCmd.GetInputOptions().GetData()
 		case connectivity.ResizeTty:
-			c.containerTtyResize(sid, cm.PodCmd.GetResizeOptions())
+			resizeCh, ok := c.openedStreams.getResizeChan(sid)
+			if !ok {
+				c.handleError(sid, ErrStreamSessionClosed)
+				return
+			}
+
+			resizeCh <- remotecommand.TerminalSize{
+				Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
+				Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
+			}
 		}
 	}
 }
 
 func (c *baseClient) handleError(sid uint64, e error) {
-	if err := c.postMsgFunc(NewErrorMsg(sid, e)); err != nil {
+	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		// TODO: log error
 	}
 }
 
-func (c *baseClient) podCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
-	if c.doPodCreate == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	podResp, err := c.doPodCreate(sid, namespace, name, options)
+func (c *baseClient) doPodCreate(sid uint64, namespace, name, uid string, options *connectivity.CreateOptions) {
+	podSpec, authConfig, volumeData, err := options.GetResolvedCreateOptions()
 	if err != nil {
 		c.handleError(sid, err)
 		return
 	}
 
-	if err := c.postMsgFunc(NewPodMsg(sid, true, podResp)); err != nil {
-		// TODO: log error
-	}
-}
-
-func (c *baseClient) podDelete(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
-	if c.doPodDelete == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	podDeleted, err := c.doPodDelete(sid, namespace, name, options)
+	podResp, err := c.runtime.CreatePod(namespace, name, uid, podSpec, authConfig, volumeData)
 	if err != nil {
 		c.handleError(sid, err)
 		return
 	}
 
-	if err := c.postMsgFunc(NewPodMsg(sid, true, podDeleted)); err != nil {
-		// TODO: log error
+	if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, podResp)); err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 
-func (c *baseClient) podList(sid uint64, namespace, name string, options *connectivity.ListOptions) {
-	if c.doPodList == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	pods, err := c.doPodList(sid, namespace, name, options)
+func (c *baseClient) doPodDelete(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
+	podDeleted, err := c.runtime.DeletePod(namespace, name, options)
 	if err != nil {
 		c.handleError(sid, err)
 		return
 	}
 
-	size := len(pods)
-	for i, pod := range pods {
-		if err := c.postMsgFunc(NewPodMsg(sid, i == size-1, pod)); err != nil {
-			// TODO: log error
+	if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, podDeleted)); err != nil {
+		c.handleError(sid, err)
+		return
+	}
+}
+
+func (c *baseClient) doPodList(sid uint64, namespace string) {
+	pods, err := c.runtime.ListPod(namespace)
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	lastIndex := len(pods) - 1
+	for i, p := range pods {
+		if err := c.doPostMsg(connectivity.NewPodMsg(sid, i == lastIndex, p)); err != nil {
+			c.handleError(sid, err)
+			return
 		}
 	}
 }
 
-func (c *baseClient) podPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
-	if c.doPodPortForward == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
+func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+	defer c.openedStreams.del(sid)
+
+	opt, err := options.GetResolvedExecOptions()
+	if err != nil {
+		c.handleError(sid, err)
 		return
 	}
 
-	err := c.doPodPortForward(sid, namespace, name, options)
-	if err != nil {
+	var (
+		stdin  io.Reader
+		stdout io.WriteCloser
+		stderr io.WriteCloser
+
+		remoteStdin  io.WriteCloser
+		remoteStdout io.Reader
+		remoteStderr io.Reader
+	)
+
+	if opt.Stdin {
+		stdin, remoteStdin = io.Pipe()
+		defer func() { _ = remoteStdin.Close() }()
+
+		go func() {
+			for inputData := range inputCh {
+				_, err := remoteStdin.Write(inputData)
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
+
+	if opt.Stdout {
+		remoteStdout, stdout = io.Pipe()
+		defer func() { _ = stdout.Close() }()
+
+		go func() {
+			s := bufio.NewScanner(remoteStdout)
+			s.Split(util.ScanAnyAvail)
+
+			for s.Scan() {
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+					c.handleError(sid, err)
+					return
+				}
+			}
+		}()
+	}
+
+	if opt.Stderr {
+		remoteStderr, stderr = io.Pipe()
+		defer func() { _ = stderr.Close() }()
+
+		go func() {
+			s := bufio.NewScanner(remoteStderr)
+			s.Split(util.ScanAnyAvail)
+
+			for s.Scan() {
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+					c.handleError(sid, err)
+					return
+				}
+			}
+		}()
+	}
+
+	// best effort
+	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+
+	if err := c.runtime.AttachContainer(namespace, name, opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) containerLog(sid uint64, namespace, name string, options *connectivity.LogOptions) {
-	if c.doContainerLog == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
+func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+	defer c.openedStreams.del(sid)
+
+	opt, err := options.GetResolvedExecOptions()
+	if err != nil {
+		c.handleError(sid, err)
 		return
 	}
 
-	err := c.doContainerLog(sid, namespace, name, options)
-	if err != nil {
+	var (
+		stdin  io.Reader
+		stdout io.WriteCloser
+		stderr io.WriteCloser
+
+		remoteStdin  io.WriteCloser
+		remoteStdout io.Reader
+		remoteStderr io.Reader
+	)
+
+	if opt.Stdin {
+		stdin, remoteStdin = io.Pipe()
+
+		go func() {
+			defer func() { _ = remoteStdin.Close() }()
+
+			for inputData := range inputCh {
+				_, err := remoteStdin.Write(inputData)
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
+
+	if opt.Stdout {
+		remoteStdout, stdout = io.Pipe()
+
+		go func() {
+			s := bufio.NewScanner(remoteStdout)
+			s.Split(util.ScanAnyAvail)
+
+			for s.Scan() {
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+					c.handleError(sid, err)
+					return
+				}
+			}
+		}()
+	}
+
+	if opt.Stderr {
+		remoteStderr, stderr = io.Pipe()
+
+		go func() {
+			s := bufio.NewScanner(remoteStderr)
+			s.Split(util.ScanAnyAvail)
+
+			for s.Scan() {
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+					c.handleError(sid, err)
+					return
+				}
+			}
+		}()
+	}
+
+	// best effort
+	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+
+	if err := c.runtime.ExecInContainer(namespace, name, opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) containerExec(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
-	if c.doContainerExec == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
+func (c *baseClient) doContainerLog(sid uint64, namespace, name string, options *connectivity.LogOptions) {
+	opt, err := options.GetResolvedLogOptions()
+	if err != nil {
+		c.handleError(sid, err)
 		return
 	}
 
-	err := c.doContainerExec(sid, namespace, name, options)
-	if err != nil {
+	remoteStdout, stdout := io.Pipe()
+	remoteStderr, stderr := io.Pipe()
+
+	// read stdout
+	go func() {
+		s := bufio.NewScanner(remoteStdout)
+		s.Split(util.ScanAnyAvail)
+
+		for s.Scan() {
+			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+				return
+			}
+		}
+	}()
+
+	// read stderr
+	go func() {
+		s := bufio.NewScanner(remoteStderr)
+		s.Split(util.ScanAnyAvail)
+
+		for s.Scan() {
+			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+				return
+			}
+		}
+	}()
+
+	// best effort
+	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+
+	if err := c.runtime.GetContainerLogs(namespace, name, stdout, stderr, opt); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) containerAttach(sid uint64, namespace, name string, options *connectivity.ExecOptions) {
-	if c.doContainerAttach == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	err := c.doContainerAttach(sid, namespace, name, options)
-	if err != nil {
-		c.handleError(sid, err)
-		return
-	}
-}
-
-func (c *baseClient) containerInput(sid uint64, options *connectivity.InputOptions) {
-	if c.doContainerInput == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	err := c.doContainerInput(sid, options)
-	if err != nil {
-		c.handleError(sid, err)
-		return
-	}
-}
-
-func (c *baseClient) containerTtyResize(sid uint64, options *connectivity.TtyResizeOptions) {
-	if c.doContainerTtyResize == nil {
-		c.handleError(sid, ErrMethodNotImplemented)
-		return
-	}
-
-	err := c.doContainerTtyResize(sid, options)
-	if err != nil {
-		c.handleError(sid, err)
-		return
-	}
+func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
 }

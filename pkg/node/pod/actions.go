@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
 
-	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 // GetContainerLogs
@@ -16,7 +16,7 @@ import (
 func (m *Manager) GetContainerLogs(namespace, pod, container string, options corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
-	msgCh, err := m.remoteManager.PostCmd(connectivitySrv.NewContainerLogCmd(namespace, pod, options), 0)
+	msgCh, err := m.remoteManager.PostCmd(connectivity.NewContainerLogCmd(namespace, pod, options), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (m *Manager) ExecInContainer(name string, uid types.UID, container string, 
 		Command:   cmd,
 	}
 
-	execCmd := connectivitySrv.NewContainerExecCmd("", name, options)
+	execCmd := connectivity.NewContainerExecCmd("", name, options)
 	return m.handleBidirectionalStream(execCmd, timeout, stdin, stdout, stderr, resize)
 }
 
@@ -62,7 +62,7 @@ func (m *Manager) AttachContainer(name string, uid types.UID, container string, 
 		Container: container,
 	}
 
-	attachCmd := connectivitySrv.NewContainerAttachCmd("", name, options)
+	attachCmd := connectivity.NewContainerAttachCmd("", name, options)
 	return m.handleBidirectionalStream(attachCmd, 0, stdin, stdout, stderr, resize)
 }
 
@@ -72,12 +72,16 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	options := corev1.PodPortForwardOptions{
 		Ports: []int32{port},
 	}
-	portForwardCmd := connectivitySrv.NewPortForwardCmd("", name, options)
+	portForwardCmd := connectivity.NewPortForwardCmd("", name, options)
 	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
 }
 
 func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivitySrv.NewPodCreateCmd(*pod, nil)
+	cmd, err := connectivity.NewPodCreateCmd(pod, nil, nil)
+	if err != nil {
+		return nil
+	}
+
 	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err
@@ -92,7 +96,7 @@ func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
 }
 
 func (m *Manager) DeletePodInDevice(namespace, name string) error {
-	cmd := connectivitySrv.NewPodDeleteCmd(namespace, name, 0)
+	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
 	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
 	if err != nil {
 		return err

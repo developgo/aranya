@@ -11,6 +11,10 @@ import (
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
+
+	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/client/runtime/fake"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/server"
@@ -19,14 +23,14 @@ import (
 var (
 	expectedDataMsgList = func() []*connectivity.Msg {
 		return []*connectivity.Msg{
-			NewDataMsg(0, false, connectivity.STDOUT, []byte("foo")),
-			NewDataMsg(0, false, connectivity.STDERR, []byte("foo")),
-			NewDataMsg(0, true, connectivity.STDOUT, []byte("bar")),
+			connectivity.NewDataMsg(0, false, connectivity.STDOUT, []byte("foo")),
+			connectivity.NewDataMsg(0, false, connectivity.STDERR, []byte("foo")),
+			connectivity.NewDataMsg(0, true, connectivity.STDOUT, []byte("bar")),
 		}
 	}
 )
 
-func newGrpcTestServerAndClient(opts []Option) (mgr *server.GrpcManager, srvStop func(), client *GrpcClient) {
+func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *server.GrpcManager, srvStop func(), client *GrpcClient) {
 	mgr = server.NewGrpcManager("client.test").(*server.GrpcManager)
 	srv := grpc.NewServer()
 	connectivity.RegisterConnectivityServer(srv, mgr)
@@ -50,7 +54,8 @@ func newGrpcTestServerAndClient(opts []Option) (mgr *server.GrpcManager, srvStop
 	if err != nil {
 		panic(err)
 	}
-	client, err = NewGrpcClient(conn, opts...)
+
+	client, err = NewGrpcClient(conn, rt)
 	if err != nil {
 		panic(err)
 	}
@@ -64,94 +69,28 @@ func TestNewGrpcClient(t *testing.T) {
 		srvStop func()
 		client  *GrpcClient
 
-		podReq = corev1.Pod{
+		podReq = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "foo",
 				Name:      "bar",
 			},
 			Spec: corev1.PodSpec{NodeName: "foo"},
 		}
+		podStatus = &criRuntime.PodSandboxStatus{
+			Metadata: &criRuntime.PodSandboxMetadata{
+				Namespace: "foo",
+				Name:      "bar",
+			},
+		}
 	)
 
-	sendPodDataMsgAll := func(sid uint64) {
-		for _, m := range expectedDataMsgList() {
-			msg := *m
-			msg.SessionId = sid
-			err := client.PostMsg(&msg)
-			assert.NoError(t, err)
-		}
-	}
+	rt, err := fake.NewFakeRuntime()
+	assert.NoError(t, err)
 
-	opts := []Option{
-		WithPodCreateHandler(func(sid uint64, namespace, name string, options *connectivity.CreateOptions) (*connectivity.Pod, error) {
-			pod := &corev1.Pod{}
-			err := pod.Unmarshal(options.GetPodV1().GetPod())
-			assert.NoError(t, err)
-
-			return NewPod(*pod, "", nil, nil), nil
-		}),
-		WithPodDeleteHandler(func(sid uint64, namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
-			return &connectivity.Pod{
-				Namespace: namespace,
-				Name:      name,
-			}, nil
-		}),
-		WithPodListHandler(func(sid uint64, namespace, name string, options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
-			return []*connectivity.Pod{{
-				Namespace: namespace,
-				Name:      name,
-			}}, nil
-		}),
-		WithPortForwardHandler(func(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) error {
-			assert.Equal(t, "foo", namespace)
-			assert.Equal(t, "bar", name)
-
-			sendPodDataMsgAll(sid)
-			return nil
-		}),
-
-		// stream cmd
-		WithContainerAttachHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error {
-			assert.Equal(t, "foo", namespace)
-			assert.Equal(t, "bar", name)
-
-			sendPodDataMsgAll(sid)
-			return nil
-		}),
-		// stream cmd
-		WithContainerExecHandler(func(sid uint64, namespace, name string, options *connectivity.ExecOptions) error {
-			assert.Equal(t, "foo", namespace)
-			assert.Equal(t, "bar", name)
-
-			sendPodDataMsgAll(sid)
-			return nil
-		}),
-		// stream/onetime cmd
-		WithContainerLogHandler(func(sid uint64, namespace, name string, options *connectivity.LogOptions) error {
-			assert.Equal(t, "foo", namespace)
-			assert.Equal(t, "bar", name)
-
-			sendPodDataMsgAll(sid)
-			return nil
-		}),
-		// onetime cmd (no reply, best effort)
-		WithContainerInputHandler(func(sid uint64, options *connectivity.InputOptions) error {
-			assert.Equal(t, "foo", string(options.GetData()))
-
-			return nil
-		}),
-		// onetime cmd (on reply, best effort)
-		WithContainerTtyResizeHandler(func(sid uint64, options *connectivity.TtyResizeOptions) error {
-			assert.Equal(t, 10, options.GetCols())
-			assert.Equal(t, 10, options.GetRows())
-			return nil
-		}),
-	}
-
-	mgr, srvStop, client = newGrpcTestServerAndClient(opts)
+	mgr, srvStop, client = newGrpcTestServerAndClient(rt)
 	defer srvStop()
 
-	err := client.PostMsg(NewNodeMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
+	err = client.PostMsg(connectivity.NewNodeMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
 	assert.Error(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -181,42 +120,44 @@ func TestNewGrpcClient(t *testing.T) {
 		defer wg.Done()
 		<-mgr.WaitUntilDeviceConnected()
 
+		createCmd, err := connectivity.NewPodCreateCmd(podReq, nil, nil)
+		assert.NoError(t, err)
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			server.NewPodCreateCmd(podReq, nil),
-			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
+			createCmd,
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			server.NewPodListCmd(podReq.Namespace, podReq.Name),
-			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
+			connectivity.NewPodListCmd(podReq.Namespace, podReq.Name),
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			server.NewPodDeleteCmd(podReq.Namespace, podReq.Name, time.Second),
-			*NewPodMsg(0, true, NewPod(podReq, "", nil, nil)))
+			connectivity.NewPodDeleteCmd(podReq.Namespace, podReq.Name, time.Second),
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			server.NewPortForwardCmd(podReq.Namespace, podReq.Name,
+			connectivity.NewPortForwardCmd(podReq.Namespace, podReq.Name,
 				corev1.PodPortForwardOptions{Ports: []int32{2048}}),
 			expectedDataMsgList())
 
 		execOptions := corev1.PodExecOptions{Stdin: true, Stdout: true, Stderr: true, TTY: true, Container: "", Command: []string{}}
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			server.NewContainerExecCmd(podReq.Namespace, podReq.Name, execOptions),
+			connectivity.NewContainerExecCmd(podReq.Namespace, podReq.Name, execOptions),
 			expectedDataMsgList())
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			server.NewContainerAttachCmd(podReq.Namespace, podReq.Name, execOptions),
+			connectivity.NewContainerAttachCmd(podReq.Namespace, podReq.Name, execOptions),
 			expectedDataMsgList())
 
 		logOptions := corev1.PodLogOptions{Container: "", Follow: true, Previous: true, Timestamps: true}
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			server.NewContainerLogCmd(podReq.Namespace, podReq.Name, logOptions),
+			connectivity.NewContainerLogCmd(podReq.Namespace, podReq.Name, logOptions),
 			expectedDataMsgList())
 
-		testOnetimeCmdWithNoExpectedMsg(t, mgr, server.NewContainerInputCmd(0, []byte("foo")))
-		testOnetimeCmdWithNoExpectedMsg(t, mgr, server.NewContainerInputCmd(1, []byte("foo")))
+		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerInputCmd(0, []byte("foo")))
+		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerInputCmd(1, []byte("foo")))
 
-		testOnetimeCmdWithNoExpectedMsg(t, mgr, server.NewContainerTtyResizeCmd(0, 10, 10))
-		testOnetimeCmdWithNoExpectedMsg(t, mgr, server.NewContainerTtyResizeCmd(1, 10, 10))
+		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerTtyResizeCmd(0, 10, 10))
+		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerTtyResizeCmd(1, 10, 10))
 
 		srvStop()
 	}()
@@ -280,12 +221,11 @@ func assertMsgEqual(t *testing.T, expectedMsg, msg connectivity.Msg) {
 		assert.Nil(t, msg.GetPod())
 	} else {
 		assert.NotNil(t, msg.GetPod())
+		// assert.True(t, expectedMsg.GetPod().Equal(msg.GetPod()))
 		assert.Equal(t, expectedMsg.GetPod().GetNamespace(), msg.GetPod().GetNamespace())
 		assert.Equal(t, expectedMsg.GetPod().GetName(), msg.GetPod().GetName())
 		assert.Equal(t, expectedMsg.GetPod().GetUid(), msg.GetPod().GetUid())
 		assert.Equal(t, expectedMsg.GetPod().GetIp(), msg.GetPod().GetIp())
-		// assert.EqualValues(t, expectedMsg.GetPod().GetContainerStatusV1Alpha2().GetV1Alpha2(), msg.GetPod().GetContainerStatusV1Alpha2().GetV1Alpha2())
-		// assert.EqualValues(t, expectedMsg.GetPod().GetSandboxStatusV1Alpha2().GetV1Alpha2(), msg.GetPod().GetSandboxStatusV1Alpha2().GetV1Alpha2())
 	}
 
 	if expectedMsg.GetData() == nil {

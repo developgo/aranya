@@ -103,6 +103,8 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 	setDisconnected()
 
 	s.deviceConnected = make(chan struct{})
+	s.sessions.cleanup()
+
 	close(s.globalMsgChan)
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)
 }

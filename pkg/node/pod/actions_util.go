@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/util"
 )
 
@@ -40,7 +39,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			defer close(inputCh)
 
 			for s.Scan() {
-				inputCh <- connectivitySrv.NewContainerInputCmd(sid, s.Bytes())
+				inputCh <- connectivity.NewContainerInputCmd(sid, s.Bytes())
 			}
 		}()
 	}
@@ -92,7 +91,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
-			resizeCmd := connectivitySrv.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
+			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.remoteManager.PostCmd(resizeCmd, 0)
 			if err != nil {
 				return err
