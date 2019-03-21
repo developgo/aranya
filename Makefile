@@ -10,7 +10,7 @@ aranya:
 
 .PHONY: arhat
 arhat-podman-grpc:
-	CGO_ENABLED=1 GOOS=linux go build -tags='podman grpc' -o build/arhat ./cmd/arhat/
+	CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -mod=vendor -tags='podman grpc' -o build/arhat ./cmd/arhat/
 
 test:
 	CGO_ENABLED=1 GO111MODULE=on go test -v -race -mod=vendor \
