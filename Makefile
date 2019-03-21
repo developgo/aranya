@@ -6,7 +6,11 @@ NS := edge
 
 .PHONY: aranya
 aranya:
-	CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -o build/aranya cmd/aranya/*.go
+	CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -o build/aranya ./cmd/aranya
+
+.PHONY: arhat
+arhat-podman-grpc:
+	CGO_ENABLED=1 GOOS=linux go build -tags='podman grpc' -o build/arhat ./cmd/arhat/
 
 test:
 	CGO_ENABLED=1 GO111MODULE=on go test -v -race -mod=vendor \

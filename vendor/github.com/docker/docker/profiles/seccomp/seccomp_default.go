@@ -357,13 +357,6 @@ func DefaultProfile() *types.Seccomp {
 			Args:   []*types.Arg{},
 		},
 		{
-			Names:  []string{"ptrace"},
-			Action: types.ActAllow,
-			Includes: types.Filter{
-				MinKernel: "4.8",
-			},
-		},
-		{
 			Names:  []string{"personality"},
 			Action: types.ActAllow,
 			Args: []*types.Arg{

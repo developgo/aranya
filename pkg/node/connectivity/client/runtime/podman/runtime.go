@@ -28,7 +28,7 @@ type podmanRuntime struct {
 	imageActionTimeout   time.Duration
 }
 
-func NewPodmanRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
+func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
 	if err := config.Init(); err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *podmanRuntime) CreatePod(namespace, name, uid string, podSpec *corev1.P
 	}
 
 	// create pod
-	podCreateOptions := defaultPodCreateOptions(namespace, name, podSpec)
+	podCreateOptions := getPodCreateOptions(namespace, name, podSpec)
 	podmanPod, err := rt.NewPod(ctx, podCreateOptions...)
 	if err != nil {
 		return nil, err

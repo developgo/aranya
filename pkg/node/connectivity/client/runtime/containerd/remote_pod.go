@@ -89,11 +89,11 @@ func (r *Runtime) remotePodSandboxStatus(podSandBoxID string) (*criRuntime.PodSa
 		return nil, err
 	}
 
-	if resp.Status != nil {
-		if err := verifySandboxStatus(resp.Status); err != nil {
-			return nil, err
-		}
-	}
+	// if resp.Status != nil {
+	// 	if err := verifySandboxStatus(resp.Status); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return resp.Status, nil
 }

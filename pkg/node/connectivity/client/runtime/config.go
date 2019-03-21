@@ -3,6 +3,7 @@ package runtime
 import (
 	"os"
 	"sync"
+	"time"
 )
 
 type Config struct {
@@ -11,6 +12,11 @@ type Config struct {
 	PauseImage    string `json:"pause_image"`
 	PauseCommand  string `json:"pause_command"`
 	VolumeDataDir string `json:"volume_data_dir"`
+
+	// Optional
+	EndpointDialTimeout time.Duration
+	RuntimeSvcEndpoint  string
+	ImageSvcEndpoint    string
 }
 
 func (c *Config) Init() error {

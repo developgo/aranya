@@ -30,7 +30,6 @@ import (
 
 	"k8s.io/api/core/v1"
 
-	"github.com/docker/docker/daemon/logger/jsonfilelog/jsonlog"
 	"github.com/fsnotify/fsnotify"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/util/tail"
@@ -135,12 +134,24 @@ func parseCRILog(log []byte, msg *logMessage) error {
 	return nil
 }
 
+// JSONLog is a log message, typically a single entry from a given log stream.
+type JSONLog struct {
+	// Log is the log message
+	Log string `json:"log,omitempty"`
+	// Stream is the log source
+	Stream string `json:"stream,omitempty"`
+	// Created is the created timestamp of log
+	Created time.Time `json:"time"`
+	// Attrs is the list of extra attributes provided by the user
+	Attrs map[string]string `json:"attrs,omitempty"`
+}
+
 // parseDockerJSONLog parses logs in Docker JSON log format. Docker JSON log format
 // example:
 //   {"log":"content 1","stream":"stdout","time":"2016-10-20T18:39:20.57606443Z"}
 //   {"log":"content 2","stream":"stderr","time":"2016-10-20T18:39:20.57606444Z"}
 func parseDockerJSONLog(log []byte, msg *logMessage) error {
-	var l = &jsonlog.JSONLog{}
+	var l = &JSONLog{}
 	l.Reset()
 
 	// TODO: JSON decoding is fairly expensive, we should evaluate this.

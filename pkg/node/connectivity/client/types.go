@@ -2,13 +2,13 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"sync"
 
-	"k8s.io/client-go/tools/remotecommand"
-
 	"arhat.dev/aranya/pkg/node/util"
+	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
@@ -20,7 +20,10 @@ var (
 	ErrStreamSessionClosed    = errors.New("stream session closed ")
 )
 
-type Option func(*baseClient) error
+type Interface interface {
+	Run(ctx context.Context) error
+	PostMsg(msg *connectivity.Msg) error
+}
 
 type streamSession struct {
 	inputCh  map[uint64]chan []byte
@@ -86,6 +89,8 @@ type baseClient struct {
 	runtime       runtime.Interface
 }
 
+// Called by actual connectivity client
+
 func (c *baseClient) onConnect(connect func() error) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -100,11 +105,11 @@ func (c *baseClient) onDisconnected(setDisconnected func()) {
 	setDisconnected()
 }
 
-func (c *baseClient) onPostMsg(m *connectivity.Msg, sendMsg func(msg *connectivity.Msg) error) error {
+func (c *baseClient) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return sendMsg(m)
+	return send(msg)
 }
 
 func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
@@ -166,6 +171,8 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		}
 	}
 }
+
+// Internal processing
 
 func (c *baseClient) handleError(sid uint64, e error) {
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {

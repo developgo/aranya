@@ -64,6 +64,12 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 
 	for {
 		select {
+		case <-c.syncClient.Context().Done():
+			// disconnected from cloud controller
+			return nil
+		case <-ctx.Done():
+			// leaving
+			return nil
 		case cmd, more := <-cmdCh:
 			if !more {
 				return nil
