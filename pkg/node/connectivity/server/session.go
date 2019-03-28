@@ -1,17 +1,31 @@
 package server
 
 import (
+	"context"
 	"sync"
-	"time"
 	"unsafe"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 type session struct {
-	timeout time.Duration
-	timer   *time.Timer
+	ctx     context.Context
+	ctxExit context.CancelFunc
 	msgCh   chan *connectivity.Msg
+}
+
+func (s *session) close() {
+	s.ctxExit()
+	close(s.msgCh)
+}
+
+func (s *session) isClosed() bool {
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
 
 type sessionManager struct {
@@ -19,7 +33,13 @@ type sessionManager struct {
 	mu sync.RWMutex
 }
 
-func (s *sessionManager) add(cmd *connectivity.Cmd, timeout time.Duration) (sid uint64, ch chan *connectivity.Msg) {
+func newSessionManager() *sessionManager {
+	return &sessionManager{
+		m: make(map[uint64]*session),
+	}
+}
+
+func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd) (sid uint64, ch chan *connectivity.Msg) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -30,21 +50,17 @@ func (s *sessionManager) add(cmd *connectivity.Cmd, timeout time.Duration) (sid 
 		sid = *(*uint64)(unsafe.Pointer(&cmd))
 
 		ch = make(chan *connectivity.Msg, 1)
-		s.m[sid] = &session{
-			msgCh:   ch,
-			timeout: timeout,
-			timer: func() *time.Timer {
-				if timeout > 0 {
-					t := time.NewTimer(timeout)
-					go func() {
-						<-t.C
-						s.del(sid)
-					}()
-					return t
-				}
-				return nil
-			}(),
-		}
+
+		session := &session{msgCh: ch}
+		session.ctx, session.ctxExit = context.WithCancel(ctx)
+		go func() {
+			select {
+			case <-session.ctx.Done():
+				s.del(sid)
+			}
+		}()
+
+		s.m[sid] = session
 	}
 
 	return sid, ch
@@ -56,11 +72,8 @@ func (s *sessionManager) get(sid uint64) (chan *connectivity.Msg, bool) {
 
 	session, ok := s.m[sid]
 	if ok {
-		if session.timeout > 0 {
-			// reset timeout with best effort
-			if session.timer.Stop() {
-				session.timer.Reset(session.timeout)
-			}
+		if session.isClosed() {
+			s.del(sid)
 		}
 
 		return session.msgCh, true
@@ -74,10 +87,8 @@ func (s *sessionManager) del(sid uint64) {
 	defer s.mu.Unlock()
 
 	if session, ok := s.m[sid]; ok {
-		if session.timer != nil {
-			session.timer.Stop()
-		}
-		close(session.msgCh)
+
+		session.close()
 		delete(s.m, sid)
 	}
 }
@@ -89,10 +100,7 @@ func (s *sessionManager) cleanup() {
 	keys := make([]uint64, len(s.m))
 	i := 0
 	for key, session := range s.m {
-		if session.timer != nil {
-			session.timer.Stop()
-		}
-		close(session.msgCh)
+		session.close()
 
 		keys[i] = key
 		i++
@@ -100,11 +108,5 @@ func (s *sessionManager) cleanup() {
 
 	for _, k := range keys {
 		delete(s.m, k)
-	}
-}
-
-func newSessionManager() *sessionManager {
-	return &sessionManager{
-		m: make(map[uint64]*session),
 	}
 }

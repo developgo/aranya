@@ -2,6 +2,7 @@ package pod
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"time"
@@ -17,7 +18,9 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		return fmt.Errorf("output should not be nil")
 	}
 
-	msgCh, err := m.remoteManager.PostCmd(initialCmd, timeout)
+	ctx, cancel := context.WithTimeout(m.ctx, timeout)
+	defer cancel()
+	msgCh, err := m.remoteManager.PostCmd(ctx, initialCmd)
 	if err != nil {
 		return err
 	}
@@ -59,7 +62,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
-			_, err = m.remoteManager.PostCmd(userInput, timeout)
+			_, err = m.remoteManager.PostCmd(ctx, userInput)
 			if err != nil {
 				return nil
 			}
@@ -91,8 +94,9 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
+
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
-			_, err = m.remoteManager.PostCmd(resizeCmd, 0)
+			_, err = m.remoteManager.PostCmd(ctx, resizeCmd)
 			if err != nil {
 				return err
 			}

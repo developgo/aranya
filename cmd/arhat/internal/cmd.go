@@ -1,15 +1,17 @@
 package internal
 
 import (
-	"arhat.dev/aranya/pkg/node/connectivity"
 	"context"
 	"fmt"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 
 	cmdConnectivity "arhat.dev/aranya/cmd/arhat/internal/connectivity"
 	cmdRuntime "arhat.dev/aranya/cmd/arhat/internal/runtime"

@@ -1,8 +1,8 @@
 package server
 
 import (
+	"context"
 	"io"
-	"time"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
@@ -63,10 +63,10 @@ func (p *GrpcManager) Sync(server connectivity.Connectivity_SyncServer) error {
 }
 
 // PostCmd sends a command to remote device
-func (p *GrpcManager) PostCmd(c *connectivity.Cmd, timeout time.Duration) (ch <-chan *connectivity.Msg, err error) {
-	return p.baseServer.onPostCmd(c, timeout, func(c *connectivity.Cmd) error {
+func (p *GrpcManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error) {
+	return p.baseServer.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
 		// fail if device not connected,
-		// you should call WaitUntilDeviceConnected first
+		// you should call DeviceConnected first
 		// to get notified when device connected
 		if p.syncSrv == nil {
 			return ErrDeviceNotConnected

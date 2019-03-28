@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -22,11 +23,11 @@ var (
 )
 
 type Interface interface {
-	WaitUntilDeviceConnected() <-chan struct{}
-	ConsumeGlobalMsg() <-chan *connectivity.Msg
+	DeviceConnected() <-chan struct{}
+	GlobalMessages() <-chan *connectivity.Msg
 	// send a command to remote device with timeout
 	// return a channel of message for this session
-	PostCmd(c *connectivity.Cmd, timeout time.Duration) (ch <-chan *connectivity.Msg, err error)
+	PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error)
 }
 
 type baseServer struct {
@@ -48,15 +49,15 @@ func newBaseServer(name string) baseServer {
 	}
 }
 
-func (s *baseServer) ConsumeGlobalMsg() <-chan *connectivity.Msg {
+func (s *baseServer) GlobalMessages() <-chan *connectivity.Msg {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return s.globalMsgChan
 }
 
-// WaitUntilDeviceConnected
-func (s *baseServer) WaitUntilDeviceConnected() <-chan struct{} {
+// DeviceConnected
+func (s *baseServer) DeviceConnected() <-chan struct{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -109,7 +110,7 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)
 }
 
-func (s baseServer) onPostCmd(cmd *connectivity.Cmd, timeout time.Duration, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
+func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -129,7 +130,7 @@ func (s baseServer) onPostCmd(cmd *connectivity.Cmd, timeout time.Duration, send
 		}
 	}
 
-	sid, ch = s.sessions.add(cmd, timeout)
+	sid, ch = s.sessions.add(ctx, cmd)
 	defer func() {
 		if err != nil {
 			s.sessions.del(sid)

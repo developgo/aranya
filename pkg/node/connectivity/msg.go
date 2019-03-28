@@ -37,7 +37,7 @@ func NewDataMsg(sid uint64, completed bool, kind Data_Kind, data []byte) *Msg {
 	}
 }
 
-func NewPod(namespace, name, uid string, podStatus *criRuntime.PodSandboxStatus, containerStatuses []*criRuntime.ContainerStatus) *Pod {
+func NewPod(namespace, name string, podStatus *criRuntime.PodSandboxStatus, containerStatuses []*criRuntime.ContainerStatus) *Pod {
 	podStatusBytes, _ := podStatus.Marshal()
 
 	containerStatusBytes := make([][]byte, len(containerStatuses))
@@ -48,7 +48,6 @@ func NewPod(namespace, name, uid string, podStatus *criRuntime.PodSandboxStatus,
 	return &Pod{
 		Namespace: namespace,
 		Name:      name,
-		Uid:       uid,
 		Ip:        podStatus.GetNetwork().GetIp(),
 
 		ContainerStatus: &Pod_ContainerV1Alpha2{

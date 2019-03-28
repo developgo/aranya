@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"context"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,14 +21,15 @@ var (
 	log = logf.Log.WithName("aranya.node.pod")
 )
 
-func NewManager(podLister kubeListersCoreV1.PodLister, manager kubeletpod.Manager, remoteManager connectivitySrv.Interface) *Manager {
-	return &Manager{lister: podLister, Manager: manager, remoteManager: remoteManager}
+func NewManager(ctx context.Context, podLister kubeListersCoreV1.PodLister, manager kubeletpod.Manager, remoteManager connectivitySrv.Interface) *Manager {
+	return &Manager{ctx: ctx, lister: podLister, Manager: manager, remoteManager: remoteManager}
 }
 
 type Manager struct {
 	kubeletpod.Manager
 	lister        kubeListersCoreV1.PodLister
 	remoteManager connectivitySrv.Interface
+	ctx           context.Context
 }
 
 // PodResourcesAreReclaimed

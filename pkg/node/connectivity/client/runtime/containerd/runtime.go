@@ -1,7 +1,6 @@
 package containerd
 
 import (
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"context"
 	"errors"
 	"time"
@@ -9,6 +8,8 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
+
+	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 )
 
 const (

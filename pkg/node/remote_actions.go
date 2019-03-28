@@ -14,13 +14,13 @@ func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
 		wg := &sync.WaitGroup{}
 
-		<-n.connectivityManager.WaitUntilDeviceConnected()
+		<-n.connectivityManager.DeviceConnected()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Wait()
 
-			globalMsgCh := n.connectivityManager.ConsumeGlobalMsg()
+			globalMsgCh := n.connectivityManager.GlobalMessages()
 			for msg := range globalMsgCh {
 				n.handleGlobalMsg(msg)
 			}
@@ -43,7 +43,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 // generate in cluster pod cache for remote device
 func (n *Node) generateCacheForPods() error {
-	msgCh, err := n.connectivityManager.PostCmd(connectivity.NewPodListCmd("", ""), 0)
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewPodListCmd("", ""))
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (n *Node) generateCacheForPods() error {
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNode() error {
-	msgCh, err := n.connectivityManager.PostCmd(connectivity.NewNodeCmd(), 0)
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeCmd())
 	if err != nil {
 		return err
 	}

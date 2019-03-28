@@ -16,7 +16,7 @@ import (
 func (m *Manager) GetContainerLogs(namespace, pod, container string, options corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
-	msgCh, err := m.remoteManager.PostCmd(connectivity.NewContainerLogCmd(namespace, pod, options), 0)
+	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(namespace, pod, options))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
 		return nil
 	}
 
-	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
+	msgCh, err := m.remoteManager.PostCmd(m.ctx, cmd)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
 
 func (m *Manager) DeletePodInDevice(namespace, name string) error {
 	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
-	msgCh, err := m.remoteManager.PostCmd(cmd, 0)
+	msgCh, err := m.remoteManager.PostCmd(m.ctx, cmd)
 	if err != nil {
 		return err
 	}

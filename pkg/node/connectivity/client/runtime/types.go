@@ -18,11 +18,12 @@ type Interface interface {
 	// 		- create pod with `pause` container
 	// 		- TODO: create and start init containers
 	// 		- create and start containers
-	CreatePod(namespace, name, uid string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error)
+	CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error)
 	DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error)
 	ListPod(namespace string) ([]*connectivity.Pod, error)
 
 	ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error
 	AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error
 	GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error
+	PodPortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error
 }

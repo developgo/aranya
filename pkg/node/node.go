@@ -103,10 +103,9 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		connectivityManager = connectivitySrv.NewMqttManager(nodeObj.Name)
 	}
 
-	podManager := pod.NewManager(podInformer.Lister(), basicPodManager, connectivityManager)
-	statsManager := stats.NewManager()
-
 	ctx, exit := context.WithCancel(ctx)
+	podManager := pod.NewManager(ctx, podInformer.Lister(), basicPodManager, connectivityManager)
+	statsManager := stats.NewManager()
 
 	logger := log.WithValues("name", nodeObj.Name)
 

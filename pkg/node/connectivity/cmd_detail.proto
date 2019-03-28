@@ -49,8 +49,6 @@ message PodCmd {
     string namespace = 1;
     // pod name
     string name = 2;
-    // pod uid
-    string uid = 3;
     // action type
     PodAction action = 4;
 

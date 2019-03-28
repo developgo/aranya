@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtimeutil"
@@ -42,9 +43,9 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	}, nil
 }
 
-func (r *podmanRuntime) newRuntime(namespace string) (*libpodRuntime.Runtime, error) {
+func (r *podmanRuntime) newRuntime() (*libpodRuntime.Runtime, error) {
 	return libpodRuntime.NewRuntime(
-		libpodRuntime.WithNamespace(namespace),
+		libpodRuntime.WithNamespace(constant.ContainerNamespace),
 		// set `pause` image in start command
 		libpodRuntime.WithDefaultInfraImage(r.config.PauseImage),
 		libpodRuntime.WithDefaultInfraCommand(r.config.PauseCommand),
@@ -53,11 +54,11 @@ func (r *podmanRuntime) newRuntime(namespace string) (*libpodRuntime.Runtime, er
 	)
 }
 
-func (r *podmanRuntime) CreatePod(namespace, name, uid string, podSpec *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
+func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
 	ctx, cancelCtx := context.WithTimeout(r.ctx, r.runtimeActionTimeout)
 	defer cancelCtx()
 
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return nil, err
 	}
@@ -118,16 +119,16 @@ func (r *podmanRuntime) CreatePod(namespace, name, uid string, podSpec *corev1.P
 		}
 	}
 
-	podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, namespace, name, uid, podmanPod, infraCtrID)
+	podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, namespace, name, podmanPod, infraCtrID)
 	if err != nil {
 		return nil, err
 	}
 
-	return connectivity.NewPod(namespace, name, uid, podStatus, containerStatuses), nil
+	return connectivity.NewPod(namespace, name, podStatus, containerStatuses), nil
 }
 
 func (r *podmanRuntime) DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (r *podmanRuntime) DeletePod(namespace, name string, options *connectivity.
 }
 
 func (r *podmanRuntime) ListPod(namespace string) ([]*connectivity.Pod, error) {
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return nil, err
 	}
@@ -166,19 +167,19 @@ func (r *podmanRuntime) ListPod(namespace string) ([]*connectivity.Pod, error) {
 			return nil, err
 		}
 
-		podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, namespace, p.Name(), "", p, infraID)
+		podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, namespace, p.Name(), p, infraID)
 		if err != nil {
 			return nil, err
 		}
 
-		allPodStatus = append(allPodStatus, connectivity.NewPod(namespace, p.Name(), "", podStatus, containerStatuses))
+		allPodStatus = append(allPodStatus, connectivity.NewPod(namespace, p.Name(), podStatus, containerStatuses))
 	}
 
 	return allPodStatus, nil
 }
 
 func (r *podmanRuntime) AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return err
 	}
@@ -194,7 +195,7 @@ func (r *podmanRuntime) AttachContainer(namespace, name, container string, stdin
 }
 
 func (r *podmanRuntime) ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return err
 	}
@@ -210,7 +211,7 @@ func (r *podmanRuntime) ExecInContainer(namespace, name, container string, stdin
 func (r *podmanRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error {
 	defer func() { _, _ = stdout.Close(), stderr.Close() }()
 
-	rt, err := r.newRuntime(namespace)
+	rt, err := r.newRuntime()
 	if err != nil {
 		return err
 	}
@@ -223,8 +224,8 @@ func (r *podmanRuntime) GetContainerLogs(namespace, name string, stdout, stderr 
 	return runtimeutil.ReadLogs(context.Background(), target.LogPath(), options, stdout, stderr)
 }
 
-func (r *podmanRuntime) PodPortForward(namespace, name string, in io.Reader, out io.WriteCloser) error {
-	rt, err := r.newRuntime(namespace)
+func (r *podmanRuntime) PodPortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+	rt, err := r.newRuntime()
 	if err != nil {
 		return err
 	}

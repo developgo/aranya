@@ -1,9 +1,10 @@
 package main
 
 import (
-	"arhat.dev/aranya/cmd/arhat/internal"
 	"fmt"
 	"os"
+
+	"arhat.dev/aranya/cmd/arhat/internal"
 )
 
 func main() {

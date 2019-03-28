@@ -13,10 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
+	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime/fake"
-
-	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/server"
 )
 
@@ -108,9 +107,9 @@ func TestNewGrpcClient(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-mgr.WaitUntilDeviceConnected()
+		<-mgr.DeviceConnected()
 
-		for msg := range mgr.ConsumeGlobalMsg() {
+		for msg := range mgr.GlobalMessages() {
 			msg.GetNode()
 		}
 	}()
@@ -118,21 +117,21 @@ func TestNewGrpcClient(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-mgr.WaitUntilDeviceConnected()
+		<-mgr.DeviceConnected()
 
 		createCmd, err := connectivity.NewPodCreateCmd(podReq, nil, nil)
 		assert.NoError(t, err)
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			createCmd,
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			connectivity.NewPodListCmd(podReq.Namespace, podReq.Name),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			connectivity.NewPodDeleteCmd(podReq.Namespace, podReq.Name, time.Second),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
 			connectivity.NewPortForwardCmd(podReq.Namespace, podReq.Name,
@@ -172,12 +171,12 @@ func TestNewGrpcClient(t *testing.T) {
 }
 
 func testOnetimeCmdWithNoExpectedMsg(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd) {
-	_, err := mgr.PostCmd(cmd, 0)
+	_, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.Equal(t, server.ErrSessionNotValid, err)
 }
 
 func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd, expectedMsg connectivity.Msg) {
-	msgCh, err := mgr.PostCmd(cmd, 0)
+	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)
 	expectedMsg.SessionId = cmd.GetSessionId()
@@ -192,7 +191,7 @@ func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr server.Interface, cmd *conn
 }
 
 func testStreamCmdWithExpectedMsgList(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd, expectedMsgList []*connectivity.Msg) {
-	msgCh, err := mgr.PostCmd(cmd, 0)
+	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)
 

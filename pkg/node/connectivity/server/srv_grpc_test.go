@@ -57,7 +57,7 @@ func TestGrpcSrv(t *testing.T) {
 
 	cmd := connectivity.NewPodListCmd("foo", "bar")
 
-	msgCh, err := srv.PostCmd(cmd, 0)
+	msgCh, err := srv.PostCmd(context.TODO(), cmd)
 	assert.Error(t, err)
 	assert.Empty(t, msgCh)
 
@@ -70,7 +70,7 @@ func TestGrpcSrv(t *testing.T) {
 		defer wg.Done()
 
 		i := 0
-		for msg := range srv.ConsumeGlobalMsg() {
+		for msg := range srv.GlobalMessages() {
 			i++
 			assert.NotEmpty(t, msg)
 			assert.Equal(t, []byte("foo"), msg.GetNode().GetNodeV1())
@@ -83,9 +83,9 @@ func TestGrpcSrv(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		<-srv.WaitUntilDeviceConnected()
+		<-srv.DeviceConnected()
 
-		msgCh, err := srv.PostCmd(cmd, 0)
+		msgCh, err := srv.PostCmd(context.TODO(), cmd)
 		assert.NoError(t, err)
 		assert.NotEqual(t, nil, msgCh)
 

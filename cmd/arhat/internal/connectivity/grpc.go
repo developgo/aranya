@@ -1,12 +1,14 @@
 package connectivity
 
 import (
+	"context"
+
+	"google.golang.org/grpc"
+
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
-	"context"
-	"google.golang.org/grpc"
 )
 
 func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt runtime.Interface) (client.Interface, error) {

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -11,11 +12,14 @@ import (
 
 func TestSessionManager_Add(t *testing.T) {
 	mgr := newSessionManager()
-	sidA, chA := mgr.add(connectivity.NewPodListCmd("", ""), 0)
-	sidB, chB := mgr.add(connectivity.NewContainerTtyResizeCmd(sidA, 0, 0), 0)
-	sidC, chC := mgr.add(connectivity.NewPodListCmd("", ""), time.Millisecond)
+	ctx := context.Background()
+	sidA, chA := mgr.add(ctx, connectivity.NewPodListCmd("", ""))
+	sidB, chB := mgr.add(ctx, connectivity.NewContainerTtyResizeCmd(sidA, 0, 0))
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
+	defer cancel()
+	sidC, chC := mgr.add(timeoutCtx, connectivity.NewPodListCmd("", ""))
 
-	assert.NotEqual(t, nil, sidA)
+	assert.NotNil(t, sidA)
 	assert.Equal(t, sidA, sidB)
 	assert.Equal(t, chA, chB)
 	assert.NotEqual(t, chA, chC)
@@ -28,7 +32,8 @@ func TestSessionManager_Add(t *testing.T) {
 
 func TestSessionManager_Del(t *testing.T) {
 	mgr := newSessionManager()
-	sid, ch := mgr.add(connectivity.NewPodListCmd("", ""), 0)
+	ctx := context.Background()
+	sid, ch := mgr.add(ctx, connectivity.NewPodListCmd("", ""))
 	mgr.del(sid)
 	_, ok := mgr.get(sid)
 	assert.Equal(t, false, ok)
@@ -39,8 +44,11 @@ func TestSessionManager_Del(t *testing.T) {
 
 func TestSessionManager_Get(t *testing.T) {
 	mgr := newSessionManager()
-	sidA, _ := mgr.add(connectivity.NewPodListCmd("", ""), 0)
-	sidB, _ := mgr.add(connectivity.NewPodListCmd("", ""), time.Millisecond)
+	ctx := context.Background()
+	sidA, _ := mgr.add(ctx, connectivity.NewPodListCmd("", ""))
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
+	defer cancel()
+	sidB, _ := mgr.add(timeoutCtx, connectivity.NewPodListCmd("", ""))
 
 	_, ok := mgr.get(sidA)
 	assert.Equal(t, true, ok)

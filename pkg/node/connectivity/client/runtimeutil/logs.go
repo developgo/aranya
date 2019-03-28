@@ -28,9 +28,8 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/api/core/v1"
-
 	"github.com/fsnotify/fsnotify"
+	"k8s.io/api/core/v1"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/util/tail"
 )
@@ -144,6 +143,14 @@ type JSONLog struct {
 	Created time.Time `json:"time"`
 	// Attrs is the list of extra attributes provided by the user
 	Attrs map[string]string `json:"attrs,omitempty"`
+}
+
+// Reset all fields to their zero value.
+func (jl *JSONLog) Reset() {
+	jl.Log = ""
+	jl.Stream = ""
+	jl.Created = time.Time{}
+	jl.Attrs = make(map[string]string)
 }
 
 // parseDockerJSONLog parses logs in Docker JSON log format. Docker JSON log format

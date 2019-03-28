@@ -7,8 +7,9 @@ import (
 	"io"
 	"sync"
 
-	"arhat.dev/aranya/pkg/node/util"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"arhat.dev/aranya/pkg/node/util"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
@@ -67,8 +68,19 @@ func (s *streamSession) del(sid uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.inputCh, sid)
-	delete(s.resizeCh, sid)
+	if ch, ok := s.inputCh[sid]; ok {
+		if ch != nil {
+			close(ch)
+		}
+		delete(s.inputCh, sid)
+	}
+
+	if ch, ok := s.resizeCh[sid]; ok {
+		if ch != nil {
+			close(ch)
+		}
+		delete(s.resizeCh, sid)
+	}
 }
 
 func newBaseClient(rt runtime.Interface) baseClient {
@@ -120,19 +132,20 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		sid := cmd.GetSessionId()
 		ns := cm.PodCmd.GetNamespace()
 		name := cm.PodCmd.GetName()
-		uid := cm.PodCmd.GetUid()
 
 		switch cm.PodCmd.GetAction() {
 
 		// pod scope commands
 		case connectivity.Create:
-			c.doPodCreate(sid, ns, name, uid, cm.PodCmd.GetCreateOptions())
+			c.doPodCreate(sid, ns, name, cm.PodCmd.GetCreateOptions())
 		case connectivity.Delete:
 			c.doPodDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
 		case connectivity.List:
 			c.doPodList(sid, ns)
 		case connectivity.PortForward:
-			c.doPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions())
+			inputCh := make(chan []byte, 1)
+			c.openedStreams.add(sid, inputCh, nil)
+			c.doPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions(), inputCh)
 
 		// container scope commands
 		case connectivity.Exec:
@@ -180,14 +193,14 @@ func (c *baseClient) handleError(sid uint64, e error) {
 	}
 }
 
-func (c *baseClient) doPodCreate(sid uint64, namespace, name, uid string, options *connectivity.CreateOptions) {
+func (c *baseClient) doPodCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
 	podSpec, authConfig, volumeData, err := options.GetResolvedCreateOptions()
 	if err != nil {
 		c.handleError(sid, err)
 		return
 	}
 
-	podResp, err := c.runtime.CreatePod(namespace, name, uid, podSpec, authConfig, volumeData)
+	podResp, err := c.runtime.CreatePod(namespace, name, podSpec, authConfig, volumeData)
 	if err != nil {
 		c.handleError(sid, err)
 		return
@@ -219,6 +232,13 @@ func (c *baseClient) doPodList(sid uint64, namespace string) {
 		return
 	}
 
+	if len(pods) == 0 {
+		if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, nil)); err != nil {
+			c.handleError(sid, err)
+		}
+		return
+	}
+
 	lastIndex := len(pods) - 1
 	for i, p := range pods {
 		if err := c.doPostMsg(connectivity.NewPodMsg(sid, i == lastIndex, p)); err != nil {
@@ -238,18 +258,18 @@ func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, optio
 	}
 
 	var (
-		stdin  io.Reader
+		stdin  io.ReadCloser
 		stdout io.WriteCloser
 		stderr io.WriteCloser
 
 		remoteStdin  io.WriteCloser
-		remoteStdout io.Reader
-		remoteStderr io.Reader
+		remoteStdout io.ReadCloser
+		remoteStderr io.ReadCloser
 	)
 
 	if opt.Stdin {
 		stdin, remoteStdin = io.Pipe()
-		defer func() { _ = remoteStdin.Close() }()
+		defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
 		go func() {
 			for inputData := range inputCh {
@@ -263,7 +283,7 @@ func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, optio
 
 	if opt.Stdout {
 		remoteStdout, stdout = io.Pipe()
-		defer func() { _ = stdout.Close() }()
+		defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
 		go func() {
 			s := bufio.NewScanner(remoteStdout)
@@ -280,7 +300,7 @@ func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, optio
 
 	if opt.Stderr {
 		remoteStderr, stderr = io.Pipe()
-		defer func() { _ = stderr.Close() }()
+		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
 			s := bufio.NewScanner(remoteStderr)
@@ -314,20 +334,20 @@ func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options
 	}
 
 	var (
-		stdin  io.Reader
+		stdin  io.ReadCloser
 		stdout io.WriteCloser
 		stderr io.WriteCloser
 
 		remoteStdin  io.WriteCloser
-		remoteStdout io.Reader
-		remoteStderr io.Reader
+		remoteStdout io.ReadCloser
+		remoteStderr io.ReadCloser
 	)
 
 	if opt.Stdin {
 		stdin, remoteStdin = io.Pipe()
 
 		go func() {
-			defer func() { _ = remoteStdin.Close() }()
+			defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
 			for inputData := range inputCh {
 				_, err := remoteStdin.Write(inputData)
@@ -340,6 +360,7 @@ func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options
 
 	if opt.Stdout {
 		remoteStdout, stdout = io.Pipe()
+		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
 			s := bufio.NewScanner(remoteStdout)
@@ -356,6 +377,7 @@ func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options
 
 	if opt.Stderr {
 		remoteStderr, stderr = io.Pipe()
+		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
 			s := bufio.NewScanner(remoteStderr)
@@ -387,7 +409,10 @@ func (c *baseClient) doContainerLog(sid uint64, namespace, name string, options 
 	}
 
 	remoteStdout, stdout := io.Pipe()
+	defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
+
 	remoteStderr, stderr := io.Pipe()
+	defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 	// read stdout
 	go func() {
@@ -422,5 +447,48 @@ func (c *baseClient) doContainerLog(sid uint64, namespace, name string, options 
 	}
 }
 
-func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions) {
+func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
+	defer c.openedStreams.del(sid)
+
+	opt, err := options.GetResolvedOptions()
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	input, remoteInput := io.Pipe()
+	remoteOutput, output := io.Pipe()
+	defer func() { _, _ = remoteOutput.Close(), output.Close() }()
+
+	// read input
+	go func() {
+		defer func() { _, _ = input.Close(), remoteInput.Close() }()
+
+		for inputData := range inputCh {
+			_, err := remoteInput.Write(inputData)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	// read output
+	go func() {
+		s := bufio.NewScanner(remoteOutput)
+		s.Split(util.ScanAnyAvail)
+
+		for s.Scan() {
+			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+				return
+			}
+		}
+	}()
+
+	// best effort
+	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+
+	if err := c.runtime.PodPortForward(namespace, name, opt, input, output); err != nil {
+		c.handleError(sid, err)
+		return
+	}
 }
