@@ -6,17 +6,26 @@ import (
 	"time"
 )
 
+type EndPoint struct {
+	Address       string        `json:"address" yaml:"address"`
+	DialTimeout   time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
+	ActionTimeout time.Duration `json:"action_timeout" yaml:"action_timeout"`
+}
+
 type Config struct {
 	once sync.Once
 
-	PauseImage    string `json:"pause_image"`
-	PauseCommand  string `json:"pause_command"`
-	VolumeDataDir string `json:"volume_data_dir"`
+	PauseImage         string `json:"pause_image" yaml:"pause_image"`
+	PauseCommand       string `json:"pause_command" yaml:"pause_command"`
+	VolumeDataDir      string `json:"volume_data_dir" yaml:"volume_data_dir"`
+	ContainerNamespace string `json:"container_namespace" yaml:"container_namespace"`
 
 	// Optional
-	EndpointDialTimeout time.Duration
-	RuntimeSvcEndpoint  string
-	ImageSvcEndpoint    string
+	EndpointDialTimeout time.Duration `json:"endpoint_dial_timeout" yaml:"endpoint_dial_timeout"`
+	EndPoints           struct {
+		Image   EndPoint `json:"image" yaml:"image"`
+		Runtime EndPoint `json:"runtime" yaml:"runtime"`
+	} `json:"endpoints" yaml:"endpoints"`
 }
 
 func (c *Config) Init() error {

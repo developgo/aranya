@@ -1,4 +1,4 @@
-// +build linux,podman
+// +build linux,rt_podman
 
 package podman
 
@@ -38,8 +38,8 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 		ctx:    ctx,
 		config: config,
 
-		runtimeActionTimeout: 2 * time.Minute,
-		imageActionTimeout:   4 * time.Minute,
+		runtimeActionTimeout: config.EndPoints.Runtime.ActionTimeout,
+		imageActionTimeout:   config.EndPoints.Image.ActionTimeout,
 	}, nil
 }
 
@@ -224,7 +224,7 @@ func (r *podmanRuntime) GetContainerLogs(namespace, name string, stdout, stderr 
 	return runtimeutil.ReadLogs(context.Background(), target.LogPath(), options, stdout, stderr)
 }
 
-func (r *podmanRuntime) PodPortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *podmanRuntime) PortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
 	rt, err := r.newRuntime()
 	if err != nil {
 		return err

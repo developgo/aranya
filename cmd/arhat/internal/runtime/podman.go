@@ -1,4 +1,4 @@
-// +build linux,podman
+// +build linux,rt_podman
 
 package runtime
 

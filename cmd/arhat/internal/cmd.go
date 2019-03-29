@@ -11,15 +11,14 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	"arhat.dev/aranya/pkg/node/connectivity"
-
-	cmdConnectivity "arhat.dev/aranya/cmd/arhat/internal/connectivity"
+	"arhat.dev/aranya/cmd/arhat/internal/conn"
 	cmdRuntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 )
 
 const (
-	DefaultConfigFile = "/etc/arhat/config.yml"
+	DefaultConfigFile = "/etc/arhat/config.yaml"
 )
 
 var (
@@ -89,7 +88,7 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	for !exiting() {
-		client, err := cmdConnectivity.GetConnectivityClient(ctx, &config.Connectivity, rt)
+		client, err := conn.GetConnectivityClient(ctx, &config.Connectivity, rt)
 		if err != nil {
 			// TODO: log error
 		}
@@ -98,4 +97,6 @@ func run(ctx context.Context, config *Config) error {
 
 		}
 	}
+
+	return nil
 }

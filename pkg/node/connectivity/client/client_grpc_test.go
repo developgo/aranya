@@ -84,10 +84,10 @@ func TestNewGrpcClient(t *testing.T) {
 		}
 	)
 
-	rt, err := fake.NewFakeRuntime()
+	okRt, err := fake.NewFakeRuntime(false)
 	assert.NoError(t, err)
 
-	mgr, srvStop, client = newGrpcTestServerAndClient(rt)
+	mgr, srvStop, client = newGrpcTestServerAndClient(okRt)
 	defer srvStop()
 
 	err = client.PostMsg(connectivity.NewNodeMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))

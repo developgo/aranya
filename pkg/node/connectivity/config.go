@@ -4,10 +4,16 @@ import (
 	"time"
 )
 
+type TLSConfig struct {
+	Cert string `json:"cert" yaml:"cert"`
+	Key  string `json:"key" yaml:"key"`
+}
+
 type Config struct {
-	Method         string        `json:"method" yaml:"method"`
-	DialTimeout    time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
-	ServerEndpoint string        `json:"server_endpoint" yaml:"server_endpoint"`
-	TLSCert        string        `json:"tls_cert" yaml:"tls_cert"`
-	TLSKey         string        `json:"tls_key" yaml:"tls_key"`
+	Server struct {
+		Address     string        `json:"address" yaml:"address"`
+		DialTimeout time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
+
+		TLS *TLSConfig `json:"tls" yaml:"tls"`
+	} `json:"server" yaml:"server"`
 }

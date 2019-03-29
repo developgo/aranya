@@ -1,3 +1,5 @@
+// +build rt_containerd
+
 package containerd
 
 import (

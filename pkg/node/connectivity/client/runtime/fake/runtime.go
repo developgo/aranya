@@ -1,6 +1,7 @@
 package fake
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -14,14 +15,19 @@ import (
 
 var _ runtime.Interface = &fakeRuntime{}
 
-func NewFakeRuntime() (runtime.Interface, error) {
-	return &fakeRuntime{}, nil
+func NewFakeRuntime(faulty bool) (runtime.Interface, error) {
+	return &fakeRuntime{faulty: faulty}, nil
 }
 
 type fakeRuntime struct {
+	faulty bool
 }
 
-func (*fakeRuntime) CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
+func (r *fakeRuntime) CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
+	if r.faulty {
+		return nil, fmt.Errorf("faulty: create pod")
+	}
+
 	return connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
 		Metadata: &criRuntime.PodSandboxMetadata{
 			Namespace: "foo",
@@ -30,7 +36,11 @@ func (*fakeRuntime) CreatePod(namespace, name string, pod *corev1.PodSpec, authC
 	}, []*criRuntime.ContainerStatus{}), nil
 }
 
-func (*fakeRuntime) DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *fakeRuntime) DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+	if r.faulty {
+		return nil, fmt.Errorf("faulty: delete pod")
+	}
+
 	return connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
 		Metadata: &criRuntime.PodSandboxMetadata{
 			Namespace: "foo",
@@ -39,7 +49,11 @@ func (*fakeRuntime) DeletePod(namespace, name string, options *connectivity.Dele
 	}, []*criRuntime.ContainerStatus{}), nil
 }
 
-func (*fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error) {
+func (r *fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error) {
+	if r.faulty {
+		return nil, fmt.Errorf("faulty: list pod")
+	}
+
 	return []*connectivity.Pod{
 		connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
 			Metadata: &criRuntime.PodSandboxMetadata{
@@ -50,7 +64,11 @@ func (*fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error)
 	}, nil
 }
 
-func (*fakeRuntime) ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+func (r *fakeRuntime) ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+	if r.faulty {
+		return fmt.Errorf("faulty: exec in container")
+	}
+
 	_, _ = stdout.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = stderr.Write([]byte("foo"))
@@ -61,7 +79,11 @@ func (*fakeRuntime) ExecInContainer(namespace, name, container string, stdin io.
 	return nil
 }
 
-func (*fakeRuntime) AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+func (r *fakeRuntime) AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+	if r.faulty {
+		return fmt.Errorf("faulty: attach container")
+	}
+
 	_, _ = stdout.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = stderr.Write([]byte("foo"))
@@ -72,7 +94,11 @@ func (*fakeRuntime) AttachContainer(namespace, name, container string, stdin io.
 	return nil
 }
 
-func (*fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error {
+func (r *fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error {
+	if r.faulty {
+		return fmt.Errorf("faulty: get container logs")
+	}
+
 	_, _ = stdout.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = stderr.Write([]byte("foo"))
@@ -83,7 +109,11 @@ func (*fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.W
 	return nil
 }
 
-func (*fakeRuntime) PodPortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *fakeRuntime) PortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+	if r.faulty {
+		return fmt.Errorf("faulty: port forward")
+	}
+
 	_, _ = out.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = out.Write([]byte("foo"))

@@ -1,4 +1,4 @@
-// +build test
+// +build rt_fake
 
 package runtime
 
@@ -10,5 +10,5 @@ import (
 )
 
 func GetRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
-	return fake.NewFakeRuntime()
+	return fake.NewFakeRuntime(false)
 }

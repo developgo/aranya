@@ -9,10 +9,9 @@ import (
 
 	"k8s.io/client-go/tools/remotecommand"
 
-	"arhat.dev/aranya/pkg/node/util"
-
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/util"
 )
 
 var (
@@ -487,7 +486,7 @@ func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.PodPortForward(namespace, name, opt, input, output); err != nil {
+	if err := c.runtime.PortForward(namespace, name, opt, input, output); err != nil {
 		c.handleError(sid, err)
 		return
 	}

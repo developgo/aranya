@@ -1,4 +1,4 @@
-// +build linux,containerd
+// +build rt_containerd
 
 package runtime
 
