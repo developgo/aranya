@@ -20,7 +20,7 @@ type Interface interface {
 	// 		- create and start containers
 	CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error)
 	DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error)
-	ListPod(namespace string) ([]*connectivity.Pod, error)
+	ListPod(namespace, name string) ([]*connectivity.Pod, error)
 
 	ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error
 	AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error

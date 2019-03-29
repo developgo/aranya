@@ -2,6 +2,7 @@ package fake
 
 import (
 	"io"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
@@ -38,26 +39,58 @@ func (*fakeRuntime) DeletePod(namespace, name string, options *connectivity.Dele
 	}, []*criRuntime.ContainerStatus{}), nil
 }
 
-func (*fakeRuntime) ListPod(namespace string) ([]*connectivity.Pod, error) {
-	return nil, nil
+func (*fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error) {
+	return []*connectivity.Pod{
+		connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
+			Metadata: &criRuntime.PodSandboxMetadata{
+				Namespace: "foo",
+				Name:      "bar",
+			},
+		}, []*criRuntime.ContainerStatus{}),
+	}, nil
 }
 
 func (*fakeRuntime) ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+	_, _ = stdout.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stderr.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stdout.Write([]byte("bar"))
+
 	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
 func (*fakeRuntime) AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+	_, _ = stdout.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stderr.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stdout.Write([]byte("bar"))
+
 	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
 func (*fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error {
+	_, _ = stdout.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stderr.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = stdout.Write([]byte("bar"))
+
 	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
 func (*fakeRuntime) PodPortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+	_, _ = out.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = out.Write([]byte("foo"))
+	time.Sleep(time.Second)
+	_, _ = out.Write([]byte("bar"))
+
+	closeAllIfNotNil(out)
 	return nil
 }
 

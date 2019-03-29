@@ -141,7 +141,7 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 		case connectivity.Delete:
 			c.doPodDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
 		case connectivity.List:
-			c.doPodList(sid, ns)
+			c.doPodList(sid, ns, name)
 		case connectivity.PortForward:
 			inputCh := make(chan []byte, 1)
 			c.openedStreams.add(sid, inputCh, nil)
@@ -225,8 +225,8 @@ func (c *baseClient) doPodDelete(sid uint64, namespace, name string, options *co
 	}
 }
 
-func (c *baseClient) doPodList(sid uint64, namespace string) {
-	pods, err := c.runtime.ListPod(namespace)
+func (c *baseClient) doPodList(sid uint64, namespace, name string) {
+	pods, err := c.runtime.ListPod(namespace, name)
 	if err != nil {
 		c.handleError(sid, err)
 		return

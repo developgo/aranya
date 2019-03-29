@@ -20,8 +20,7 @@ func (n *Node) InitializeRemoteDevice() {
 		go func() {
 			defer wg.Wait()
 
-			globalMsgCh := n.connectivityManager.GlobalMessages()
-			for msg := range globalMsgCh {
+			for msg := range n.connectivityManager.GlobalMessages() {
 				n.handleGlobalMsg(msg)
 			}
 		}()

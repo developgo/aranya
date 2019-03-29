@@ -17,6 +17,8 @@ func (o *ExecOptions) GetResolvedExecOptions() (*corev1.PodExecOptions, error) {
 		if err := execOption.Unmarshal(opt.OptionsV1); err != nil {
 			return nil, err
 		}
+
+		return execOption, nil
 	}
 
 	return nil, ErrUnknownExecOption

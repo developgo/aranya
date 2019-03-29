@@ -24,7 +24,8 @@ var (
 		return []*connectivity.Msg{
 			connectivity.NewDataMsg(0, false, connectivity.STDOUT, []byte("foo")),
 			connectivity.NewDataMsg(0, false, connectivity.STDERR, []byte("foo")),
-			connectivity.NewDataMsg(0, true, connectivity.STDOUT, []byte("bar")),
+			connectivity.NewDataMsg(0, false, connectivity.STDOUT, []byte("bar")),
+			connectivity.NewDataMsg(0, true, connectivity.OTHER, nil),
 		}
 	}
 )

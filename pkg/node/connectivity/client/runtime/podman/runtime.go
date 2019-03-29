@@ -153,7 +153,7 @@ func (r *podmanRuntime) DeletePod(namespace, name string, options *connectivity.
 	return nil, nil
 }
 
-func (r *podmanRuntime) ListPod(namespace string) ([]*connectivity.Pod, error) {
+func (r *podmanRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error) {
 	rt, err := r.newRuntime()
 	if err != nil {
 		return nil, err
