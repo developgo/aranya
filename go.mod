@@ -112,6 +112,7 @@ require (
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
 	github.com/cri-o/ocicni v0.1.0
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/docker-credential-helpers v0.6.1 // indirect

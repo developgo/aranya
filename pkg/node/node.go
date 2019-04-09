@@ -156,7 +156,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		podStatusManager:    kubeletStatus.NewManager(client, podManager, podManager),
 		podManager:          podManager,
 		podCache:            newPodCache(),
-		nodeCache:           newNodeCache(),
+		nodeCache:           newNodeCache(nodeObj),
 	}
 
 	return srv, nil

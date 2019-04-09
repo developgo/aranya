@@ -2,14 +2,14 @@ package client
 
 import (
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
 	"strings"
 	"syscall"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func systemInfo() *corev1.NodeSystemInfo {
 	bootID, _ := ioutil.ReadFile("/proc/sys/kernel/random/boot_id")
-	machineID, _ := ioutil.ReadFile("/etc/machine-id")
 	osImage, _ := ioutil.ReadFile("/etc/os-release")
 	systemUUID, _ := ioutil.ReadFile("/sys/devices/virtual/dmi/id/product_uuid")
 
@@ -25,10 +25,9 @@ func systemInfo() *corev1.NodeSystemInfo {
 	}
 
 	return &corev1.NodeSystemInfo{
-		MachineID:               string(machineID),
-		SystemUUID:              string(systemUUID),
-		BootID:                  string(bootID),
-		KernelVersion:           kernelVersion,
-		OSImage:                 string(osImage),
+		SystemUUID:    string(systemUUID),
+		BootID:        string(bootID),
+		KernelVersion: kernelVersion,
+		OSImage:       string(osImage),
 	}
 }

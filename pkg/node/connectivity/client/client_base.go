@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/denisbrodbeck/machineid"
 	corev1 "k8s.io/api/core/v1"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -204,6 +205,7 @@ func (c baseClient) doNodeInfo(sid uint64) {
 	runtimeName, runtimeVersion := c.runtime.Version()
 
 	nodeSystemInfo := systemInfo()
+	nodeSystemInfo.MachineID, _ = machineid.ID()
 	nodeSystemInfo.OperatingSystem = goruntime.GOOS
 	nodeSystemInfo.Architecture = goruntime.GOARCH
 	nodeSystemInfo.ContainerRuntimeVersion = runtimeName + "://" + runtimeVersion

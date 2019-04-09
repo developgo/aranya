@@ -56,13 +56,13 @@ func (c *PodCache) Get(namespace, name string) (*corev1.Pod, *kubeletContainer.P
 	return podPair.pod, podPair.status
 }
 
-func newNodeCache() *NodeCache {
-	return &NodeCache{}
+func newNodeCache(node *corev1.Node) *NodeCache {
+	return &NodeCache{node: node}
 }
 
 type NodeCache struct {
 	node *corev1.Node
-	mu sync.RWMutex
+	mu   sync.RWMutex
 }
 
 func (c *NodeCache) Update(pod corev1.Node) {
@@ -76,6 +76,9 @@ func (c *NodeCache) Get() corev1.Node {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	if c.node == nil {
+		return corev1.Node{}
+	}
 	return *c.node
 }
 
