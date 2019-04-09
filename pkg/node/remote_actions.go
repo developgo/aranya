@@ -17,10 +17,11 @@ func (n *Node) InitializeRemoteDevice() {
 		wg := &sync.WaitGroup{}
 
 		<-n.connectivityManager.DeviceConnected()
+		n.log.Error(nil, "device connected")
 
 		wg.Add(1)
 		go func() {
-			defer wg.Wait()
+			defer wg.Done()
 
 			for msg := range n.connectivityManager.GlobalMessages() {
 				n.handleGlobalMsg(msg)

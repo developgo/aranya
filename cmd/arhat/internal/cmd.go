@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -90,12 +92,15 @@ func run(ctx context.Context, config *Config) error {
 	for !exiting() {
 		client, err := conn.GetConnectivityClient(ctx, &config.Connectivity, rt)
 		if err != nil {
-			// TODO: log error
+			log.Printf("failed to get client: %v", err)
+			return err
 		}
 
-		if err := client.Run(ctx); err != nil {
-
+		if err = client.Run(ctx); err != nil {
+			log.Printf("failed to run sync loop: %v", err)
+			return err
 		}
+		time.Sleep(time.Second)
 	}
 
 	return nil

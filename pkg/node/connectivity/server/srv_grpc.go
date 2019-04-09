@@ -26,10 +26,12 @@ func (p *GrpcManager) Sync(server connectivity.Connectivity_SyncServer) error {
 		}
 		return false
 	}); err != nil {
+		p.log.Error(err, "")
 		return err
 	}
 
 	defer p.baseServer.onDeviceDisconnected(func() {
+		p.log.Error(nil, "device disconnected")
 		p.syncSrv = nil
 	})
 

@@ -1,7 +1,7 @@
 include scripts/tools.mk
 
+BUILD_DIR := build
 ARHAT_SRC := ./cmd/arhat
-
 
 # target name format:
 # 	arhat-{runtime}-{connectivity}
@@ -16,7 +16,7 @@ arhat-podman-grpc:
 	CGO_ENABLED=1 GOOS=linux\
 	$(GOBUILD) \
 		-tags='rt_podman conn_grpc' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
 .PHONY: arhat-containerd-grpc
@@ -24,7 +24,7 @@ arhat-containerd-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_containerd conn_grpc' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
 .PHONY: arhat-fake-grpc
@@ -32,7 +32,7 @@ arhat-fake-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_fake conn_grpc' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
 #
@@ -44,7 +44,7 @@ arhat-podman-mqtt:
 	CGO_ENABLED=1 GOOS=linux \
 	$(GOBUILD) \
 		-tags='rt_podman conn_mqtt' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
 .PHONY: arhat-containerd-mqtt
@@ -52,7 +52,7 @@ arhat-containerd-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_containerd conn_mqtt' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
 .PHONY: arhat-fake-mqtt
@@ -60,5 +60,5 @@ arhat-fake-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_fake conn_mqtt' \
-		-o build/$@ \
+		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)

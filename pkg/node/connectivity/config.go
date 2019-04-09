@@ -5,8 +5,10 @@ import (
 )
 
 type TLSConfig struct {
-	Cert string `json:"cert" yaml:"cert"`
-	Key  string `json:"key" yaml:"key"`
+	CaCert     string `json:"ca_cert" yaml:"ca_cert"`
+	Cert       string `json:"cert" yaml:"cert"`
+	Key        string `json:"key" yaml:"key"`
+	ServerName string `json:"server_name" yaml:"server_name"`
 }
 
 type Config struct {
