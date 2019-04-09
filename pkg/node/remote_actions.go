@@ -75,7 +75,7 @@ func (n *Node) generateCacheForPodsInDevice() error {
 				return err
 			}
 
-			n.deletePodInDevice(apiPod)
+			n.deletePodInDevice(podStatus.Namespace, podStatus.Name)
 			continue
 		}
 
@@ -288,8 +288,8 @@ func (n *Node) createPodInDevice(pod *corev1.Pod) {
 	}
 }
 
-func (n *Node) deletePodInDevice(pod *corev1.Pod) {
-	podDeleteCmd := connectivity.NewPodDeleteCmd(pod.Namespace, pod.Name, time.Minute)
+func (n *Node) deletePodInDevice(namespace, name string) {
+	podDeleteCmd := connectivity.NewPodDeleteCmd(namespace, name, time.Minute)
 	msgCh, err := n.connectivityManager.PostCmd(n.ctx, podDeleteCmd)
 	if err != nil {
 		n.log.Error(err, "failed to post pod delete command")
