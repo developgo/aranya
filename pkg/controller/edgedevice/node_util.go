@@ -11,11 +11,33 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice) (nodeObj *corev1.Node, l net.Listener, err error) {
+func (r *ReconcileEdgeDevice) newListener() (l net.Listener, err error) {
+	var (
+		hostIP string
+		port   int32
+	)
+
+	// get node ip address
+	hostIP, _, err = r.getHostAddress()
+	if err != nil {
+		return
+	}
+
+	// get free port on this node
+	port = getFreePort()
+	if port < 1 {
+		return nil, errNoFreePort
+	}
+
+	// claim this address immediately
+	return net.Listen("tcp", fmt.Sprintf("%s:%s", hostIP, strconv.FormatInt(int64(port), 10)))
+}
+
+func (r *ReconcileEdgeDevice) createNodeObject(device *aranya.EdgeDevice) (nodeObj *corev1.Node, l net.Listener, err error) {
 	var (
 		hostIP            string
 		hostname          string
@@ -61,7 +83,7 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 }
 
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
-func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, hostname string, kubeletPort int32) *corev1.Node {
+func newNodeForEdgeDevice(device *aranya.EdgeDevice, hostIP string, hostname string, kubeletPort int32) *corev1.Node {
 	createdAt := metav1.Now()
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{

@@ -176,10 +176,19 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 					reqLog.Info("delete node object on error")
 					if e := r.client.Delete(r.ctx, nodeObj); e != nil {
-						log.Error(e, "failed to delete node object")
+						reqLog.Error(e, "failed to delete node object")
 					}
 				}
 			}()
+
+			switch deviceObj.Spec.Connectivity.Method {
+			case aranya.DeviceConnectViaGRPC:
+				grpcListener, err = r.newListener()
+				if err != nil {
+					reqLog.Error(err, "failed to create grpc listener")
+					return
+				}
+			}
 
 			// create and start a new virtual node instance
 			reqLog.Info("create virtual node")

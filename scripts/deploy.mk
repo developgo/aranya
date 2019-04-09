@@ -1,6 +1,6 @@
 NS := edge
 
-.PHONY: setup
+.PHONY: operator-setup
 operator-setup:
 	# ns
 	kubectl create namespace ${NS} || true
@@ -14,8 +14,8 @@ operator-setup:
 	# deploy
 	kubectl apply -n $(NS) -f cicd/k8s/aranya-deploy.yaml
 
-.PHONY: cleanup
-operator-cleanup: delete-sample
+.PHONY: operator-cleanup
+operator-cleanup: delete-sample-devices
 	# delete deployment
 	kubectl delete -n $(NS) -f cicd/k8s/aranya-deploy.yaml || true
 	# delete rbac
@@ -27,10 +27,18 @@ operator-cleanup: delete-sample
 	# delete ns
 	kubectl delete namespace ${NS} || true
 
-.PHONY: deploy-sample
-deploy-sample:
-	kubectl -n ${NS} apply -f cicd/k8s/sample/example-edge-devices.yaml
+.PHONY: deploy-sample-devices
+deploy-sample-devices:
+	kubectl -n ${NS} apply -f cicd/k8s/sample/sample-edge-devices.yaml
 
-.PHONY: delete-sample
-delete-sample:
-	kubectl -n ${NS} delete -f cicd/k8s/sample/example-edge-devices.yaml
+.PHONY: delete-sample-devices
+delete-sample-devices:
+	kubectl -n ${NS} delete -f cicd/k8s/sample/sample-edge-devices.yaml || true
+
+.PHONY: deploy-sample-workload
+deploy-sample-workload:
+	kubectl -n ${NS} apply -f cicd/k8s/sample/sample-workload.yaml
+
+.PHONY: delete-sample-workload
+delete-sample-workload:
+	kubectl -n ${NS} delete -f cicd/k8s/sample/sample-workload.yaml || true

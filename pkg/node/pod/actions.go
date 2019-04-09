@@ -75,32 +75,3 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	portForwardCmd := connectivity.NewPortForwardCmd("", name, options)
 	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
 }
-
-func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
-	cmd := connectivity.NewPodCreateCmd(pod, nil, nil, nil, nil)
-
-	msgCh, err := m.remoteManager.PostCmd(m.ctx, cmd)
-	if err != nil {
-		return err
-	}
-
-	for msg := range msgCh {
-		createdPod := msg.GetPod()
-		_ = createdPod
-	}
-
-	return nil
-}
-
-func (m *Manager) DeletePodInDevice(namespace, name string) error {
-	cmd := connectivity.NewPodDeleteCmd(namespace, name, 0)
-	msgCh, err := m.remoteManager.PostCmd(m.ctx, cmd)
-	if err != nil {
-		return err
-	}
-
-	for msg := range msgCh {
-		_ = msg.GetPod()
-	}
-	return nil
-}
