@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
-	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -84,7 +83,6 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranya.EdgeDevice) (nodeO
 
 // create a node object in kubernetes, handle it in a dedicated arhat.dev/aranya/pkg/node.Node instance
 func newNodeForEdgeDevice(device *aranya.EdgeDevice, hostIP string, hostname string, kubeletPort int32) *corev1.Node {
-	createdAt := metav1.Now()
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      device.Name,
