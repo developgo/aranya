@@ -69,6 +69,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// watch services created by EdgeDevice object
+	svcMapper := &ServiceMapper{client: mgr.GetClient()}
+	if err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: svcMapper,
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -153,9 +161,42 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	var (
 		virtualNode     *node.Node
 		nodeObj         *corev1.Node
+		svcObj          *corev1.Service
 		grpcListener    net.Listener
 		kubeletListener net.Listener
 	)
+
+	// check service object if grpc is used
+	switch deviceObj.Spec.Connectivity.Method {
+	case aranya.DeviceConnectViaGRPC:
+		svcFound := &corev1.Service{}
+		err = r.client.Get(r.ctx, deviceNsName, svcFound)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				reqLog.Info("create grpc svc object")
+				svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
+				if err != nil {
+					reqLog.Error(err, "failed to create grpc svc object")
+					return reconcile.Result{}, err
+				}
+
+				defer func() {
+					if err != nil {
+						_ = grpcListener.Close()
+
+						reqLog.Info("delete grpc svc object on error")
+						if e := r.client.Delete(r.ctx, svcObj); e != nil {
+							log.Error(e, "delete svc object failed")
+						}
+					}
+				}()
+
+			} else {
+				reqLog.Error(err, "get svc object failed")
+				return reconcile.Result{}, err
+			}
+		}
+	}
 
 	// check the node object exists
 	nodeFound := &corev1.Node{}
@@ -181,15 +222,6 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 				}
 			}()
 
-			switch deviceObj.Spec.Connectivity.Method {
-			case aranya.DeviceConnectViaGRPC:
-				grpcListener, err = r.newListener()
-				if err != nil {
-					reqLog.Error(err, "failed to create grpc listener")
-					return
-				}
-			}
-
 			// create and start a new virtual node instance
 			reqLog.Info("create virtual node")
 			virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
@@ -204,7 +236,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 				return
 			}
 		} else {
-			reqLog.Error(err, "get node object failed")
+			reqLog.Error(err, "failed to get node object")
 			return reconcile.Result{}, err
 		}
 	}

@@ -19,10 +19,33 @@ spec:
           # public aranya address for edge device to access
           # you may have to setup cluster edge proxy or loadbalancer to 
           # make this accessible to edge devices
-          server: grpc.example.com:8080
+          server: aranya.example.com:10000
           tlsSecretRef:
             name: my-grpc-client-secret
             namespace: iot-edge
+---
+# Ingress configuration to tell your ingress plugin 
+# how to redirect requests to related grpc service
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: example-edge-device-grpc
+  annotations:
+    # example annotation to let traefik handle the grpc connection
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  # customize you host name according to your requirements
+  - host: example-edge-device-grpc.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          # if grpc is used as connectivity method, aranya controller will create a
+          # service object with the name of that edge deivce, and label the related
+          # port with `grpc`
+          serviceName: example-edge-device-grpc
+          servicePort: grpc
 ---
 # An example edge device accessing via mqtt
 apiVersion: aranya.arhat.dev/v1alpha1
@@ -36,7 +59,7 @@ spec:
     config:
       mqtt:
         # mqtt message namespace for aranya communication
-        namespace: /k8s/aranya
+        namespace: /aranya.arhat.dev
         # tell aranya how to connect mqtt broker
         forServer:
           # mqtt broker address
