@@ -193,13 +193,19 @@ func (c *baseClient) handleError(sid uint64, e error) {
 }
 
 func (c *baseClient) doPodCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
-	podSpec, authConfig, volumeData, err := options.GetResolvedCreateOptions()
+	authConfig, err := options.GetResolvedImagePullAuthConfig()
 	if err != nil {
 		c.handleError(sid, err)
 		return
 	}
 
-	podResp, err := c.runtime.CreatePod(namespace, name, podSpec, authConfig, volumeData)
+	podResp, err := c.runtime.CreatePod(
+		namespace, name,
+		options.GetContainers(),
+		authConfig,
+		options.GetVolumeData(),
+		options.GetHostVolumes())
+
 	if err != nil {
 		c.handleError(sid, err)
 		return

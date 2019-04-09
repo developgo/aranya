@@ -2,12 +2,14 @@ package node
 
 import (
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/node/resolver"
 )
 
 func (n *Node) InitializeRemoteDevice() {
@@ -25,12 +27,12 @@ func (n *Node) InitializeRemoteDevice() {
 			}
 		}()
 
-		if err := n.generateCacheForPods(); err != nil {
+		if err := n.generateCacheForPodsInDevice(); err != nil {
 			n.log.Error(err, "generate pods cache failed")
 			goto waitForDeviceDisconnect
 		}
 
-		if err := n.generateCacheForNode(); err != nil {
+		if err := n.generateCacheForNodeInDevice(); err != nil {
 			n.log.Error(err, "generate node cache failed")
 			goto waitForDeviceDisconnect
 		}
@@ -41,7 +43,7 @@ func (n *Node) InitializeRemoteDevice() {
 }
 
 // generate in cluster pod cache for remote device
-func (n *Node) generateCacheForPods() error {
+func (n *Node) generateCacheForPodsInDevice() error {
 	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewPodListCmd("", ""))
 	if err != nil {
 		return err
@@ -53,11 +55,14 @@ func (n *Node) generateCacheForPods() error {
 			return err
 		}
 
-		podStatus, err := msg.GetPod().GetResolvedKubePodStatus()
-		if err != nil {
-			return err
+		switch podMsg := msg.GetMsg().(type) {
+		case *connectivity.Msg_Pod:
+			podStatus, err := podMsg.Pod.GetResolvedKubePodStatus()
+			if err != nil {
+				return err
+			}
+			podStatuses = append(podStatuses, podStatus)
 		}
-		podStatuses = append(podStatuses, podStatus)
 	}
 
 	for _, podStatus := range podStatuses {
@@ -66,14 +71,20 @@ func (n *Node) generateCacheForPods() error {
 			return err
 		}
 
-		n.podCache.Update(apiPod, podStatus)
+		apiStatus := n.GenerateAPIPodStatus(apiPod, podStatus)
+		n.podStatusManager.SetPodStatus(apiPod, apiStatus)
+
+		// generate cache
+		pod := apiPod.DeepCopy()
+		pod.Status = apiStatus
+		n.podCache.Update(pod, podStatus)
 	}
 
 	return nil
 }
 
 // generate in cluster node cache for remote device
-func (n *Node) generateCacheForNode() error {
+func (n *Node) generateCacheForNodeInDevice() error {
 	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeCmd())
 	if err != nil {
 		return err
@@ -85,9 +96,13 @@ func (n *Node) generateCacheForNode() error {
 			return err
 		}
 
-		node, err = msg.GetResolvedCoreV1Node()
-		if err != nil {
-			return err
+		switch nodeMsg := msg.GetMsg().(type) {
+		case *connectivity.Msg_Node:
+			apiNode, err := nodeMsg.Node.GetResolvedCoreV1Node()
+			if err != nil {
+				return err
+			}
+			_ = apiNode
 		}
 	}
 	// TODO: store node cache
@@ -203,4 +218,77 @@ func resolveDeviceStatus(old, new corev1.NodeStatus) *corev1.NodeStatus {
 	}
 
 	return resolved
+}
+
+func (n *Node) createPodInDevice(pod *corev1.Pod) {
+	containerEnvs := make(map[string]map[string]string)
+	for _, ctr := range pod.Spec.Containers {
+		envs, err := resolver.ResolveEnv(n.kubeClient, pod, &ctr)
+		if err != nil {
+			n.log.Error(err, "failed to resolve pod envs")
+			return
+		}
+		containerEnvs[ctr.Name] = envs
+	}
+
+	secrets := make([]corev1.Secret, len(pod.Spec.ImagePullSecrets))
+	for i, secretRef := range pod.Spec.ImagePullSecrets {
+		s, err := n.kubeClient.CoreV1().Secrets(pod.Namespace).Get(secretRef.Name, metav1.GetOptions{})
+		if err != nil {
+			n.log.Error(err, "failed to get image pull secret")
+			return
+		}
+		secrets[i] = *s
+	}
+
+	imagePullSecrets, err := resolver.ResolveImagePullSecret(pod, secrets)
+	if err != nil {
+		n.log.Error(err, "failed to resolve image pull secret")
+		return
+	}
+
+	volumeData, hostVolume, err := resolver.ResolveVolume(n.kubeClient, pod)
+	if err != nil {
+		n.log.Error(err, "failed to resolve volume")
+		return
+	}
+
+	podCreateCmd := connectivity.NewPodCreateCmd(pod, imagePullSecrets, containerEnvs, volumeData, hostVolume)
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, podCreateCmd)
+	if err != nil {
+		n.log.Error(err, "failed to post pod create command")
+	}
+
+	for msg := range msgCh {
+		if err := msg.Error(); err != nil {
+			n.log.Error(err, "failed to create pod in device")
+			return
+		}
+
+		switch podMsg := msg.GetMsg().(type) {
+		case *connectivity.Msg_Pod:
+			status, err := podMsg.Pod.GetResolvedKubePodStatus()
+			if err != nil {
+				n.log.Error(err, "failed to get resolved kube pod status")
+				return
+			}
+
+			n.podCache.Update(pod, status)
+		}
+	}
+}
+
+func (n *Node) deletePodInDevice(pod *corev1.Pod) {
+	podDeleteCmd := connectivity.NewPodDeleteCmd(pod.Namespace, pod.Name, time.Minute)
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, podDeleteCmd)
+	if err != nil {
+		n.log.Error(err, "failed to post pod delete command")
+	}
+
+	for msg := range msgCh {
+		if err := msg.Error(); err != nil {
+			n.log.Error(err, "failed to delete pod in device")
+			return
+		}
+	}
 }

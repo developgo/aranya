@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtimeutil"
@@ -22,9 +21,11 @@ import (
 var _ runtime.Interface = &podmanRuntime{}
 
 type podmanRuntime struct {
-	ctx    context.Context
-	config *runtime.Config
+	ctx context.Context
 
+	managementNamespace  string
+	pauseImage           string
+	pauseCmd             string
 	runtimeActionTimeout time.Duration
 	imageActionTimeout   time.Duration
 }
@@ -35,9 +36,10 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	}
 
 	return &podmanRuntime{
-		ctx:    ctx,
-		config: config,
-
+		ctx:                  ctx,
+		pauseImage:           config.PauseImage,
+		pauseCmd:             config.PauseCommand,
+		managementNamespace:  config.ManagementNamespace,
 		runtimeActionTimeout: config.EndPoints.Runtime.ActionTimeout,
 		imageActionTimeout:   config.EndPoints.Image.ActionTimeout,
 	}, nil
@@ -45,16 +47,22 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 
 func (r *podmanRuntime) newRuntime() (*libpodRuntime.Runtime, error) {
 	return libpodRuntime.NewRuntime(
-		libpodRuntime.WithNamespace(constant.ContainerNamespace),
+		libpodRuntime.WithNamespace(r.managementNamespace),
 		// set `pause` image in start command
-		libpodRuntime.WithDefaultInfraImage(r.config.PauseImage),
-		libpodRuntime.WithDefaultInfraCommand(r.config.PauseCommand),
+		libpodRuntime.WithDefaultInfraImage(r.pauseImage),
+		libpodRuntime.WithDefaultInfraCommand(r.pauseCmd),
 		// set default proto to pull image
 		libpodRuntime.WithDefaultTransport(libpodRuntime.DefaultTransport),
 	)
 }
 
-func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
+func (r *podmanRuntime) CreatePod(
+	namespace, name string,
+	containers map[string]*connectivity.ContainerSpec,
+	authConfig map[string]*criRuntime.AuthConfig,
+	volumeData map[string]*connectivity.NamedData,
+	hostVolumes map[string]string,
+) (*connectivity.Pod, error) {
 	ctx, cancelCtx := context.WithTimeout(r.ctx, r.runtimeActionTimeout)
 	defer cancelCtx()
 
@@ -69,14 +77,13 @@ func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpe
 	}
 
 	// ensure image exists per container spec and apply image pull policy
-	imageMap, err := ensureImages(rt.ImageRuntime(), podSpec, authConfig)
+	imageMap, err := ensureImages(rt.ImageRuntime(), containers, authConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// create pod
-	podCreateOptions := getPodCreateOptions(namespace, name, podSpec)
-	podmanPod, err := rt.NewPod(ctx, podCreateOptions...)
+	podmanPod, err := rt.NewPod(ctx, defaultPodCreateOptions(namespace, name, containers)...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +94,7 @@ func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpe
 		return nil, err
 	}
 
+	// share infrastructure container namespaces
 	namespaces := map[string]string{
 		"net":  fmt.Sprintf("container:%s", infraCtrID),
 		"user": fmt.Sprintf("container:%s", infraCtrID),
@@ -95,9 +103,11 @@ func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpe
 	}
 
 	// create containers with shared namespaces
-	var containers []*libpodRuntime.Container
-	for _, apiCtr := range podSpec.Containers {
-		createConfig := kubeContainerToCreateConfig(podSpec, &apiCtr, rt, imageMap[apiCtr.Image], namespaces)
+	var libpodContainers []*libpodRuntime.Container
+	for containerName, containerSpec := range containers {
+		createConfig, err := r.translateContainerSpecToPodmanCreateConfig(
+			namespace, name, containerName, containerSpec, hostVolumes, volumeData,
+			rt, imageMap, namespaces)
 		if err != nil {
 			return nil, err
 		}
@@ -107,11 +117,11 @@ func (r *podmanRuntime) CreatePod(namespace, name string, podSpec *corev1.PodSpe
 			return nil, err
 		}
 
-		containers = append(containers, ctr)
+		libpodContainers = append(libpodContainers, ctr)
 	}
 
 	// start the containers
-	for _, ctr := range containers {
+	for _, ctr := range libpodContainers {
 		if err := ctr.Start(ctx, true); err != nil {
 			// Making this a hard failure here to avoid a mess
 			// the other containers are in created status

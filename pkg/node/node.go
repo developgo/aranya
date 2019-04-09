@@ -3,10 +3,8 @@ package node
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
-	"reflect"
 	"sync"
 	"time"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
-	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,10 +22,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	kubeletconfigmap "k8s.io/kubernetes/pkg/kubelet/configmap"
-	kubeletpod "k8s.io/kubernetes/pkg/kubelet/pod"
-	kubeletsecret "k8s.io/kubernetes/pkg/kubelet/secret"
-	kubeletstatus "k8s.io/kubernetes/pkg/kubelet/status"
+	kubeletConfigMap "k8s.io/kubernetes/pkg/kubelet/configmap"
+	kubeletPod "k8s.io/kubernetes/pkg/kubelet/pod"
+	kubeletSecret "k8s.io/kubernetes/pkg/kubelet/secret"
+	kubeletStatus "k8s.io/kubernetes/pkg/kubelet/status"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -40,7 +37,6 @@ import (
 
 const (
 	resyncInterval = time.Minute
-	maxRetries     = 20
 )
 
 var (
@@ -66,8 +62,8 @@ type Node struct {
 	podInformerFactory kubeInformers.SharedInformerFactory
 	podInformer        kubeInformersCoreV1.PodInformer
 
-	podManager    *pod.Manager
-	statusManager kubeletstatus.Manager
+	podManager       *pod.Manager
+	podStatusManager kubeletStatus.Manager
 
 	podCache *PodCache
 
@@ -90,10 +86,10 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		}))
 	podInformer := podInformerFactory.Core().V1().Pods()
 
-	basicPodManager := kubeletpod.NewBasicPodManager(
-		kubeletpod.NewBasicMirrorClient(client),
-		kubeletsecret.NewWatchingSecretManager(client),
-		kubeletconfigmap.NewWatchingConfigMapManager(client),
+	basicPodManager := kubeletPod.NewBasicPodManager(
+		kubeletPod.NewBasicMirrorClient(client),
+		kubeletSecret.NewWatchingSecretManager(client),
+		kubeletConfigMap.NewWatchingConfigMapManager(client),
 		nil)
 
 	var connectivityManager connectivitySrv.Interface
@@ -113,7 +109,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// register http routes
 	m.Use(util.LogMiddleware(logger), util.PanicRecoverMiddleware(logger))
 	m.StrictSlash(true)
-
 	//
 	// routes for pod
 	//
@@ -140,7 +135,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// stats summary
 	m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
 
-	// TODO: metrics
+	// TODO: handle metrics
 
 	srv := &Node{
 		log:                 logger,
@@ -157,7 +152,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		podInformer:         podInformer,
 		wq:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
 		status:              statusReady,
-		statusManager:       kubeletstatus.NewManager(client, podManager, podManager),
+		podStatusManager:    kubeletStatus.NewManager(client, podManager, podManager),
 		podManager:          podManager,
 		podCache:            newPodCache(),
 	}
@@ -166,7 +161,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 }
 
 func (n *Node) Start() error {
-	err := func() error {
+	if err := func() error {
 		n.mu.RLock()
 		defer n.mu.RUnlock()
 
@@ -174,9 +169,7 @@ func (n *Node) Start() error {
 			return errors.New("node already started or stopped, do not reuse")
 		}
 		return nil
-	}()
-
-	if err != nil {
+	}(); err != nil {
 		return err
 	}
 
@@ -185,7 +178,7 @@ func (n *Node) Start() error {
 	defer n.mu.Unlock()
 
 	// add to the pool of running server
-	if err := AddRunningServer(n); err != nil {
+	if err := Add(n); err != nil {
 		return err
 	}
 
@@ -205,13 +198,13 @@ func (n *Node) Start() error {
 
 	// node status update routine
 	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
-	go n.statusManager.Start()
+	go n.podStatusManager.Start()
 
-	// start a kubelet server
+	// start a kubelet http server
 	go func() {
 		n.log.Info("serve kubelet services")
 		if err := n.httpSrv.Serve(n.kubeletListener); err != nil && err != http.ErrServerClosed {
-			n.log.Error(err, "serve kubelet services failed")
+			n.log.Error(err, "failed to serve kubelet services")
 			return
 		}
 	}()
@@ -224,11 +217,12 @@ func (n *Node) Start() error {
 		go func() {
 			n.log.Info("serve grpc services")
 			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {
-				n.log.Error(err, "serve grpc services failed")
+				n.log.Error(err, "failed to serve grpc services")
 			}
 		}()
 	} else {
 		// TODO: setup mqtt connection to broker
+		n.log.Info("mqtt connectivity not implemented")
 	}
 
 	// informer routine
@@ -236,58 +230,20 @@ func (n *Node) Start() error {
 
 	// handle node change
 	n.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(pod interface{}) {
-			// a new pod need to be created in this virtual node
-			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-				n.log.Error(err, "")
-			} else {
-				// enqueue the create work for workers
-				n.wq.AddRateLimited(key)
-			}
+		AddFunc: func(newObj interface{}) {
+			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			// pod in this virtual node need to update
-			oldPod := oldObj.(*corev1.Pod).DeepCopy()
-			newPod := newObj.(*corev1.Pod).DeepCopy()
-
-			newPod.ResourceVersion = oldPod.ResourceVersion
-			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
-				n.log.Info("new pod is same with the old one, no action")
-				return
-			}
-
-			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
-				n.log.Error(err, "")
-			} else {
-				// enqueue the update work for workers
-				n.wq.AddRateLimited(key)
-			}
+			n.deletePodInDevice(oldObj.(*corev1.Pod))
+			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
-		DeleteFunc: func(pod interface{}) {
-			// pod in this virtual node got deleted
-			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
-				n.log.Error(err, "")
-			} else {
-				// enqueue the delete work for workers
-				n.wq.AddRateLimited(key)
-			}
+		DeleteFunc: func(oldObj interface{}) {
+			n.deletePodInDevice(oldObj.(*corev1.Pod))
 		},
 	})
 
-	go func() {
-		if ok := cache.WaitForCacheSync(n.ctx.Done(), n.podInformer.Informer().HasSynced); !ok {
-			n.log.V(2).Info("failed to wait for caches to sync")
-			return
-		}
+	go n.InitializeRemoteDevice()
 
-		go n.InitializeRemoteDevice()
-
-		n.log.Info("start node work queue workers")
-		go func() {
-			for n.work(n.wq) {
-			}
-		}()
-	}()
 	return nil
 }
 
@@ -328,72 +284,6 @@ func (n *Node) Shutdown(grace time.Duration) {
 
 		n.exit()
 	}
-}
-
-func (n *Node) work(wq workqueue.RateLimitingInterface) bool {
-	obj, shutdown := wq.Get()
-	if shutdown {
-		return false
-	}
-
-	err := func(obj interface{}) error {
-		defer wq.Done(obj)
-
-		var (
-			key string
-			ok  bool
-		)
-
-		if key, ok = obj.(string); !ok {
-			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
-			wq.Forget(obj)
-			n.log.Info("expected string in work queue but got %#v", obj)
-			return nil
-		}
-
-		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		if err != nil {
-			// Log the error as a warning, but do not requeue the key as it is invalid.
-			n.log.Error(err, "invalid resource key: %q", key)
-			return nil
-		}
-
-		podFound, err := n.podManager.GetMirrorPod(namespace, name)
-		if err != nil {
-			if !kubeErrors.IsNotFound(err) {
-				n.log.Error(err, "failed to fetch pod with key from lister", "key", key)
-				return err
-			}
-
-			// pod has been deleted
-			if err := n.podManager.DeletePodInDevice(namespace, name); err != nil {
-				n.log.Error(err, "failed to delete pod in the provider", "pod.ns", namespace, "pod.name", name)
-				return err
-			}
-		}
-
-		if err := n.podManager.SyncPodInDevice(podFound); err != nil {
-			if wq.NumRequeues(key) < maxRetries {
-				// Put the item back on the work queue to handle any transient errors.
-				n.log.Error(err, "requeue due to failed sync", "key", key)
-				wq.AddRateLimited(key)
-				return nil
-			}
-			// We've exceeded the maximum retries, so we must forget the key.
-			wq.Forget(key)
-			return fmt.Errorf("forgetting %q due to maximum retries reached", key)
-		}
-		// Finally, if no error occurs we Forget this item so it does not get queued again until another change happens.
-		wq.Forget(obj)
-		return nil
-	}(obj)
-
-	if err != nil {
-		n.log.Error(err, "")
-		return true
-	}
-
-	return true
 }
 
 func (n *Node) closing() bool {

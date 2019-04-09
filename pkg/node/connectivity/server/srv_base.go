@@ -119,6 +119,7 @@ func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCm
 		sessionMustPresent bool
 	)
 
+	// session id should not be empty if it's a input or resize command
 	switch c := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_PodCmd:
 		switch c.PodCmd.GetAction() {
@@ -141,6 +142,7 @@ func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCm
 		return nil, ErrSessionNotValid
 	}
 
+	// TODO: check race condition
 	cmd.SessionId = sid
 
 	if err := sendCmd(cmd); err != nil {

@@ -18,7 +18,14 @@ type Interface interface {
 	// 		- create pod with `pause` container
 	// 		- TODO: create and start init containers
 	// 		- create and start containers
-	CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error)
+	CreatePod(
+		namespace, name string,
+		containers map[string]*connectivity.ContainerSpec,
+		authConfig map[string]*criRuntime.AuthConfig,
+		volumeData map[string]*connectivity.NamedData,
+		hostVolumes map[string]string,
+	) (*connectivity.Pod, error)
+
 	DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error)
 	ListPod(namespace, name string) ([]*connectivity.Pod, error)
 

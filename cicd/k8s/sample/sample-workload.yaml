@@ -11,8 +11,8 @@ spec:
     - key: node.kubernetes.io/unreachable
       operator: Exists
   nodeSelector:
-    # select specific edge device(s) with labels
-    arhat.dev/role: node
+    # select specific remote node(s) with labels
+    arhat.dev/role: remote-node
     kubernetes.io/hostname: example-edge-device-mqtt
   containers:
   - name: sleep

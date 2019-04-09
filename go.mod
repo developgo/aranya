@@ -3,10 +3,89 @@ module arhat.dev/aranya
 go 1.12
 
 replace (
-	github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.4.0
+	cloud.google.com/go => cloud.google.com/go v0.0.0-20160913182117-3b1ae45394a2
+	github.com/Nvveen/Gotty => github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
+	github.com/PuerkitoBio/purell => github.com/PuerkitoBio/purell v1.1.1
+	github.com/blang/semver => github.com/blang/semver v3.5.1+incompatible
+	github.com/boltdb/bolt => github.com/boltdb/bolt v1.3.1
+	github.com/containernetworking/cni => github.com/containernetworking/cni v0.6.0
+	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
-	github.com/docker/docker v1.13.1 => github.com/docker/engine v0.0.0-20190226002956-8c91e9672cc8
+	github.com/docker/docker => github.com/docker/engine v0.0.0-20190327083406-200b524eff60
 	github.com/docker/docker/builder/dockerfile/parser v1.13.1 => github.com/moby/buildkit v0.4.0
+	github.com/docker/spdystream => github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
+	github.com/elazarl/goproxy => github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a
+	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.0+incompatible
+	github.com/fatih/camelcase => github.com/fatih/camelcase v1.0.0
+	github.com/fsnotify/fsnotify => github.com/fsnotify/fsnotify v1.4.7
+	github.com/ghodss/yaml => github.com/ghodss/yaml v0.0.0-20180820084758-c7ce16629ff4
+	github.com/go-openapi/jsonpointer => github.com/go-openapi/jsonpointer v0.19.0
+	github.com/go-openapi/jsonreference => github.com/go-openapi/jsonreference v0.19.0
+	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.0
+	github.com/go-openapi/swag => github.com/go-openapi/swag v0.19.0
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.1
+	github.com/golang/groupcache => github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
+	github.com/golang/mock => github.com/golang/mock v1.2.0
+	github.com/golang/protobuf => github.com/golang/protobuf v1.3.1
+	github.com/google/btree => github.com/google/btree v0.0.0-20160524151835-7d79101e329e
+	github.com/google/gofuzz => github.com/google/gofuzz v1.0.0
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.2.0
+	github.com/gorilla/mux => github.com/gorilla/mux v1.7.0
+	github.com/gregjones/httpcache => github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7
+	github.com/imdario/mergo => github.com/imdario/mergo v0.3.7
+	github.com/inconshreveable/mousetrap => github.com/inconshreveable/mousetrap v1.0.0
+	github.com/json-iterator/go => github.com/json-iterator/go v1.1.5
+	github.com/kisielk/sqlstruct => github.com/kisielk/sqlstruct v0.0.0-20150923205031-648daed35d49
+	github.com/kr/fs => github.com/kr/fs v0.1.0
+	github.com/lib/pq => github.com/lib/pq v1.0.0
+	github.com/lithammer/dedent => github.com/lithammer/dedent v1.1.0
+	github.com/mattn/go-shellwords => github.com/mattn/go-shellwords v1.0.5
+	github.com/mistifyio/go-zfs => github.com/mistifyio/go-zfs v2.1.1+incompatible
+	github.com/modern-go/concurrent => github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+	github.com/modern-go/reflect2 => github.com/modern-go/reflect2 v1.0.1
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc6
+	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.0.1
+	github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.0.0
+	github.com/pborman/uuid => github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
+	github.com/peterbourgon/diskv => github.com/peterbourgon/diskv v2.0.1+incompatible
+	github.com/pkg/sftp => github.com/pkg/sftp v1.10.0
+	github.com/pquerna/ffjson => github.com/pquerna/ffjson v0.0.0-20181028064349-e517b90714f7
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+	github.com/prometheus/client_model => github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/procfs => github.com/prometheus/procfs v0.0.0-20190209105433-f8d8b3f739bd
+	github.com/renstrom/dedent v1.1.0 => github.com/lithammer/dedent v1.1.0
+	github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.0
+	github.com/seccomp/libseccomp-golang => github.com/seccomp/libseccomp-golang v0.9.0
+	github.com/sigma/go-inotify => github.com/sigma/go-inotify v0.0.0-20181102212354-c87b6cf5033d
+	github.com/spf13/afero => github.com/spf13/afero v1.2.1
+	github.com/spf13/cobra => github.com/spf13/cobra v0.0.3
+	github.com/spf13/pflag => github.com/spf13/pflag v1.0.3
+	github.com/stretchr/testify => github.com/stretchr/testify v1.3.0
+	github.com/syndtr/gocapability => github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
+	go.uber.org/atomic => go.uber.org/atomic v1.3.2
+	go.uber.org/multierr => go.uber.org/multierr v1.1.0
+	go.uber.org/zap => go.uber.org/zap v1.9.1
+	golang.org/x/net => github.com/golang/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/oauth2 => github.com/golang/oauth2 v0.0.0-20190226205417-e64efc72b421
+	golang.org/x/sync => github.com/golang/sync v0.0.0-20190227155943-e225da77a7e6
+	google.golang.org/genproto => github.com/google/go-genproto v0.0.0-20190307195333-5fe7a883aa19
+	google.golang.org/grpc => github.com/grpc/grpc-go v1.19.1
+	gopkg.in/inf.v0 => gopkg.in/inf.v0 v0.9.0
+	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.2
+	sigs.k8s.io/yaml => github.com/kubernetes-sigs/yaml v1.1.0
+)
+
+// Kubernetes v1.13.5
+replace (
+	k8s.io/api => github.com/kubernetes/api v0.0.0-20190222213804-5cb15d344471
+	k8s.io/apiextensions-apiserver => github.com/kubernetes/apiextensions-apiserver v0.0.0-20190325193600-475668423e9f
+	k8s.io/apimachinery => github.com/kubernetes/apimachinery v0.0.0-20190221213512-86fb29eff628
+	k8s.io/apiserver => github.com/kubernetes/apiserver v0.0.0-20190319190228-a4358799e4fe
+	k8s.io/client-go => github.com/kubernetes/client-go v2.0.0-alpha.0.0.20190307161346-7621a5ebb88b+incompatible
+	k8s.io/cloud-provider => github.com/kubernetes/cloud-provider v0.0.0-20190325195930-a624236cb1f2
+	k8s.io/klog => github.com/kubernetes/klog v0.2.0
+	k8s.io/kubernetes => github.com/kubernetes/kubernetes v1.13.5
+	k8s.io/utils => github.com/kubernetes/utils v0.0.0-20190221042446-c2654d5206da
 )
 
 require (
@@ -45,6 +124,7 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/fsouza/go-dockerclient v1.3.6 // indirect
+	github.com/ghodss/yaml v0.0.0-00010101000000-000000000000 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.0 // indirect
 	github.com/go-openapi/jsonpointer v0.18.0 // indirect
@@ -53,10 +133,14 @@ require (
 	github.com/go-openapi/swag v0.18.0 // indirect
 	github.com/gogo/protobuf v1.2.0
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
-	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/uuid v1.1.0 // indirect
+	github.com/golang/mock v1.2.0 // indirect
+	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/google/btree v0.0.0-00010101000000-000000000000 // indirect
+	github.com/google/gofuzz v1.0.0 // indirect
+	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gorilla/mux v1.7.0
+	github.com/gregjones/httpcache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/guregu/null v3.4.0+incompatible // indirect
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
@@ -69,8 +153,8 @@ require (
 	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mattn/go-shellwords v1.0.5 // indirect
 	github.com/mistifyio/go-zfs v2.1.1+incompatible // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
+	github.com/modern-go/concurrent v0.0.0-00010101000000-000000000000 // indirect
+	github.com/modern-go/reflect2 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/mtrmac/gpgme v0.0.0-20170102180018-b2432428689c // indirect
 	github.com/opencontainers/runc v1.0.0-rc6 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1
@@ -83,16 +167,14 @@ require (
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
-	github.com/pkg/errors v0.8.1
 	github.com/pquerna/ffjson v0.0.0-20181028064349-e517b90714f7 // indirect
-	github.com/prometheus/client_golang v0.9.2 // indirect
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
-	github.com/prometheus/common v0.2.0 // indirect
 	github.com/prometheus/procfs v0.0.0-20190209105433-f8d8b3f739bd // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/seccomp/containers-golang v0.0.0-20190312124753-8ca8945ccf5f // indirect
 	github.com/seccomp/libseccomp-golang v0.9.0 // indirect
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sigma/go-inotify v0.0.0-20181102212354-c87b6cf5033d // indirect
 	github.com/spf13/afero v1.2.1 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
@@ -109,23 +191,24 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
-	golang.org/x/crypto v0.0.0-20190211182817-74369b46fc67 // indirect
-	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd // indirect
-	golang.org/x/oauth2 v0.0.0-20190212230446-3e8b2be13635 // indirect
-	google.golang.org/grpc v1.17.0
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
+	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19 // indirect
+	google.golang.org/grpc v1.19.1
+	gopkg.in/inf.v0 v0.0.0-00010101000000-000000000000 // indirect
 	gopkg.in/yaml.v2 v2.2.2
-	k8s.io/api v0.0.0-20190222213804-5cb15d344471
-	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236 // indirect
-	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
-	k8s.io/apiserver v0.0.0-20190228174905-79427f02047f // indirect
+	k8s.io/api v0.0.0-20190408172450-b1350b9e3bc2
+	k8s.io/apiextensions-apiserver v0.0.0-20190325193600-475668423e9f // indirect
+	k8s.io/apimachinery v0.0.0-20190408172355-3115ef20f323
+	k8s.io/apiserver v0.0.0-20190319190228-a4358799e4fe // indirect
 	k8s.io/client-go v2.0.0-alpha.0.0.20190228174230-b40b2a5939e4+incompatible
-	k8s.io/cloud-provider v0.0.0-20190228181926-f531db154915 // indirect
-	k8s.io/csi-api v0.0.0-20190228180745-64f278f73b48 // indirect
-	k8s.io/klog v0.2.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
-	k8s.io/kubernetes v1.13.4
+	k8s.io/cloud-provider v0.0.0-20190325195930-a624236cb1f2 // indirect
+	k8s.io/csi-api v0.0.0-20190325194237-b07135bbe9d0 // indirect
+	k8s.io/klog v0.2.0
+	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
+	k8s.io/kubernetes v1.13.5
 	k8s.io/utils v0.0.0-20190221042446-c2654d5206da
 	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
-	sigs.k8s.io/yaml v1.1.0 // indirect
+	sigs.k8s.io/yaml v0.0.0-00010101000000-000000000000 // indirect
 )

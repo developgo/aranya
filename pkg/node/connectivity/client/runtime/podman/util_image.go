@@ -8,28 +8,30 @@ import (
 	libpodImage "github.com/containers/libpod/libpod/image"
 	corev1 "k8s.io/api/core/v1"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func ensureImages(imageRuntime *libpodImage.Runtime, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*libpodImage.Image, error) {
+func ensureImages(imageRuntime *libpodImage.Runtime, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*libpodImage.Image, error) {
 	imageMap := make(map[string]*libpodImage.Image)
 	imageToPull := make([]string, 0)
 
-	for _, ctr := range pod.Containers {
-		image, err := imageRuntime.NewFromLocal(ctr.Name)
+	for _, ctr := range containers {
+		image, err := imageRuntime.NewFromLocal(ctr.Image)
 		if err == nil {
 			// image exists
 			switch ctr.ImagePullPolicy {
-			case corev1.PullNever, corev1.PullIfNotPresent:
+			case string(corev1.PullNever), string(corev1.PullIfNotPresent):
 				imageMap[ctr.Image] = image
-			case corev1.PullAlways:
+			case string(corev1.PullAlways):
 				imageToPull = append(imageToPull, ctr.Image)
 			}
 		} else {
 			// image does not exist
 			switch ctr.ImagePullPolicy {
-			case corev1.PullNever:
+			case string(corev1.PullNever):
 				return nil, err
-			case corev1.PullIfNotPresent, corev1.PullAlways:
+			case string(corev1.PullIfNotPresent), string(corev1.PullAlways):
 				imageToPull = append(imageToPull, ctr.Image)
 			}
 		}

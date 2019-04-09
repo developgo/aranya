@@ -10,17 +10,19 @@ var (
 	mutex          = &sync.RWMutex{}
 )
 
-func AddRunningServer(server *Node) error {
+func Add(node *Node) error {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if _, ok := runningServers[server.name]; ok {
-		return errors.New("node already running")
+
+	if _, ok := runningServers[node.name]; ok {
+		return errors.New("node with same name already running")
 	}
-	runningServers[server.name] = server
+
+	runningServers[node.name] = node
 	return nil
 }
 
-func DeleteRunningServer(name string) {
+func Delete(name string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 

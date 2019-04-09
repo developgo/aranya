@@ -120,8 +120,7 @@ func TestNewGrpcClient(t *testing.T) {
 		defer wg.Done()
 		<-mgr.DeviceConnected()
 
-		createCmd, err := connectivity.NewPodCreateCmd(podReq, nil, nil)
-		assert.NoError(t, err)
+		createCmd := connectivity.NewPodCreateCmd(podReq, nil, nil, nil, nil)
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			createCmd,
 			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))

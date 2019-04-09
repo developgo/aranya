@@ -15,15 +15,48 @@ func NewNodeCmd() *Cmd {
 	}
 }
 
-func NewPodCreateCmd(pod *corev1.Pod, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*Cmd, error) {
-	podSpecBytes, err := pod.Spec.Marshal()
-	if err != nil {
-		return nil, err
+func NewPodCreateCmd(
+	pod *corev1.Pod,
+	imagePullSecrets map[string]*criRuntime.AuthConfig,
+	containerEnvs map[string]map[string]string,
+	volumeData map[string]map[string][]byte,
+	hostVolume map[string]string,
+) *Cmd {
+	authConfigBytes := make(map[string][]byte, len(imagePullSecrets))
+	for name, authConf := range imagePullSecrets {
+		authConfigBytes[name], _ = authConf.Marshal()
 	}
 
-	actualAuthConfig := make(map[string][]byte)
-	for imageName, config := range authConfig {
-		actualAuthConfig[imageName], _ = config.Marshal()
+	actualVolumeData := make(map[string]*NamedData)
+	for k, namedVolumeData := range volumeData {
+		actualVolumeData[k] = &NamedData{Data: namedVolumeData}
+	}
+
+	containers := make(map[string]*ContainerSpec)
+	for _, ctr := range pod.Spec.Containers {
+		containers[ctr.Name] = &ContainerSpec{
+			Image:           ctr.Image,
+			ImagePullPolicy: string(ctr.ImagePullPolicy),
+			Command:         ctr.Command,
+			Args:            ctr.Args,
+			WorkingDir:      ctr.WorkingDir,
+			Stdin:           ctr.Stdin,
+			Tty:             ctr.TTY,
+
+			Ports: func() map[string]*ContainerPort {
+				m := make(map[string]*ContainerPort)
+				for _, p := range ctr.Ports {
+					m[p.Name] = &ContainerPort{
+						Protocol:      string(p.Protocol),
+						HostPort:      p.HostPort,
+						ContainerPort: p.ContainerPort,
+						HostIp:        p.HostIP,
+					}
+				}
+				return m
+			}(),
+			Envs: containerEnvs[ctr.Name],
+		}
 	}
 
 	return &Cmd{
@@ -34,18 +67,15 @@ func NewPodCreateCmd(pod *corev1.Pod, authConfig map[string]*criRuntime.AuthConf
 				Action:    Create,
 				Options: &PodCmd_CreateOptions{
 					CreateOptions: &CreateOptions{
-						Options: &CreateOptions_PodV1_{
-							PodV1: &CreateOptions_PodV1{
-								PodSpec:    podSpecBytes,
-								AuthConfig: actualAuthConfig,
-								VolumeData: volumeData,
-							},
-						},
+						Containers:          containers,
+						ImagePullAuthConfig: authConfigBytes,
+						VolumeData:          actualVolumeData,
+						HostVolumes:         hostVolume,
 					},
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 func NewPodDeleteCmd(namespace, name string, graceTime time.Duration) *Cmd {

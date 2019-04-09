@@ -13,8 +13,6 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 )
 
-var _ runtime.Interface = &fakeRuntime{}
-
 func NewFakeRuntime(faulty bool) (runtime.Interface, error) {
 	return &fakeRuntime{faulty: faulty}, nil
 }
@@ -23,7 +21,14 @@ type fakeRuntime struct {
 	faulty bool
 }
 
-func (r *fakeRuntime) CreatePod(namespace, name string, pod *corev1.PodSpec, authConfig map[string]*criRuntime.AuthConfig, volumeData map[string][]byte) (*connectivity.Pod, error) {
+func (r *fakeRuntime) CreatePod(
+	namespace, name string,
+	containers map[string]*connectivity.ContainerSpec,
+	authConfig map[string]*criRuntime.AuthConfig,
+	volumeData map[string]*connectivity.NamedData,
+	hostVolumes map[string]string,
+) (*connectivity.Pod, error) {
+
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: create pod")
 	}

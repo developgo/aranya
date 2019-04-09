@@ -18,7 +18,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
 )
@@ -58,21 +58,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch changes to EdgeDevice resources
-	if err = c.Watch(&source.Kind{Type: &aranyav1alpha1.EdgeDevice{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &aranya.EdgeDevice{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
 	// Watch virtual nodes created by EdgeDevice object
 	if err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForOwner{
-		IsController: true, OwnerType: &aranyav1alpha1.EdgeDevice{},
-	}); err != nil {
-		return err
-	}
-
-	// watch services created by EdgeDevice object
-	svcMapper := &ServiceMapper{client: mgr.GetClient()}
-	if err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: svcMapper,
+		IsController: true, OwnerType: &aranya.EdgeDevice{},
 	}); err != nil {
 		return err
 	}
@@ -102,53 +94,56 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	reqLog.Info("reconciling edge device")
 
 	var (
-		deleted      bool
-		nodeNsName   = types.NamespacedName{Name: request.Name}
+		nodeNsName   = types.NamespacedName{Namespace: corev1.NamespaceAll, Name: request.Name}
 		deviceNsName = types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: request.Name}
 	)
 
 	// reconcile related node object
-	// node name is in the form of `namespace/name`
 	if request.Namespace == corev1.NamespaceAll {
 		nodeObj := &corev1.Node{}
 		err = r.client.Get(r.ctx, nodeNsName, nodeObj)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				reqLog.Info("node object deleted, close virtual node")
-				node.DeleteRunningServer(request.Name)
+				reqLog.Info("node object deleted, destroy virtual node")
+				// since the node object has been deleted, delete the virtual node only
+				node.Delete(request.Name)
 			} else {
-				reqLog.Error(err, "get node object failed")
+				reqLog.Error(err, "failed to get node object")
 				return reconcile.Result{}, err
 			}
 		}
+
+		return
 	}
 
 	// get the edge device instance
-	deviceObj := &aranyav1alpha1.EdgeDevice{}
+	deviceObj := &aranya.EdgeDevice{}
 	err = r.client.Get(r.ctx, deviceNsName, deviceObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLog.Info("edge device deleted, clean up related objects")
-			if err = r.cleanupVirtualObjects(reqLog, deviceObj); err != nil {
-				reqLog.Error(err, "delete related resources failed")
+			if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
+				reqLog.Error(err, "failed to related resources")
 				return reconcile.Result{}, err
 			}
 
 			return reconcile.Result{}, nil
 		}
-		reqLog.Error(err, "get edge device failed")
-		return reconcile.Result{}, err
+
+		reqLog.Error(err, "failed to get edge device")
+		return
 	}
 
-	// tag with finalizer's name and do related job when necessary
-	deleted, err = r.runFinalizerLogic(reqLog, deviceObj)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	deviceDeleted := !(deviceObj.DeletionTimestamp == nil || deviceObj.DeletionTimestamp.IsZero())
 
 	// edge device need to be deleted, no more check
-	if deleted {
-		return reconcile.Result{}, nil
+	if deviceDeleted {
+		if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
+			reqLog.Error(err, "failed to related resources")
+			return
+		}
+
+		return
 	}
 
 	//
@@ -158,43 +153,11 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	var (
 		virtualNode     *node.Node
 		nodeObj         *corev1.Node
-		svcObj          *corev1.Service
 		grpcListener    net.Listener
 		kubeletListener net.Listener
 	)
 
-	// check service object if grpc is used
-	switch deviceObj.Spec.Connectivity.Method {
-	case aranyav1alpha1.DeviceConnectViaGRPC:
-		svcFound := &corev1.Service{}
-		err = r.client.Get(r.ctx, deviceNsName, svcFound)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				reqLog.Info("create grpc svc object")
-				svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
-				if err != nil {
-					reqLog.Error(err, "create grpc svc object failed")
-					return reconcile.Result{}, err
-				}
-
-				defer func() {
-					if err != nil {
-						_ = grpcListener.Close()
-
-						reqLog.Info("delete grpc svc object on error")
-						if e := r.client.Delete(r.ctx, svcObj); e != nil {
-							log.Error(e, "delete svc object failed")
-						}
-					}
-				}()
-			} else {
-				reqLog.Error(err, "get svc object failed")
-				return reconcile.Result{}, err
-			}
-		}
-	}
-
-	// check node object exists
+	// check the node object exists
 	nodeFound := &corev1.Node{}
 	err = r.client.Get(r.ctx, nodeNsName, nodeFound)
 	if err != nil {
@@ -202,7 +165,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			reqLog.Info("create node object")
 			nodeObj, kubeletListener, err = r.createNodeObject(deviceObj)
 			if err != nil {
-				reqLog.Error(err, "create node object failed")
+				reqLog.Error(err, "failed to create node object")
 				return
 			}
 
@@ -213,7 +176,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 					reqLog.Info("delete node object on error")
 					if e := r.client.Delete(r.ctx, nodeObj); e != nil {
-						log.Error(e, "delete node object failed")
+						log.Error(e, "failed to delete node object")
 					}
 				}
 			}()
@@ -222,13 +185,13 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			reqLog.Info("create virtual node")
 			virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
 			if err != nil {
-				reqLog.Error(err, "create virtual node failed")
+				reqLog.Error(err, "failed to create virtual node")
 				return
 			}
 
 			reqLog.Info("start virtual node")
 			if err = virtualNode.Start(); err != nil {
-				reqLog.Error(err, "start virtual node failed")
+				reqLog.Error(err, "failed to start virtual node")
 				return
 			}
 		} else {

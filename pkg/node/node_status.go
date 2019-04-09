@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/kubelet/util"
-	nodeutil "k8s.io/kubernetes/pkg/util/node"
+	utilnode "k8s.io/kubernetes/pkg/util/node"
 )
 
 const (
@@ -51,7 +51,7 @@ func (n *Node) tryUpdateNodeStatus(tryNumber int) error {
 	}
 
 	// Patch the current status on the API server
-	updatedNode, _, err := nodeutil.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), originalNode, node)
+	updatedNode, _, err := utilnode.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), originalNode, node)
 	if err != nil {
 		return err
 	}

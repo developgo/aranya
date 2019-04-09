@@ -1,14 +1,17 @@
 runtime:
   volume_data_dir: /tmp/arhat/data
-  container_namespace: container.arhat.dev
+  management_namespace: container.arhat.dev
+
+  pause_image: k8s.gcr.io/pause:3.1
+  pause_command: /pause
 
   endpoints:
     image:
-      address: /run/containerd/containerd.sock
+      address: unix:///var/run/docker.sock
       dial_timeout: 10s
       action_timeout: 2m
     runtime:
-      address: /run/containerd/containerd.sock
+      address: unix:///var/run/docker.sock
       dial_timeout: 10s
       action_timeout: 2m
 

@@ -62,6 +62,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
+
 			_, err = m.remoteManager.PostCmd(ctx, userInput)
 			if err != nil {
 				return nil

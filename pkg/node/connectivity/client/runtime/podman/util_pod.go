@@ -5,35 +5,31 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	libpodRuntime "github.com/containers/libpod/libpod"
 	libpodImage "github.com/containers/libpod/libpod/image"
 	libpodNS "github.com/containers/libpod/pkg/namespaces"
-	libpodRootless "github.com/containers/libpod/pkg/rootless"
 	libpodSpec "github.com/containers/libpod/pkg/spec"
 	"github.com/containers/storage"
 	"github.com/cri-o/ocicni/pkg/ocicni"
 	ociRuntimeSpec "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func getPodCreateOptions(namespace, name string, podSpec *corev1.PodSpec) []libpodRuntime.PodCreateOption {
+func defaultPodCreateOptions(namespace, name string, containers map[string]*connectivity.ContainerSpec) []libpodRuntime.PodCreateOption {
 	var portmap []ocicni.PortMapping
-	for _, ctr := range podSpec.Containers {
+	for _, ctr := range containers {
 		for _, p := range ctr.Ports {
 			pm := ocicni.PortMapping{
 				HostPort:      p.HostPort,
 				ContainerPort: p.ContainerPort,
-				Protocol:      strings.ToLower(string(p.Protocol)),
+				Protocol:      strings.ToLower(p.Protocol),
 			}
-			if p.HostIP != "" {
-				logrus.Debug("HostIP on port bindings is not supported")
-			}
+
 			portmap = append(portmap, pm)
 		}
 	}
@@ -43,7 +39,7 @@ func getPodCreateOptions(namespace, name string, podSpec *corev1.PodSpec) []libp
 		libpodRuntime.WithPodNamespace(namespace),
 		libpodRuntime.WithPodName(name),
 		// TODO: add pod labels
-		// libpodRuntime.WithPodLabels(podSpec.Labels),
+		// libpodRuntime.WithPodLabels(podSpec),
 		// with `pause` container
 		libpodRuntime.WithInfraContainer(),
 		// claim ports
@@ -56,38 +52,77 @@ func getPodCreateOptions(namespace, name string, podSpec *corev1.PodSpec) []libp
 	}
 }
 
-func kubeContainerToCreateConfig(podSpec *corev1.PodSpec, apiCtr *corev1.Container, runtime *libpodRuntime.Runtime, newImage *libpodImage.Image, namespaces map[string]string) *libpodSpec.CreateConfig {
-	envs := make(map[string]string)
-	for _, e := range apiCtr.Env {
-		envs[e.Name] = e.Value
-	}
+func (r *podmanRuntime) translateContainerSpecToPodmanCreateConfig(
+	namespace string,
+	podName string,
+	containerName string,
+	container *connectivity.ContainerSpec,
+	hostVolumes map[string]string,
+	volumeData map[string]*connectivity.NamedData,
+	// libpod related
+	runtime *libpodRuntime.Runtime,
+	localImages map[string]*libpodImage.Image,
+	namespaces map[string]string,
+) (*libpodSpec.CreateConfig, error) {
 
-	var mounts []ociRuntimeSpec.Mount
-	for _, m := range apiCtr.VolumeMounts {
-		mounts = append(mounts, ociRuntimeSpec.Mount{
-			Destination: m.MountPath,
+	var volumeMounts []ociRuntimeSpec.Mount
+	for volName, mountSpec := range container.GetVolumeMounts() {
+		if hostPath, ok := hostVolumes[volName]; ok {
+			volumeMounts = append(volumeMounts, ociRuntimeSpec.Mount{
+				Destination: mountSpec.MountPath,
+				Type:        "bind",
+				Source:      hostPath,
+			})
+			continue
+		}
+
+		if data, ok := volumeData[volName]; ok {
+			targetDir := filepath.Join(r.volumeDataDir, namespace, podName, volName)
+			for fileName, v := range data.GetData() {
+				if err := os.MkdirAll(targetDir, 0755); err != nil {
+					if !os.IsExist(err) {
+						return nil, err
+					}
+				}
+
+				if err := ioutil.WriteFile(filepath.Join(targetDir, fileName), v, 0644); err != nil {
+					return nil, err
+				}
+			}
+
+			volumeMounts = append(volumeMounts, ociRuntimeSpec.Mount{
+				Destination: mountSpec.MountPath,
+				Type:        "tmpfs",
+				Source:      targetDir,
+			})
+			continue
+		}
+
+		volumeMounts = append(volumeMounts, ociRuntimeSpec.Mount{
+			Destination: mountSpec.MountPath,
+			Type:        "tmpfs",
+			Source:      "tmpfs",
 		})
 	}
 
-	secCtx := determineEffectiveSecurityContext(podSpec, apiCtr)
 	return &libpodSpec.CreateConfig{
 		Runtime: runtime,
-		Image:   apiCtr.Image,
-		ImageID: newImage.ID(),
-		Name:    apiCtr.Name,
-		Tty:     apiCtr.TTY,
-		WorkDir: apiCtr.WorkingDir,
+		Image:   container.GetImage(),
+		ImageID: localImages[container.GetImage()].ID(),
+		Name:    containerName,
+		Tty:     container.GetTty(),
+		WorkDir: container.GetWorkingDir(),
 
 		// security opts
-		ReadOnlyRootfs: *secCtx.ReadOnlyRootFilesystem,
-		Privileged:     *secCtx.Privileged,
-		NoNewPrivs:     !*secCtx.AllowPrivilegeEscalation,
+		// ReadOnlyRootfs: *secCtx.ReadOnlyRootFilesystem,
+		Privileged: container.GetPrivileged(),
+		// NoNewPrivs:     !*secCtx.AllowPrivilegeEscalation,
 
-		Env:        envs,
-		Entrypoint: apiCtr.Command,
-		Command:    apiCtr.Args,
+		Env:        container.GetEnv(),
+		Entrypoint: container.GetCommand(),
+		Command:    container.GetArgs(),
 		StopSignal: syscall.SIGTERM,
-		Mounts:     []ociRuntimeSpec.Mount{},
+		Mounts:     volumeMounts,
 
 		IDMappings: &storage.IDMappingOptions{},
 
@@ -95,7 +130,7 @@ func kubeContainerToCreateConfig(podSpec *corev1.PodSpec, apiCtr *corev1.Contain
 		IpcMode:    libpodNS.IpcMode(namespaces["ipc"]),
 		UtsMode:    libpodNS.UTSMode(namespaces["uts"]),
 		UsernsMode: libpodNS.UsernsMode(namespaces["user"]),
-	}
+	}, nil
 }
 
 func createContainerFromCreateConfig(r *libpodRuntime.Runtime, createConfig *libpodSpec.CreateConfig, ctx context.Context, pod *libpodRuntime.Pod) (*libpodRuntime.Container, error) {
@@ -103,6 +138,7 @@ func createContainerFromCreateConfig(r *libpodRuntime.Runtime, createConfig *lib
 	if err != nil {
 		return nil, err
 	}
+
 	// add post stop hook to get notified
 	if runtimeSpec.Hooks == nil {
 		runtimeSpec.Hooks = &ociRuntimeSpec.Hooks{}
@@ -120,14 +156,14 @@ func createContainerFromCreateConfig(r *libpodRuntime.Runtime, createConfig *lib
 		return nil, err
 	}
 
-	became, ret, err := joinOrCreateRootlessUserNamespace(createConfig, r)
-	if err != nil {
-		return nil, err
-	}
-
-	if became {
-		os.Exit(ret)
-	}
+	// became, ret, err := joinOrCreateRootlessUserNamespace(createConfig, r)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//
+	// if became {
+	// 	os.Exit(ret)
+	// }
 
 	ctr, err := r.NewContainer(ctx, runtimeSpec, options...)
 	if err != nil {
@@ -145,162 +181,162 @@ func createContainerFromCreateConfig(r *libpodRuntime.Runtime, createConfig *lib
 	return ctr, nil
 }
 
-func joinOrCreateRootlessUserNamespace(createConfig *libpodSpec.CreateConfig, runtime *libpodRuntime.Runtime) (bool, int, error) {
-	if os.Geteuid() == 0 {
-		return false, 0, nil
-	}
-
-	if createConfig.Pod != "" {
-		pod, err := runtime.LookupPod(createConfig.Pod)
-		if err != nil {
-			return false, -1, err
-		}
-		inspect, err := pod.Inspect()
-		for _, ctr := range inspect.Containers {
-			prevCtr, err := runtime.LookupContainer(ctr.ID)
-			if err != nil {
-				return false, -1, err
-			}
-			s, err := prevCtr.State()
-			if err != nil {
-				return false, -1, err
-			}
-			if s != libpodRuntime.ContainerStateRunning && s != libpodRuntime.ContainerStatePaused {
-				continue
-			}
-			data, err := ioutil.ReadFile(prevCtr.Config().ConmonPidFile)
-			if err != nil {
-				return false, -1, errors.Wrapf(err, "cannot read conmon PID file %q", prevCtr.Config().ConmonPidFile)
-			}
-			conmonPid, err := strconv.Atoi(string(data))
-			if err != nil {
-				return false, -1, errors.Wrapf(err, "cannot parse PID %q", data)
-			}
-			return libpodRootless.JoinDirectUserAndMountNS(uint(conmonPid))
-		}
-	}
-
-	namespacesStr := []string{string(createConfig.IpcMode), string(createConfig.NetMode), string(createConfig.UsernsMode), string(createConfig.PidMode), string(createConfig.UtsMode)}
-	for _, i := range namespacesStr {
-		if libpodSpec.IsNS(i) {
-			return libpodRootless.JoinNSPath(libpodSpec.NS(i))
-		}
-	}
-
-	type namespace interface {
-		IsContainer() bool
-		Container() string
-	}
-	namespaces := []namespace{createConfig.IpcMode, createConfig.NetMode, createConfig.UsernsMode, createConfig.PidMode, createConfig.UtsMode}
-	for _, i := range namespaces {
-		if i.IsContainer() {
-			ctr, err := runtime.LookupContainer(i.Container())
-			if err != nil {
-				return false, -1, err
-			}
-			pid, err := ctr.PID()
-			if err != nil {
-				return false, -1, err
-			}
-			if pid == 0 {
-				if createConfig.Pod != "" {
-					continue
-				}
-				return false, -1, errors.Errorf("dependency container %s is not running", ctr.ID())
-			}
-			return libpodRootless.JoinNS(uint(pid))
-		}
-	}
-	return libpodRootless.BecomeRootInUserNS()
-}
-
-func determineEffectiveSecurityContext(podSpec *corev1.PodSpec, container *corev1.Container) *corev1.SecurityContext {
-	effectiveSc := securityContextFromPodSecurityContext(podSpec)
-	containerSc := container.SecurityContext
-
-	if effectiveSc == nil && containerSc == nil {
-		return &corev1.SecurityContext{}
-	}
-	if effectiveSc != nil && containerSc == nil {
-		return effectiveSc
-	}
-	if effectiveSc == nil && containerSc != nil {
-		return containerSc
-	}
-
-	if containerSc.SELinuxOptions != nil {
-		effectiveSc.SELinuxOptions = new(corev1.SELinuxOptions)
-		*effectiveSc.SELinuxOptions = *containerSc.SELinuxOptions
-	}
-
-	if containerSc.Capabilities != nil {
-		effectiveSc.Capabilities = new(corev1.Capabilities)
-		*effectiveSc.Capabilities = *containerSc.Capabilities
-	}
-
-	if containerSc.Privileged != nil {
-		effectiveSc.Privileged = new(bool)
-		*effectiveSc.Privileged = *containerSc.Privileged
-	}
-
-	if containerSc.RunAsUser != nil {
-		effectiveSc.RunAsUser = new(int64)
-		*effectiveSc.RunAsUser = *containerSc.RunAsUser
-	}
-
-	if containerSc.RunAsGroup != nil {
-		effectiveSc.RunAsGroup = new(int64)
-		*effectiveSc.RunAsGroup = *containerSc.RunAsGroup
-	}
-
-	if containerSc.RunAsNonRoot != nil {
-		effectiveSc.RunAsNonRoot = new(bool)
-		*effectiveSc.RunAsNonRoot = *containerSc.RunAsNonRoot
-	}
-
-	if containerSc.ReadOnlyRootFilesystem != nil {
-		effectiveSc.ReadOnlyRootFilesystem = new(bool)
-		*effectiveSc.ReadOnlyRootFilesystem = *containerSc.ReadOnlyRootFilesystem
-	}
-
-	if containerSc.AllowPrivilegeEscalation != nil {
-		effectiveSc.AllowPrivilegeEscalation = new(bool)
-		*effectiveSc.AllowPrivilegeEscalation = *containerSc.AllowPrivilegeEscalation
-	}
-
-	if containerSc.ProcMount != nil {
-		effectiveSc.ProcMount = new(corev1.ProcMountType)
-		*effectiveSc.ProcMount = *containerSc.ProcMount
-	}
-
-	return effectiveSc
-}
-
-func securityContextFromPodSecurityContext(podSpec *corev1.PodSpec) *corev1.SecurityContext {
-	if podSpec.SecurityContext == nil {
-		return nil
-	}
-
-	synthesized := &corev1.SecurityContext{}
-
-	if podSpec.SecurityContext.SELinuxOptions != nil {
-		synthesized.SELinuxOptions = &corev1.SELinuxOptions{}
-		*synthesized.SELinuxOptions = *podSpec.SecurityContext.SELinuxOptions
-	}
-	if podSpec.SecurityContext.RunAsUser != nil {
-		synthesized.RunAsUser = new(int64)
-		*synthesized.RunAsUser = *podSpec.SecurityContext.RunAsUser
-	}
-
-	if podSpec.SecurityContext.RunAsGroup != nil {
-		synthesized.RunAsGroup = new(int64)
-		*synthesized.RunAsGroup = *podSpec.SecurityContext.RunAsGroup
-	}
-
-	if podSpec.SecurityContext.RunAsNonRoot != nil {
-		synthesized.RunAsNonRoot = new(bool)
-		*synthesized.RunAsNonRoot = *podSpec.SecurityContext.RunAsNonRoot
-	}
-
-	return synthesized
-}
+// func joinOrCreateRootlessUserNamespace(createConfig *libpodSpec.CreateConfig, runtime *libpodRuntime.Runtime) (bool, int, error) {
+// 	if os.Geteuid() == 0 {
+// 		return false, 0, nil
+// 	}
+//
+// 	if createConfig.Pod != "" {
+// 		pod, err := runtime.LookupPod(createConfig.Pod)
+// 		if err != nil {
+// 			return false, -1, err
+// 		}
+// 		inspect, err := pod.Inspect()
+// 		for _, ctr := range inspect.Containers {
+// 			prevCtr, err := runtime.LookupContainer(ctr.ID)
+// 			if err != nil {
+// 				return false, -1, err
+// 			}
+// 			s, err := prevCtr.State()
+// 			if err != nil {
+// 				return false, -1, err
+// 			}
+// 			if s != libpodRuntime.ContainerStateRunning && s != libpodRuntime.ContainerStatePaused {
+// 				continue
+// 			}
+// 			data, err := ioutil.ReadFile(prevCtr.Config().ConmonPidFile)
+// 			if err != nil {
+// 				return false, -1, errors.Wrapf(err, "cannot read conmon PID file %q", prevCtr.Config().ConmonPidFile)
+// 			}
+// 			conmonPid, err := strconv.Atoi(string(data))
+// 			if err != nil {
+// 				return false, -1, errors.Wrapf(err, "cannot parse PID %q", data)
+// 			}
+// 			return libpodRootless.JoinDirectUserAndMountNS(uint(conmonPid))
+// 		}
+// 	}
+//
+// 	namespacesStr := []string{string(createConfig.IpcMode), string(createConfig.NetMode), string(createConfig.UsernsMode), string(createConfig.PidMode), string(createConfig.UtsMode)}
+// 	for _, i := range namespacesStr {
+// 		if libpodSpec.IsNS(i) {
+// 			return libpodRootless.JoinNSPath(libpodSpec.NS(i))
+// 		}
+// 	}
+//
+// 	type namespace interface {
+// 		IsContainer() bool
+// 		Container() string
+// 	}
+// 	namespaces := []namespace{createConfig.IpcMode, createConfig.NetMode, createConfig.UsernsMode, createConfig.PidMode, createConfig.UtsMode}
+// 	for _, i := range namespaces {
+// 		if i.IsContainer() {
+// 			ctr, err := runtime.LookupContainer(i.Container())
+// 			if err != nil {
+// 				return false, -1, err
+// 			}
+// 			pid, err := ctr.PID()
+// 			if err != nil {
+// 				return false, -1, err
+// 			}
+// 			if pid == 0 {
+// 				if createConfig.Pod != "" {
+// 					continue
+// 				}
+// 				return false, -1, errors.Errorf("dependency container %s is not running", ctr.ID())
+// 			}
+// 			return libpodRootless.JoinNS(uint(pid))
+// 		}
+// 	}
+// 	return libpodRootless.BecomeRootInUserNS()
+// }
+//
+// func determineEffectiveSecurityContext(podSpec *corev1.PodSpec, container *corev1.Container) *corev1.SecurityContext {
+// 	effectiveSc := securityContextFromPodSecurityContext(podSpec)
+// 	containerSc := container.SecurityContext
+//
+// 	if effectiveSc == nil && containerSc == nil {
+// 		return &corev1.SecurityContext{}
+// 	}
+// 	if effectiveSc != nil && containerSc == nil {
+// 		return effectiveSc
+// 	}
+// 	if effectiveSc == nil && containerSc != nil {
+// 		return containerSc
+// 	}
+//
+// 	if containerSc.SELinuxOptions != nil {
+// 		effectiveSc.SELinuxOptions = new(corev1.SELinuxOptions)
+// 		*effectiveSc.SELinuxOptions = *containerSc.SELinuxOptions
+// 	}
+//
+// 	if containerSc.Capabilities != nil {
+// 		effectiveSc.Capabilities = new(corev1.Capabilities)
+// 		*effectiveSc.Capabilities = *containerSc.Capabilities
+// 	}
+//
+// 	if containerSc.Privileged != nil {
+// 		effectiveSc.Privileged = new(bool)
+// 		*effectiveSc.Privileged = *containerSc.Privileged
+// 	}
+//
+// 	if containerSc.RunAsUser != nil {
+// 		effectiveSc.RunAsUser = new(int64)
+// 		*effectiveSc.RunAsUser = *containerSc.RunAsUser
+// 	}
+//
+// 	if containerSc.RunAsGroup != nil {
+// 		effectiveSc.RunAsGroup = new(int64)
+// 		*effectiveSc.RunAsGroup = *containerSc.RunAsGroup
+// 	}
+//
+// 	if containerSc.RunAsNonRoot != nil {
+// 		effectiveSc.RunAsNonRoot = new(bool)
+// 		*effectiveSc.RunAsNonRoot = *containerSc.RunAsNonRoot
+// 	}
+//
+// 	if containerSc.ReadOnlyRootFilesystem != nil {
+// 		effectiveSc.ReadOnlyRootFilesystem = new(bool)
+// 		*effectiveSc.ReadOnlyRootFilesystem = *containerSc.ReadOnlyRootFilesystem
+// 	}
+//
+// 	if containerSc.AllowPrivilegeEscalation != nil {
+// 		effectiveSc.AllowPrivilegeEscalation = new(bool)
+// 		*effectiveSc.AllowPrivilegeEscalation = *containerSc.AllowPrivilegeEscalation
+// 	}
+//
+// 	if containerSc.ProcMount != nil {
+// 		effectiveSc.ProcMount = new(corev1.ProcMountType)
+// 		*effectiveSc.ProcMount = *containerSc.ProcMount
+// 	}
+//
+// 	return effectiveSc
+// }
+//
+// func securityContextFromPodSecurityContext(podSpec *corev1.PodSpec) *corev1.SecurityContext {
+// 	if podSpec.SecurityContext == nil {
+// 		return nil
+// 	}
+//
+// 	synthesized := &corev1.SecurityContext{}
+//
+// 	if podSpec.SecurityContext.SELinuxOptions != nil {
+// 		synthesized.SELinuxOptions = &corev1.SELinuxOptions{}
+// 		*synthesized.SELinuxOptions = *podSpec.SecurityContext.SELinuxOptions
+// 	}
+// 	if podSpec.SecurityContext.RunAsUser != nil {
+// 		synthesized.RunAsUser = new(int64)
+// 		*synthesized.RunAsUser = *podSpec.SecurityContext.RunAsUser
+// 	}
+//
+// 	if podSpec.SecurityContext.RunAsGroup != nil {
+// 		synthesized.RunAsGroup = new(int64)
+// 		*synthesized.RunAsGroup = *podSpec.SecurityContext.RunAsGroup
+// 	}
+//
+// 	if podSpec.SecurityContext.RunAsNonRoot != nil {
+// 		synthesized.RunAsNonRoot = new(bool)
+// 		*synthesized.RunAsNonRoot = *podSpec.SecurityContext.RunAsNonRoot
+// 	}
+//
+// 	return synthesized
+// }

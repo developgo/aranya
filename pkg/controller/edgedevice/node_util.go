@@ -21,6 +21,7 @@ func (r *ReconcileEdgeDevice) createNodeObject(device *aranyav1alpha1.EdgeDevice
 		hostname          string
 		kubeletListenPort int32
 	)
+
 	// get node ip address
 	hostIP, hostname, err = r.getHostAddress()
 	if err != nil {
@@ -91,6 +92,7 @@ func newNodeForEdgeDevice(device *aranyav1alpha1.EdgeDevice, hostIP string, host
 			}},
 			DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: kubeletPort}},
 			Phase:           corev1.NodePending,
+			// TODO: remove example resources and conditions
 			Capacity: corev1.ResourceList{
 				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
 				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),

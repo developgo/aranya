@@ -77,10 +77,7 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 }
 
 func (m *Manager) CreatePodInDevice(pod *corev1.Pod) error {
-	cmd, err := connectivity.NewPodCreateCmd(pod, nil, nil)
-	if err != nil {
-		return nil
-	}
+	cmd := connectivity.NewPodCreateCmd(pod, nil, nil, nil, nil)
 
 	msgCh, err := m.remoteManager.PostCmd(m.ctx, cmd)
 	if err != nil {
