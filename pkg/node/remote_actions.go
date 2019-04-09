@@ -18,7 +18,7 @@ func (n *Node) InitializeRemoteDevice() {
 		wg := &sync.WaitGroup{}
 
 		<-n.connectivityManager.DeviceConnected()
-		n.log.Error(nil, "device connected")
+		n.log.Info("device connected")
 
 		wg.Add(1)
 		go func() {
@@ -70,12 +70,16 @@ func (n *Node) generateCacheForPodsInDevice() error {
 	for _, podStatus := range podStatuses {
 		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
 		if err != nil {
-			if errors.IsNotFound(err) {
-				n.deletePodInDevice(apiPod)
-			} else {
+			if !errors.IsNotFound(err) {
+				n.log.Error(err, "failed to get pod for pod cache sync")
 				return err
 			}
+
+			n.deletePodInDevice(apiPod)
+			continue
 		}
+
+		// ok, process and generate pod cache
 
 		apiStatus := n.GenerateAPIPodStatus(apiPod, podStatus)
 		n.podStatusManager.SetPodStatus(apiPod, apiStatus)
