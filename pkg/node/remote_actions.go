@@ -1,6 +1,7 @@
 package node
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -29,15 +30,19 @@ func (n *Node) InitializeRemoteDevice() {
 			}
 		}()
 
+		n.log.Info("sync pods cache")
 		if err := n.generateCacheForPodsInDevice(); err != nil {
-			n.log.Error(err, "generate pods cache failed")
+			n.log.Error(err, "failed to sync pods cache")
 			goto waitForDeviceDisconnect
 		}
+		n.log.Info("sync pods cache success")
 
+		n.log.Info("sync node cache")
 		if err := n.generateCacheForNodeInDevice(); err != nil {
-			n.log.Error(err, "generate node cache failed")
+			n.log.Error(err, "failed to sync node cache")
 			goto waitForDeviceDisconnect
 		}
+		n.log.Info("sync node cache success")
 
 	waitForDeviceDisconnect:
 		wg.Wait()
@@ -79,6 +84,10 @@ func (n *Node) generateCacheForPodsInDevice() error {
 			continue
 		}
 
+		if apiPod == nil {
+			return fmt.Errorf("nil pod object")
+		}
+
 		// ok, process and generate pod cache
 
 		apiStatus := n.GenerateAPIPodStatus(apiPod, podStatus)
@@ -100,7 +109,6 @@ func (n *Node) generateCacheForNodeInDevice() error {
 		return err
 	}
 
-	var node *corev1.Node
 	for msg := range msgCh {
 		if err := msg.Error(); err != nil {
 			return err
@@ -108,15 +116,11 @@ func (n *Node) generateCacheForNodeInDevice() error {
 
 		switch nodeMsg := msg.GetMsg().(type) {
 		case *connectivity.Msg_Node:
-			apiNode, err := nodeMsg.Node.GetResolvedCoreV1Node()
-			if err != nil {
+			if err := n.updateNodeCache(nodeMsg); err != nil {
 				return err
 			}
-			_ = apiNode
 		}
 	}
-	// TODO: store node cache
-	_ = node
 
 	return nil
 }
@@ -129,39 +133,22 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 			n.log.Error(msg.Error(), "received error from remote device")
 		}
 	case *connectivity.Msg_Node:
-		switch node := m.Node.GetNode().(type) {
-		case *connectivity.Node_NodeV1:
-			// update node info
-			newNode := &corev1.Node{}
-			if err := newNode.Unmarshal(node.NodeV1); err != nil {
-				n.log.Error(err, "unmarshal device status failed")
-				return
-			}
-
-			me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
-			if err != nil {
-				n.log.Error(err, "get self node info failed")
-				return
-			}
-
-			resolveDeviceStatus(me.Status, newNode.Status)
-			updatedMe, err := n.nodeClient.UpdateStatus(me)
-			if err != nil {
-				n.log.Error(err, "update node status failed")
-				return
-			}
-			_ = updatedMe
+		if err := n.updateNodeCache(m); err != nil {
+			n.log.Error(err, "failed to update node cache")
 		}
 	case *connectivity.Msg_Pod:
 		podStatus, err := m.Pod.GetResolvedKubePodStatus()
 		if err != nil {
-			n.log.Error(err, "resolve kube pod status failed")
+			n.log.Error(err, "failed to resolve pod status")
 			return
 		}
 
-		_ = podStatus
 		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				n.deletePodInDevice(podStatus.Namespace, podStatus.Name)
+				return
+			}
 			n.log.Error(err, "get mirror pod failed")
 			return
 		}
@@ -169,6 +156,28 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 	case *connectivity.Msg_Data:
 		// we don't know how to handle this kind of message, discard
 	}
+}
+
+func (n *Node) updateNodeCache(node *connectivity.Msg_Node) error {
+	apiNode, err := node.Node.GetResolvedCoreV1Node()
+	if err != nil {
+		n.log.Error(err, "failed to resolve node")
+		return err
+	}
+
+	me, err := n.nodeClient.Get(n.name, metav1.GetOptions{})
+	if err != nil {
+		n.log.Error(err, "failed to get node info")
+		return err
+	}
+	if me == nil {
+		n.log.Error(nil, "empty node object")
+		return err
+	}
+
+	me.Status = *resolveDeviceStatus(me.Status, apiNode.Status)
+	n.nodeCache.Update(*me)
+	return nil
 }
 
 func resolveDeviceStatus(old, new corev1.NodeStatus) *corev1.NodeStatus {

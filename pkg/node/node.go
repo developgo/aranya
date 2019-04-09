@@ -65,7 +65,8 @@ type Node struct {
 	podManager       *pod.Manager
 	podStatusManager kubeletStatus.Manager
 
-	podCache *PodCache
+	podCache  *PodCache
+	nodeCache *NodeCache
 
 	// status
 	status uint32
@@ -155,6 +156,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		podStatusManager:    kubeletStatus.NewManager(client, podManager, podManager),
 		podManager:          podManager,
 		podCache:            newPodCache(),
+		nodeCache:           newNodeCache(),
 	}
 
 	return srv, nil
@@ -197,7 +199,7 @@ func (n *Node) Start() error {
 	}()
 
 	// node status update routine
-	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
+	go wait.Until(n.syncNodeStatus, 10*time.Second, n.ctx.Done())
 	go n.podStatusManager.Start()
 
 	// start a kubelet http server

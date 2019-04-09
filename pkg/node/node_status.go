@@ -20,14 +20,12 @@ const (
 )
 
 func (n *Node) syncNodeStatus() {
-	n.log.V(10).Info("update node status")
+	n.log.Info("update node status")
 	for i := 0; i < nodeStatusUpdateRetry; i++ {
 		if err := n.tryUpdateNodeStatus(i); err != nil {
-			// if i > 0 && kl.onRepeatedHeartbeatFailure != nil {
-			// 	kl.onRepeatedHeartbeatFailure()
-			// }
-			n.log.Error(err, "update node status failed, will retry")
+			n.log.Error(err, "failed to update node status, retry")
 		} else {
+			n.log.Info("update node status success")
 			return
 		}
 	}
@@ -40,18 +38,14 @@ func (n *Node) tryUpdateNodeStatus(tryNumber int) error {
 		util.FromApiserverCache(&opts)
 	}
 
-	node, err := n.kubeClient.CoreV1().Nodes().Get(n.name, opts)
+	oldNode, err := n.kubeClient.CoreV1().Nodes().Get(n.name, opts)
 	if err != nil {
 		return fmt.Errorf("error getting node %q: %v", n.name, err)
 	}
 
-	originalNode := node.DeepCopy()
-	if originalNode == nil {
-		return fmt.Errorf("nil %q node object", n.name)
-	}
-
 	// Patch the current status on the API server
-	updatedNode, _, err := utilnode.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), originalNode, node)
+	newNode := n.nodeCache.Get()
+	updatedNode, _, err := utilnode.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), oldNode, &newNode)
 	if err != nil {
 		return err
 	}

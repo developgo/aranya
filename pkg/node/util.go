@@ -56,6 +56,29 @@ func (c *PodCache) Get(namespace, name string) (*corev1.Pod, *kubeletContainer.P
 	return podPair.pod, podPair.status
 }
 
+func newNodeCache() *NodeCache {
+	return &NodeCache{}
+}
+
+type NodeCache struct {
+	node *corev1.Node
+	mu sync.RWMutex
+}
+
+func (c *NodeCache) Update(pod corev1.Node) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.node = &pod
+}
+
+func (c *NodeCache) Get() corev1.Node {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return *c.node
+}
+
 // ConvertStatusToAPIStatus creates an api PodStatus for the given pod from
 // the given internal pod status.  It is purely transformative and does not
 // alter the kubelet state at all.
