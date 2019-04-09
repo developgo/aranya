@@ -121,7 +121,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			}
 		}
 
-		return
+		return reconcile.Result{}, nil
 	}
 
 	// get the edge device instance
@@ -139,7 +139,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		}
 
 		reqLog.Error(err, "failed to get edge device")
-		return
+		return reconcile.Result{}, err
 	}
 
 	deviceDeleted := !(deviceObj.DeletionTimestamp == nil || deviceObj.DeletionTimestamp.IsZero())
@@ -148,10 +148,10 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	if deviceDeleted {
 		if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
 			reqLog.Error(err, "failed to related resources")
-			return
+			return reconcile.Result{}, err
 		}
 
-		return
+		return reconcile.Result{}, nil
 	}
 
 	//
@@ -172,29 +172,30 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		svcFound := &corev1.Service{}
 		err = r.client.Get(r.ctx, deviceNsName, svcFound)
 		if err != nil {
-			if errors.IsNotFound(err) {
-				reqLog.Info("create grpc svc object")
-				svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
-				if err != nil {
-					reqLog.Error(err, "failed to create grpc svc object")
-					return reconcile.Result{}, err
-				}
-
-				defer func() {
-					if err != nil {
-						_ = grpcListener.Close()
-
-						reqLog.Info("delete grpc svc object on error")
-						if e := r.client.Delete(r.ctx, svcObj); e != nil {
-							log.Error(e, "delete svc object failed")
-						}
-					}
-				}()
-
-			} else {
-				reqLog.Error(err, "get svc object failed")
+			if !errors.IsNotFound(err) {
+				reqLog.Error(err, "failed to get svc object")
 				return reconcile.Result{}, err
 			}
+
+			// svc object not found, create one
+
+			reqLog.Info("create grpc svc object")
+			svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
+			if err != nil {
+				reqLog.Error(err, "failed to create grpc svc object")
+				return reconcile.Result{}, err
+			}
+
+			defer func() {
+				if err != nil {
+					_ = grpcListener.Close()
+
+					reqLog.Info("delete grpc svc object on error")
+					if e := r.client.Delete(r.ctx, svcObj); e != nil {
+						log.Error(e, "failed to delete svc object")
+					}
+				}
+			}()
 		}
 	}
 
@@ -202,41 +203,43 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	nodeFound := &corev1.Node{}
 	err = r.client.Get(r.ctx, nodeNsName, nodeFound)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			reqLog.Info("create node object")
-			nodeObj, kubeletListener, err = r.createNodeObject(deviceObj)
-			if err != nil {
-				reqLog.Error(err, "failed to create node object")
-				return
-			}
-
-			defer func() {
-				// delete related objects with best effort if error happened
-				if err != nil {
-					_ = kubeletListener.Close()
-
-					reqLog.Info("delete node object on error")
-					if e := r.client.Delete(r.ctx, nodeObj); e != nil {
-						reqLog.Error(e, "failed to delete node object")
-					}
-				}
-			}()
-
-			// create and start a new virtual node instance
-			reqLog.Info("create virtual node")
-			virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
-			if err != nil {
-				reqLog.Error(err, "failed to create virtual node")
-				return
-			}
-
-			reqLog.Info("start virtual node")
-			if err = virtualNode.Start(); err != nil {
-				reqLog.Error(err, "failed to start virtual node")
-				return
-			}
-		} else {
+		if !errors.IsNotFound(err) {
 			reqLog.Error(err, "failed to get node object")
+			return reconcile.Result{}, err
+		}
+
+		// node not found, create one
+
+		reqLog.Info("create node object")
+		nodeObj, kubeletListener, err = r.createNodeObject(deviceObj)
+		if err != nil {
+			reqLog.Error(err, "failed to create node object")
+			return reconcile.Result{}, err
+		}
+
+		defer func() {
+			// delete related objects with best effort if error happened
+			if err != nil {
+				_ = kubeletListener.Close()
+
+				reqLog.Info("delete node object on error")
+				if e := r.client.Delete(r.ctx, nodeObj); e != nil {
+					reqLog.Error(e, "failed to delete node object")
+				}
+			}
+		}()
+
+		// create and start a new virtual node instance
+		reqLog.Info("create virtual node")
+		virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
+		if err != nil {
+			reqLog.Error(err, "failed to create virtual node")
+			return reconcile.Result{}, err
+		}
+
+		reqLog.Info("start virtual node")
+		if err = virtualNode.Start(); err != nil {
+			reqLog.Error(err, "failed to start virtual node")
 			return reconcile.Result{}, err
 		}
 	}
