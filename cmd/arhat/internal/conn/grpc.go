@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -72,7 +71,8 @@ func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt 
 				dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(certPool, tlsConfig.ServerName)))
 			}
 		} else {
-			return nil, fmt.Errorf("tls cert not provided")
+			// use server side public cert
+			dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
 		}
 	} else {
 		dialOptions = append(dialOptions, grpc.WithInsecure())

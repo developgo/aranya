@@ -9,6 +9,7 @@ import (
 	"time"
 
 	libpodRuntime "github.com/containers/libpod/libpod"
+	podmanVersion "github.com/containers/libpod/version"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
@@ -257,4 +258,8 @@ func (r *podmanRuntime) PortForward(namespace, name string, ports []int32, in io
 
 	_ = infraCtr
 	return nil
+}
+
+func (r *podmanRuntime) Version() (name, ver string) {
+	return "podman", podmanVersion.Version
 }

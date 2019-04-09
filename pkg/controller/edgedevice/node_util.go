@@ -114,27 +114,6 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, hostIP string, hostname str
 			}},
 			DaemonEndpoints: corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: kubeletPort}},
 			Phase:           corev1.NodePending,
-			// TODO: remove example resources and conditions
-			Capacity: corev1.ResourceList{
-				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-			},
-			Allocatable: corev1.ResourceList{
-				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-			},
-			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodePIDPressure, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionUnknown, LastTransitionTime: createdAt},
-			},
 		},
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
@@ -69,7 +70,11 @@ func (n *Node) generateCacheForPodsInDevice() error {
 	for _, podStatus := range podStatuses {
 		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
 		if err != nil {
-			return err
+			if errors.IsNotFound(err) {
+				n.deletePodInDevice(apiPod)
+			} else {
+				return err
+			}
 		}
 
 		apiStatus := n.GenerateAPIPodStatus(apiPod, podStatus)

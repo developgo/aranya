@@ -129,6 +129,10 @@ func (r *fakeRuntime) PortForward(namespace, name string, ports []int32, in io.R
 	return nil
 }
 
+func (r *fakeRuntime) Version() (name, ver string) {
+	return "fake", "0.0.1"
+}
+
 func closeAllIfNotNil(c ...io.Closer) {
 	for _, v := range c {
 		if v != nil {

@@ -90,7 +90,7 @@ func TestNewGrpcClient(t *testing.T) {
 	mgr, srvStop, client = newGrpcTestServerAndClient(okRt)
 	defer srvStop()
 
-	err = client.PostMsg(connectivity.NewNodeMsg(0, true, corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
+	err = client.PostMsg(connectivity.NewNodeMsg(0, &corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
 	assert.Error(t, err)
 
 	wg := &sync.WaitGroup{}

@@ -5,8 +5,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	goruntime "runtime"
 	"sync"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -124,11 +129,12 @@ func (c *baseClient) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Ms
 }
 
 func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
+	sid := cmd.GetSessionId()
+
 	switch cm := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
-		_ = cm.NodeCmd
+		c.doNodeInfo(sid)
 	case *connectivity.Cmd_PodCmd:
-		sid := cmd.GetSessionId()
 		ns := cm.PodCmd.GetNamespace()
 		name := cm.PodCmd.GetName()
 
@@ -189,6 +195,54 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 func (c *baseClient) handleError(sid uint64, e error) {
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		// TODO: log error
+	}
+}
+
+func (c baseClient) doNodeInfo(sid uint64) {
+	now := metav1.Time{Time: time.Now()}
+
+	runtimeName, runtimeVersion := c.runtime.Version()
+
+	nodeSystemInfo := systemInfo()
+	nodeSystemInfo.OperatingSystem = goruntime.GOOS
+	nodeSystemInfo.Architecture = goruntime.GOARCH
+	nodeSystemInfo.ContainerRuntimeVersion = runtimeName + "://" + runtimeVersion
+	nodeSystemInfo.KubeletVersion = "1.13.5"
+	nodeSystemInfo.KubeProxyVersion = "1.13.5"
+
+	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+			},
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+			},
+			Phase: corev1.NodeRunning,
+			Conditions: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastTransitionTime: now},
+				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastTransitionTime: now},
+				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
+				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
+				{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
+				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastTransitionTime: now},
+			},
+			NodeInfo:        *nodeSystemInfo,
+			Images:          []corev1.ContainerImage{},
+			VolumesInUse:    []corev1.UniqueVolumeName{},
+			VolumesAttached: []corev1.AttachedVolume{},
+		},
+	})
+
+	if err := c.doPostMsg(nodeMsg); err != nil {
+		c.handleError(sid, err)
+		return
 	}
 }
 

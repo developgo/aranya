@@ -8,12 +8,12 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func NewNodeMsg(sid uint64, completed bool, node corev1.Node) *Msg {
+func NewNodeMsg(sid uint64, node *corev1.Node) *Msg {
 	nodeBytes, _ := node.Marshal()
 
 	return &Msg{
 		SessionId: sid,
-		Completed: completed,
+		Completed: true,
 		Msg: &Msg_Node{
 			Node: &Node{
 				Node: &Node_NodeV1{

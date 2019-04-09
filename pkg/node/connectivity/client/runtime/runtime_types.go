@@ -33,4 +33,6 @@ type Interface interface {
 	AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error
 	GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error
 	PortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error
+
+	Version() (name string, version string)
 }
