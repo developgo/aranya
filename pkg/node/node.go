@@ -199,7 +199,7 @@ func (n *Node) Start() error {
 	}()
 
 	// node status update routine
-	go wait.Until(n.syncNodeStatus, 10*time.Second, n.ctx.Done())
+	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
 	go n.podStatusManager.Start()
 
 	// start a kubelet http server
