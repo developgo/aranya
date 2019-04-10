@@ -7,13 +7,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 	podUtil "k8s.io/kubernetes/pkg/api/v1/pod"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubeletTypes "k8s.io/kubernetes/pkg/kubelet/types"
-	"k8s.io/kubernetes/pkg/kubelet/util/format"
 )
 
 func newPodCache() *PodCache {
@@ -56,30 +54,30 @@ func (c *PodCache) Get(namespace, name string) (*corev1.Pod, *kubeletContainer.P
 	return podPair.pod, podPair.status
 }
 
-func newNodeCache(node *corev1.Node) *NodeCache {
-	return &NodeCache{node: node}
+func newNodeCache(node corev1.NodeStatus) *NodeCache {
+	return &NodeCache{nodeStatus: &node}
 }
 
 type NodeCache struct {
-	node *corev1.Node
-	mu   sync.RWMutex
+	nodeStatus *corev1.NodeStatus
+	mu         sync.RWMutex
 }
 
-func (c *NodeCache) Update(pod corev1.Node) {
+func (c *NodeCache) Update(nodeStatus corev1.NodeStatus) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.node = &pod
+	c.nodeStatus = &nodeStatus
 }
 
-func (c *NodeCache) Get() corev1.Node {
+func (c *NodeCache) Get() corev1.NodeStatus {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.node == nil {
-		return corev1.Node{}
+	if c.nodeStatus == nil {
+		return corev1.NodeStatus{}
 	}
-	return *c.node
+	return *c.nodeStatus
 }
 
 // ConvertStatusToAPIStatus creates an api PodStatus for the given pod from
@@ -124,7 +122,7 @@ func (n *Node) ConvertStatusToAPIStatus(pod *corev1.Pod, podStatus *kubeletConta
 // generateAPIPodStatus creates the final API pod status for a pod, given the
 // internal pod status.
 func (n *Node) GenerateAPIPodStatus(pod *corev1.Pod, podStatus *kubeletContainer.PodStatus) corev1.PodStatus {
-	klog.V(3).Infof("Generating status for %q", format.Pod(pod))
+	// klog.V(3).Infof("Generating status for %q", format.Pod(pod))
 
 	s := n.ConvertStatusToAPIStatus(pod, podStatus)
 
@@ -146,7 +144,7 @@ func (n *Node) GenerateAPIPodStatus(pod *corev1.Pod, podStatus *kubeletContainer
 	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
 		// API server shows terminal phase; transitions are not allowed
 		if s.Phase != pod.Status.Phase {
-			klog.Errorf("Pod attempted illegal phase transition from %s to %s: %v", pod.Status.Phase, s.Phase, s)
+			// klog.Errorf("Pod attempted illegal phase transition from %s to %s: %v", pod.Status.Phase, s.Phase, s)
 			// Force back to phase from the API server
 			s.Phase = pod.Status.Phase
 		}

@@ -65,8 +65,8 @@ type Node struct {
 	podManager       *pod.Manager
 	podStatusManager kubeletStatus.Manager
 
-	podCache  *PodCache
-	nodeCache *NodeCache
+	podCache        *PodCache
+	nodeStatusCache *NodeCache
 
 	// status
 	status uint32
@@ -146,17 +146,17 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		kubeClient:          client,
 		nodeClient:          client.CoreV1().Nodes(),
 		connectivityManager: connectivityManager,
-		kubeletListener:     kubeletListener,
-		grpcListener:        grpcListener,
-		httpSrv:             &http.Server{Handler: m},
-		podInformerFactory:  podInformerFactory,
-		podInformer:         podInformer,
-		wq:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
-		status:              statusReady,
-		podStatusManager:    kubeletStatus.NewManager(client, podManager, podManager),
-		podManager:          podManager,
-		podCache:            newPodCache(),
-		nodeCache:           newNodeCache(nodeObj),
+		kubeletListener:    kubeletListener,
+		grpcListener:       grpcListener,
+		httpSrv:            &http.Server{Handler: m},
+		podInformerFactory: podInformerFactory,
+		podInformer:        podInformer,
+		wq:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
+		status:             statusReady,
+		podStatusManager:   kubeletStatus.NewManager(client, podManager, podManager),
+		podManager:         podManager,
+		podCache:           newPodCache(),
+		nodeStatusCache:    newNodeCache(nodeObj.Status),
 	}
 
 	return srv, nil

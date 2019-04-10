@@ -89,6 +89,7 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, hostIP string, hostname str
 			Namespace: corev1.NamespaceAll,
 			Labels: map[string]string{
 				constant.LabelRole: constant.LabelRoleValueNode,
+				constant.LabelName: device.Name,
 				// TODO: use corev1.LabelHostname in future when controller-runtime updated
 				"kubernetes.io/hostname": hostname,
 			},

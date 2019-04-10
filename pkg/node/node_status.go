@@ -45,8 +45,7 @@ func (n *Node) tryUpdateNodeStatus(tryNumber int) error {
 
 	// Patch the current status on the API server
 	newNode := oldNode.DeepCopy()
-	cachedNode := n.nodeCache.Get()
-	newNode.Status = cachedNode.Status
+	newNode.Status = n.nodeStatusCache.Get()
 
 	updatedNode, _, err := utilnode.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), oldNode, newNode)
 	if err != nil {

@@ -12,8 +12,8 @@ spec:
       operator: Exists
   nodeSelector:
     # select specific remote node(s) with labels
-    arhat.dev/role: remote-node
-    kubernetes.io/hostname: example-edge-device-mqtt
+    arhat.dev/role: node
+    arhat.dev/name: example-edge-device-grpc
   containers:
   - name: sleep
     image: alpine:latest

@@ -9,3 +9,7 @@ const (
 	LabelRoleValueService    = "service"
 	LabelRoleValueController = "controller"
 )
+
+const (
+	LabelName = "arhat.dev/name"
+)
