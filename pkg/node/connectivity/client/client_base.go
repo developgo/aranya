@@ -202,15 +202,15 @@ func (c *baseClient) handleError(sid uint64, e error) {
 func (c baseClient) doNodeInfo(sid uint64) {
 	now := metav1.Time{Time: time.Now()}
 
-	runtimeName, runtimeVersion := c.runtime.Version()
-
 	nodeSystemInfo := systemInfo()
 	nodeSystemInfo.MachineID, _ = machineid.ID()
 	nodeSystemInfo.OperatingSystem = goruntime.GOOS
 	nodeSystemInfo.Architecture = goruntime.GOARCH
-	nodeSystemInfo.ContainerRuntimeVersion = runtimeName + "://" + runtimeVersion
 	nodeSystemInfo.KubeletVersion = "1.13.5"
 	nodeSystemInfo.KubeProxyVersion = "1.13.5"
+
+	runtimeName, runtimeVersion := c.runtime.Version()
+	nodeSystemInfo.ContainerRuntimeVersion = runtimeName + "://" + runtimeVersion
 
 	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
 		Status: corev1.NodeStatus{
