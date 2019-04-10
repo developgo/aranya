@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +31,7 @@ const (
 
 var (
 	errNoFreePort = errors.NewInternalError(fmt.Errorf("could not allocate free port"))
+	once          = &sync.Once{}
 )
 
 var log = logf.Log.WithName(controllerName)
@@ -99,7 +102,25 @@ type ReconcileEdgeDevice struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result reconcile.Result, err error) {
 	reqLog := log.WithValues("ns", request.Namespace, "name", request.Name)
-	reqLog.Info("reconciling edge device")
+	once.Do(func() {
+		reqLog.Info("initialize edge devices")
+		// get all edge devices in this namespace (only once)
+		deviceList := &aranya.EdgeDeviceList{}
+		err = r.client.List(r.ctx, &client.ListOptions{Namespace: constant.CurrentNamespace()}, deviceList)
+		if err != nil {
+			reqLog.Error(err, "failed to list edge devices")
+			return
+		}
+
+		for _, device := range deviceList.Items {
+			if err := r.doReconcileEdgeDevice(reqLog, &device); err != nil {
+				reqLog.Error(err, "reconcile edge device failed", "device.name", device.Name)
+			}
+		}
+	})
+	if err != nil {
+		return
+	}
 
 	var (
 		nodeNsName   = types.NamespacedName{Namespace: corev1.NamespaceAll, Name: request.Name}
@@ -131,7 +152,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		if errors.IsNotFound(err) {
 			reqLog.Info("edge device deleted, clean up related objects")
 			if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
-				reqLog.Error(err, "failed to related resources")
+				reqLog.Error(err, "failed to cleanup related resources")
 				return reconcile.Result{}, err
 			}
 
@@ -142,16 +163,20 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		return reconcile.Result{}, err
 	}
 
+	return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, deviceObj)
+}
+
+func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, deviceObj *aranya.EdgeDevice) (err error) {
 	deviceDeleted := !(deviceObj.DeletionTimestamp == nil || deviceObj.DeletionTimestamp.IsZero())
 
 	// edge device need to be deleted, no more check
 	if deviceDeleted {
 		if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
 			reqLog.Error(err, "failed to related resources")
-			return reconcile.Result{}, err
+			return err
 		}
 
-		return reconcile.Result{}, nil
+		return nil
 	}
 
 	//
@@ -170,11 +195,11 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranya.DeviceConnectViaGRPC:
 		svcFound := &corev1.Service{}
-		err = r.client.Get(r.ctx, deviceNsName, svcFound)
+		err := r.client.Get(r.ctx, types.NamespacedName{Namespace: deviceObj.Namespace, Name: deviceObj.Name}, svcFound)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				reqLog.Error(err, "failed to get svc object")
-				return reconcile.Result{}, err
+				return err
 			}
 
 			// svc object not found, create one
@@ -183,7 +208,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 			svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
 			if err != nil {
 				reqLog.Error(err, "failed to create grpc svc object")
-				return reconcile.Result{}, err
+				return err
 			}
 
 			defer func() {
@@ -201,20 +226,20 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 	// check the node object exists
 	nodeFound := &corev1.Node{}
-	err = r.client.Get(r.ctx, nodeNsName, nodeFound)
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: deviceObj.Name}, nodeFound)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			reqLog.Error(err, "failed to get node object")
-			return reconcile.Result{}, err
+			return err
 		}
 
 		// node not found, create one
 
-		reqLog.Info("create node object")
+		reqLog.Info("create node object since not found")
 		nodeObj, kubeletListener, err = r.createNodeObject(deviceObj)
 		if err != nil {
 			reqLog.Error(err, "failed to create node object")
-			return reconcile.Result{}, err
+			return err
 		}
 
 		defer func() {
@@ -230,20 +255,19 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		}()
 
 		// create and start a new virtual node instance
-		reqLog.Info("create virtual node")
+		reqLog.Info("create virtual node for node object")
 		virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
 		if err != nil {
 			reqLog.Error(err, "failed to create virtual node")
-			return reconcile.Result{}, err
+			return err
 		}
 
 		reqLog.Info("start virtual node")
 		if err = virtualNode.Start(); err != nil {
 			reqLog.Error(err, "failed to start virtual node")
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
-	// let arhat.dev/aranya/pkg/node.Node do update job on its own
-	return reconcile.Result{}, nil
+	return nil
 }
