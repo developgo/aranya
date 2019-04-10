@@ -67,6 +67,11 @@ func (c *NodeCache) Update(nodeStatus corev1.NodeStatus) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.nodeStatus != nil {
+		nodeStatus.DaemonEndpoints = c.nodeStatus.DaemonEndpoints
+		nodeStatus.Addresses = c.nodeStatus.Addresses
+	}
+
 	c.nodeStatus = &nodeStatus
 }
 
