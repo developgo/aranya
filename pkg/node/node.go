@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
 	kubeInformers "k8s.io/client-go/informers"
 	kubeInformersCoreV1 "k8s.io/client-go/informers/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
@@ -198,10 +197,6 @@ func (n *Node) Start() error {
 		n.status = statusStopped
 	}()
 
-	// node status update routine
-	go wait.Until(n.syncNodeStatus, time.Second, n.ctx.Done())
-	go n.podStatusManager.Start()
-
 	// start a kubelet http server
 	go func() {
 		n.log.Info("serve kubelet services")
@@ -227,6 +222,7 @@ func (n *Node) Start() error {
 		n.log.Info("mqtt connectivity not implemented")
 	}
 
+	go n.podStatusManager.Start()
 	// informer routine
 	go n.podInformerFactory.Start(n.ctx.Done())
 

@@ -3,6 +3,7 @@ package node
 import (
 	"sort"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,7 +83,14 @@ func (c *NodeCache) Get() corev1.NodeStatus {
 	if c.nodeStatus == nil {
 		return corev1.NodeStatus{}
 	}
-	return *c.nodeStatus
+
+	nodeStatus := c.nodeStatus.DeepCopy()
+	now := metav1.NewTime(time.Now())
+	for i := range nodeStatus.Conditions {
+		nodeStatus.Conditions[i].LastHeartbeatTime = now
+	}
+
+	return *nodeStatus
 }
 
 // ConvertStatusToAPIStatus creates an api PodStatus for the given pod from

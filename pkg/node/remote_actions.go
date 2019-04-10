@@ -1,7 +1,9 @@
 package node
 
 import (
+	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sync"
 	"time"
 
@@ -16,10 +18,14 @@ import (
 
 func (n *Node) InitializeRemoteDevice() {
 	for !n.closing() {
+		connCtx, cancel := context.WithCancel(n.ctx)
 		wg := &sync.WaitGroup{}
 
 		<-n.connectivityManager.DeviceConnected()
 		n.log.Info("device connected")
+
+		// sync node status after device has been connected
+		go wait.Until(n.syncNodeStatus, 10*time.Second, connCtx.Done())
 
 		wg.Add(1)
 		go func() {
@@ -46,6 +52,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 	waitForDeviceDisconnect:
 		wg.Wait()
+		cancel()
 	}
 }
 
