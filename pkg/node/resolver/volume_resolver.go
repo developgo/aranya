@@ -56,9 +56,7 @@ func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData
 			namedData := make(map[string][]byte)
 
 			for dataName, base64EncodedData := range secret.Data {
-				size := base64.StdEncoding.DecodedLen(len(base64EncodedData))
-				data := make([]byte, size)
-				_, err = base64.StdEncoding.Decode(data, base64EncodedData)
+				data, err := base64.StdEncoding.DecodeString(string(base64EncodedData))
 				if err != nil {
 					return nil, nil, err
 				}

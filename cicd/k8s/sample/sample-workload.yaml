@@ -7,6 +7,7 @@ spec:
     # set deploy to which virtual cluster (kubernetes namespace)
     # this toleration is requeired, because it's the taint set on every node in that virtual cluster
     - key: arhat.dev/namespace
+      operator: Equal
       value: edge
     - key: node.kubernetes.io/unreachable
       operator: Exists

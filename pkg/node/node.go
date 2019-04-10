@@ -233,14 +233,17 @@ func (n *Node) Start() error {
 	// handle node change
 	n.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
+			n.log.Info("create pod in device")
 			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			n.log.Info("update pod in device")
 			oldPod := oldObj.(*corev1.Pod)
 			n.deletePodInDevice(oldPod.Namespace, oldPod.Name)
 			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
 		DeleteFunc: func(oldObj interface{}) {
+			n.log.Info("delete pod in device")
 			oldPod := oldObj.(*corev1.Pod)
 			n.deletePodInDevice(oldPod.Namespace, oldPod.Name)
 		},
