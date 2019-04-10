@@ -1,8 +1,6 @@
 package resolver
 
 import (
-	"encoding/base64"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,12 +53,8 @@ func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData
 
 			namedData := make(map[string][]byte)
 
-			for dataName, base64EncodedData := range secret.Data {
-				data, err := base64.StdEncoding.DecodeString(string(base64EncodedData))
-				if err != nil {
-					return nil, nil, err
-				}
-				namedData[dataName] = []byte(data)
+			for dataName, dataVal := range secret.Data {
+				namedData[dataName] = dataVal
 			}
 
 			volumeData[vol.Name] = namedData
