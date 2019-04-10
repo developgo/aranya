@@ -5,12 +5,11 @@ metadata:
 spec:
   tolerations:
     # set deploy to which virtual cluster (kubernetes namespace)
-    # this toleration is requeired, because it's the taint set on every node in that virtual cluster
+    # this toleration is requeired, because it's the taint set on 
+    # every node in the virtual cluster (namespace)
     - key: arhat.dev/namespace
       operator: Equal
       value: edge
-    - key: node.kubernetes.io/unreachable
-      operator: Exists
   nodeSelector:
     # select specific remote node(s) with labels
     arhat.dev/role: node

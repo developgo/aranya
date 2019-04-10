@@ -3,13 +3,13 @@ package node
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -23,9 +23,6 @@ func (n *Node) InitializeRemoteDevice() {
 
 		<-n.connectivityManager.DeviceConnected()
 		n.log.Info("device connected")
-
-		// sync node status after device has been connected
-		go wait.Until(n.syncNodeStatus, 10*time.Second, connCtx.Done())
 
 		wg.Add(1)
 		go func() {
@@ -49,6 +46,9 @@ func (n *Node) InitializeRemoteDevice() {
 			goto waitForDeviceDisconnect
 		}
 		n.log.Info("sync node cache success")
+
+		// sync node status after device has been connected
+		go wait.Until(n.syncNodeStatus, 10*time.Second, connCtx.Done())
 
 	waitForDeviceDisconnect:
 		wg.Wait()

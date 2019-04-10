@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"reflect"
 	"sync"
 	"time"
 
@@ -233,8 +234,17 @@ func (n *Node) Start() error {
 			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			n.log.Info("update pod in device")
 			oldPod := oldObj.(*corev1.Pod)
+			newPod := newObj.(*corev1.Pod)
+
+			// TODO: more delicate equal judgement
+			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				// do nothing if no changes
+				return
+			}
+
+			n.log.Info("update pod in device")
+			// delete and create
 			n.deletePodInDevice(oldPod.Namespace, oldPod.Name)
 			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
