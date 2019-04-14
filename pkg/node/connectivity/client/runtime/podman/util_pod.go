@@ -3,9 +3,7 @@ package podman
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -20,7 +18,7 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func defaultPodCreateOptions(namespace, name string, containers map[string]*connectivity.ContainerSpec) []libpodRuntime.PodCreateOption {
+func defaultPodCreateOptions(podUID string, containers map[string]*connectivity.ContainerSpec) []libpodRuntime.PodCreateOption {
 	var portmap []ocicni.PortMapping
 	for _, ctr := range containers {
 		for _, p := range ctr.Ports {
@@ -36,8 +34,7 @@ func defaultPodCreateOptions(namespace, name string, containers map[string]*conn
 
 	return []libpodRuntime.PodCreateOption{
 		// pod metadata
-		libpodRuntime.WithPodNamespace(namespace),
-		libpodRuntime.WithPodName(name),
+		libpodRuntime.WithPodName(podUID),
 		// TODO: add pod labels
 		// libpodRuntime.WithPodLabels(podSpec),
 		// with `pause` container
@@ -53,13 +50,12 @@ func defaultPodCreateOptions(namespace, name string, containers map[string]*conn
 }
 
 func (r *podmanRuntime) translateContainerSpecToPodmanCreateConfig(
-	namespace string,
-	podName string,
+	podUID string,
 	containerName string,
 	container *connectivity.ContainerSpec,
 	hostVolumes map[string]string,
 	volumeData map[string]*connectivity.NamedData,
-	// libpod related
+// libpod related
 	runtime *libpodRuntime.Runtime,
 	localImages map[string]*libpodImage.Image,
 	namespaces map[string]string,
@@ -77,23 +73,16 @@ func (r *podmanRuntime) translateContainerSpecToPodmanCreateConfig(
 		}
 
 		if data, ok := volumeData[volName]; ok {
-			targetDir := filepath.Join(r.volumeDataDir, namespace, podName, volName)
-			for fileName, v := range data.GetData() {
-				if err := os.MkdirAll(targetDir, 0755); err != nil {
-					if !os.IsExist(err) {
-						return nil, err
-					}
-				}
-
-				if err := ioutil.WriteFile(filepath.Join(targetDir, fileName), v, 0644); err != nil {
-					return nil, err
-				}
+			targetDir := r.PodVolumeDir(podUID, "local", volName)
+			source, err := mountSpec.Ensure(targetDir, data.GetData())
+			if err != nil {
+				return nil, err
 			}
 
 			volumeMounts = append(volumeMounts, ociRuntimeSpec.Mount{
 				Destination: mountSpec.MountPath,
 				Type:        "tmpfs",
-				Source:      targetDir,
+				Source:      source,
 			})
 			continue
 		}
@@ -114,11 +103,11 @@ func (r *podmanRuntime) translateContainerSpecToPodmanCreateConfig(
 		WorkDir: container.GetWorkingDir(),
 
 		// security opts
-		// ReadOnlyRootfs: *secCtx.ReadOnlyRootFilesystem,
+		// ReadOnlyRootfs: ,
 		Privileged: container.GetPrivileged(),
-		// NoNewPrivs:     !*secCtx.AllowPrivilegeEscalation,
+		NoNewPrivs: !container.GetAllowNewPrivileges(),
 
-		Env:        container.GetEnv(),
+		Env:        container.GetEnvs(),
 		Entrypoint: container.GetCommand(),
 		Command:    container.GetArgs(),
 		StopSignal: syscall.SIGTERM,

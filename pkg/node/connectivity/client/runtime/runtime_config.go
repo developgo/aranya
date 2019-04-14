@@ -28,8 +28,7 @@ type Config struct {
 	ManagementNamespace string `json:"management_namespace" yaml:"management_namespace"`
 
 	// Optional
-	EndpointDialTimeout time.Duration `json:"endpoint_dial_timeout" yaml:"endpoint_dial_timeout"`
-	EndPoints           struct {
+	EndPoints struct {
 		Image   EndPoint `json:"image" yaml:"image"`
 		Runtime EndPoint `json:"runtime" yaml:"runtime"`
 	} `json:"endpoints" yaml:"endpoints"`

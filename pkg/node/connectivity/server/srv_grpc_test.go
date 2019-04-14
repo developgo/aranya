@@ -55,7 +55,7 @@ func TestGrpcSrv(t *testing.T) {
 	srvStop, srv, stub := newTestGrpcSrvAndStub()
 	defer srvStop()
 
-	cmd := connectivity.NewPodListCmd("foo", "bar")
+	cmd := connectivity.NewPodListCmd("foo", "bar", true)
 
 	msgCh, err := srv.PostCmd(context.TODO(), cmd)
 	assert.Error(t, err)
@@ -93,7 +93,6 @@ func TestGrpcSrv(t *testing.T) {
 		assert.True(t, more)
 		assert.NotEmpty(t, msg)
 		assert.Equal(t, cmd.GetSessionId(), msg.GetSessionId())
-		assert.Equal(t, "foo", msg.GetPod().GetName())
 
 		_, more = <-msgCh
 		assert.False(t, more)
@@ -106,15 +105,12 @@ func TestGrpcSrv(t *testing.T) {
 		cmdRecv, err := syncClient.Recv()
 		assert.NoError(t, err)
 		assert.Equal(t, cmd.GetSessionId(), cmdRecv.GetSessionId())
-		assert.Equal(t, "foo", cmdRecv.GetPodCmd().GetNamespace())
-		assert.Equal(t, "bar", cmdRecv.GetPodCmd().GetName())
 
 		err = syncClient.Send(&connectivity.Msg{
 			SessionId: cmdRecv.GetSessionId(),
 			Completed: true,
 			Msg: &connectivity.Msg_Pod{
 				Pod: &connectivity.Pod{
-					Name: "foo",
 				},
 			},
 		})

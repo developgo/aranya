@@ -114,20 +114,21 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// routes for pod
 	//
 	// containerLogs (kubectl logs)
-	m.HandleFunc("/containerLogs/{namespace}/{podID}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
+	// m.HandleFunc("/containerLogs/{namespace}/{podID}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
+	m.HandleFunc("/containerLogs/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
 	// logs
 	m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
 	// run (kubectl run) is basically a exec in new pod
-	m.HandleFunc("/run/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/run/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/run/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// exec (kubectl exec)
-	m.HandleFunc("/exec/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/exec/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/exec/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// attach (kubectl attach)
-	m.HandleFunc("/attach/{namespace}/{podID}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/attach/{namespace}/{podID}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/attach/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
 	// portForward (kubectl proxy)
-	m.HandleFunc("/portForward/{namespace}/{podID}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/portForward/{namespace}/{podID}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/portForward/{namespace}/{podID}/{uid}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 
 	//
@@ -245,13 +246,13 @@ func (n *Node) Start() error {
 
 			n.log.Info("update pod in device")
 			// delete and create
-			n.deletePodInDevice(oldPod.Namespace, oldPod.Name)
+			n.deletePodInDevice(oldPod.UID)
 			n.createPodInDevice(newObj.(*corev1.Pod))
 		},
 		DeleteFunc: func(oldObj interface{}) {
 			n.log.Info("delete pod in device")
 			oldPod := oldObj.(*corev1.Pod)
-			n.deletePodInDevice(oldPod.Namespace, oldPod.Name)
+			n.deletePodInDevice(oldPod.UID)
 		},
 	})
 

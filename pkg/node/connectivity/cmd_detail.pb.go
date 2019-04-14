@@ -120,12 +120,8 @@ func (*NodeCmd) XXX_MessageName() string {
 }
 
 type PodCmd struct {
-	// pod namespace
-	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	// pod name
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// action type
-	Action PodAction `protobuf:"varint,4,opt,name=action,proto3,enum=connectivity.PodAction" json:"action,omitempty"`
+	Action PodAction `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.PodAction" json:"action,omitempty"`
 	// options for action
 	//
 	// Types that are valid to be assigned to Options:
@@ -218,20 +214,6 @@ func (m *PodCmd) GetOptions() isPodCmd_Options {
 		return m.Options
 	}
 	return nil
-}
-
-func (m *PodCmd) GetNamespace() string {
-	if m != nil {
-		return m.Namespace
-	}
-	return ""
-}
-
-func (m *PodCmd) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
 }
 
 func (m *PodCmd) GetAction() PodAction {
@@ -608,9 +590,11 @@ func (*ContainerPort) XXX_MessageName() string {
 }
 
 type VolumeMount struct {
-	MountPath     string `protobuf:"bytes,1,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
-	VolumeSubPath string `protobuf:"bytes,2,opt,name=volume_sub_path,json=volumeSubPath,proto3" json:"volume_sub_path,omitempty"`
-	ReadOnly      bool   `protobuf:"varint,3,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	MountPath     string   `protobuf:"bytes,1,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
+	VolumeSubPath string   `protobuf:"bytes,2,opt,name=volume_sub_path,json=volumeSubPath,proto3" json:"volume_sub_path,omitempty"`
+	ReadOnly      bool     `protobuf:"varint,3,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
+	Type          string   `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	Options       []string `protobuf:"bytes,5,rep,name=options,proto3" json:"options,omitempty"`
 }
 
 func (m *VolumeMount) Reset()      { *m = VolumeMount{} }
@@ -666,6 +650,20 @@ func (m *VolumeMount) GetReadOnly() bool {
 	return false
 }
 
+func (m *VolumeMount) GetType() string {
+	if m != nil {
+		return m.Type
+	}
+	return ""
+}
+
+func (m *VolumeMount) GetOptions() []string {
+	if m != nil {
+		return m.Options
+	}
+	return nil
+}
+
 func (*VolumeMount) XXX_MessageName() string {
 	return "connectivity.VolumeMount"
 }
@@ -674,9 +672,9 @@ type ContainerSpec struct {
 	// container image name to pull
 	Image           string `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
 	ImagePullPolicy string `protobuf:"bytes,2,opt,name=image_pull_policy,json=imagePullPolicy,proto3" json:"image_pull_policy,omitempty"`
-	// Command (ENTRYPOINT in docker)
+	// Command (ENTRYPOINT in Dockerfile)
 	Command []string `protobuf:"bytes,3,rep,name=command,proto3" json:"command,omitempty"`
-	// Args (CMD in docker)
+	// Args (CMD in Dockerfile)
 	Args       []string `protobuf:"bytes,4,rep,name=args,proto3" json:"args,omitempty"`
 	WorkingDir string   `protobuf:"bytes,5,opt,name=working_dir,json=workingDir,proto3" json:"working_dir,omitempty"`
 	Stdin      bool     `protobuf:"varint,6,opt,name=stdin,proto3" json:"stdin,omitempty"`
@@ -693,7 +691,8 @@ type ContainerSpec struct {
 	//
 	// security opts
 	//
-	Privileged bool `protobuf:"varint,21,opt,name=privileged,proto3" json:"privileged,omitempty"`
+	Privileged         bool `protobuf:"varint,21,opt,name=privileged,proto3" json:"privileged,omitempty"`
+	AllowNewPrivileges bool `protobuf:"varint,22,opt,name=allow_new_privileges,json=allowNewPrivileges,proto3" json:"allow_new_privileges,omitempty"`
 }
 
 func (m *ContainerSpec) Reset()      { *m = ContainerSpec{} }
@@ -805,18 +804,27 @@ func (m *ContainerSpec) GetPrivileged() bool {
 	return false
 }
 
+func (m *ContainerSpec) GetAllowNewPrivileges() bool {
+	if m != nil {
+		return m.AllowNewPrivileges
+	}
+	return false
+}
+
 func (*ContainerSpec) XXX_MessageName() string {
 	return "connectivity.ContainerSpec"
 }
 
 type CreateOptions struct {
+	// kubernetes pod uid
+	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	// key: container name in the pod
 	// value: container creation spec
-	Containers map[string]*ContainerSpec `protobuf:"bytes,1,rep,name=containers,proto3" json:"containers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Containers map[string]*ContainerSpec `protobuf:"bytes,2,rep,name=containers,proto3" json:"containers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// key: image name
 	// value: bytes of criRuntime.AuthConfig
 	// used to pull private images
-	ImagePullAuthConfig map[string][]byte `protobuf:"bytes,2,rep,name=image_pull_auth_config,json=imagePullAuthConfig,proto3" json:"image_pull_auth_config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ImagePullAuthConfig map[string][]byte `protobuf:"bytes,3,rep,name=image_pull_auth_config,json=imagePullAuthConfig,proto3" json:"image_pull_auth_config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// key: volume name
 	// value: host path
 	HostVolumes map[string]string `protobuf:"bytes,11,rep,name=host_volumes,json=hostVolumes,proto3" json:"host_volumes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -824,6 +832,11 @@ type CreateOptions struct {
 	// value: data from {ConfigMap, Secret}
 	// used to populate file(s) in container(s)
 	VolumeData map[string]*NamedData `protobuf:"bytes,13,rep,name=volume_data,json=volumeData,proto3" json:"volume_data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// other options
+	HostIpc     bool   `protobuf:"varint,21,opt,name=host_ipc,json=hostIpc,proto3" json:"host_ipc,omitempty"`
+	HostNetwork bool   `protobuf:"varint,22,opt,name=host_network,json=hostNetwork,proto3" json:"host_network,omitempty"`
+	HostPid     bool   `protobuf:"varint,23,opt,name=host_pid,json=hostPid,proto3" json:"host_pid,omitempty"`
+	Hostname    string `protobuf:"bytes,24,opt,name=hostname,proto3" json:"hostname,omitempty"`
 }
 
 func (m *CreateOptions) Reset()      { *m = CreateOptions{} }
@@ -858,6 +871,13 @@ func (m *CreateOptions) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CreateOptions proto.InternalMessageInfo
 
+func (m *CreateOptions) GetPodUid() string {
+	if m != nil {
+		return m.PodUid
+	}
+	return ""
+}
+
 func (m *CreateOptions) GetContainers() map[string]*ContainerSpec {
 	if m != nil {
 		return m.Containers
@@ -886,12 +906,42 @@ func (m *CreateOptions) GetVolumeData() map[string]*NamedData {
 	return nil
 }
 
+func (m *CreateOptions) GetHostIpc() bool {
+	if m != nil {
+		return m.HostIpc
+	}
+	return false
+}
+
+func (m *CreateOptions) GetHostNetwork() bool {
+	if m != nil {
+		return m.HostNetwork
+	}
+	return false
+}
+
+func (m *CreateOptions) GetHostPid() bool {
+	if m != nil {
+		return m.HostPid
+	}
+	return false
+}
+
+func (m *CreateOptions) GetHostname() string {
+	if m != nil {
+		return m.Hostname
+	}
+	return ""
+}
+
 func (*CreateOptions) XXX_MessageName() string {
 	return "connectivity.CreateOptions"
 }
 
 type DeleteOptions struct {
-	GraceTime int64 `protobuf:"varint,1,opt,name=grace_time,json=graceTime,proto3" json:"grace_time,omitempty"`
+	// pods to delete
+	PodUid    string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
+	GraceTime int64  `protobuf:"varint,10,opt,name=grace_time,json=graceTime,proto3" json:"grace_time,omitempty"`
 }
 
 func (m *DeleteOptions) Reset()      { *m = DeleteOptions{} }
@@ -926,6 +976,13 @@ func (m *DeleteOptions) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DeleteOptions proto.InternalMessageInfo
 
+func (m *DeleteOptions) GetPodUid() string {
+	if m != nil {
+		return m.PodUid
+	}
+	return ""
+}
+
 func (m *DeleteOptions) GetGraceTime() int64 {
 	if m != nil {
 		return m.GraceTime
@@ -938,6 +995,12 @@ func (*DeleteOptions) XXX_MessageName() string {
 }
 
 type ListOptions struct {
+	// pod namespace
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// pod name
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// show all pods available
+	All bool `protobuf:"varint,3,opt,name=all,proto3" json:"all,omitempty"`
 }
 
 func (m *ListOptions) Reset()      { *m = ListOptions{} }
@@ -972,11 +1035,33 @@ func (m *ListOptions) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListOptions proto.InternalMessageInfo
 
+func (m *ListOptions) GetNamespace() string {
+	if m != nil {
+		return m.Namespace
+	}
+	return ""
+}
+
+func (m *ListOptions) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *ListOptions) GetAll() bool {
+	if m != nil {
+		return m.All
+	}
+	return false
+}
+
 func (*ListOptions) XXX_MessageName() string {
 	return "connectivity.ListOptions"
 }
 
 type LogOptions struct {
+	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	// Types that are valid to be assigned to Options:
 	//	*LogOptions_OptionsV1
 	Options isLogOptions_Options `protobuf_oneof:"options"`
@@ -1022,7 +1107,7 @@ type isLogOptions_Options interface {
 }
 
 type LogOptions_OptionsV1 struct {
-	OptionsV1 []byte `protobuf:"bytes,1,opt,name=options_v1,json=optionsV1,proto3,oneof"`
+	OptionsV1 []byte `protobuf:"bytes,10,opt,name=options_v1,json=optionsV1,proto3,oneof"`
 }
 
 func (*LogOptions_OptionsV1) isLogOptions_Options() {}
@@ -1032,6 +1117,13 @@ func (m *LogOptions) GetOptions() isLogOptions_Options {
 		return m.Options
 	}
 	return nil
+}
+
+func (m *LogOptions) GetPodUid() string {
+	if m != nil {
+		return m.PodUid
+	}
+	return ""
 }
 
 func (m *LogOptions) GetOptionsV1() []byte {
@@ -1053,7 +1145,7 @@ func _LogOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	// options
 	switch x := m.Options.(type) {
 	case *LogOptions_OptionsV1:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
 		_ = b.EncodeRawBytes(x.OptionsV1)
 	case nil:
 	default:
@@ -1065,7 +1157,7 @@ func _LogOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _LogOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*LogOptions)
 	switch tag {
-	case 1: // options.options_v1
+	case 10: // options.options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -1097,6 +1189,7 @@ func (*LogOptions) XXX_MessageName() string {
 }
 
 type ExecOptions struct {
+	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	// Types that are valid to be assigned to Options:
 	//	*ExecOptions_OptionsV1
 	Options isExecOptions_Options `protobuf_oneof:"options"`
@@ -1142,7 +1235,7 @@ type isExecOptions_Options interface {
 }
 
 type ExecOptions_OptionsV1 struct {
-	OptionsV1 []byte `protobuf:"bytes,1,opt,name=options_v1,json=optionsV1,proto3,oneof"`
+	OptionsV1 []byte `protobuf:"bytes,10,opt,name=options_v1,json=optionsV1,proto3,oneof"`
 }
 
 func (*ExecOptions_OptionsV1) isExecOptions_Options() {}
@@ -1152,6 +1245,13 @@ func (m *ExecOptions) GetOptions() isExecOptions_Options {
 		return m.Options
 	}
 	return nil
+}
+
+func (m *ExecOptions) GetPodUid() string {
+	if m != nil {
+		return m.PodUid
+	}
+	return ""
 }
 
 func (m *ExecOptions) GetOptionsV1() []byte {
@@ -1173,7 +1273,7 @@ func _ExecOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	// options
 	switch x := m.Options.(type) {
 	case *ExecOptions_OptionsV1:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
 		_ = b.EncodeRawBytes(x.OptionsV1)
 	case nil:
 	default:
@@ -1185,7 +1285,7 @@ func _ExecOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _ExecOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*ExecOptions)
 	switch tag {
-	case 1: // options.options_v1
+	case 10: // options.options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -1217,6 +1317,7 @@ func (*ExecOptions) XXX_MessageName() string {
 }
 
 type PortForwardOptions struct {
+	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
 	// Types that are valid to be assigned to Options:
 	//	*PortForwardOptions_OptionsV1
 	Options isPortForwardOptions_Options `protobuf_oneof:"options"`
@@ -1262,7 +1363,7 @@ type isPortForwardOptions_Options interface {
 }
 
 type PortForwardOptions_OptionsV1 struct {
-	OptionsV1 []byte `protobuf:"bytes,1,opt,name=options_v1,json=optionsV1,proto3,oneof"`
+	OptionsV1 []byte `protobuf:"bytes,10,opt,name=options_v1,json=optionsV1,proto3,oneof"`
 }
 
 func (*PortForwardOptions_OptionsV1) isPortForwardOptions_Options() {}
@@ -1272,6 +1373,13 @@ func (m *PortForwardOptions) GetOptions() isPortForwardOptions_Options {
 		return m.Options
 	}
 	return nil
+}
+
+func (m *PortForwardOptions) GetPodUid() string {
+	if m != nil {
+		return m.PodUid
+	}
+	return ""
 }
 
 func (m *PortForwardOptions) GetOptionsV1() []byte {
@@ -1293,7 +1401,7 @@ func _PortForwardOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) erro
 	// options
 	switch x := m.Options.(type) {
 	case *PortForwardOptions_OptionsV1:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
 		_ = b.EncodeRawBytes(x.OptionsV1)
 	case nil:
 	default:
@@ -1305,7 +1413,7 @@ func _PortForwardOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) erro
 func _PortForwardOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*PortForwardOptions)
 	switch tag {
-	case 1: // options.options_v1
+	case 10: // options.options_v1
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -1466,84 +1574,92 @@ func init() {
 func init() { proto.RegisterFile("cmd_detail.proto", fileDescriptor_1571bcd24e248579) }
 
 var fileDescriptor_1571bcd24e248579 = []byte{
-	// 1220 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x56, 0xcf, 0x72, 0xd4, 0xc6,
-	0x13, 0x5e, 0xb1, 0xfe, 0xa7, 0xd6, 0xca, 0x2b, 0xe6, 0xc7, 0x2f, 0x28, 0x4b, 0x22, 0x9c, 0xad,
-	0x82, 0x72, 0x91, 0x60, 0x17, 0x24, 0xa9, 0x00, 0x49, 0x51, 0x31, 0x36, 0x04, 0x2a, 0x04, 0x5c,
-	0xc2, 0xe1, 0xc0, 0x45, 0x25, 0x4b, 0xc3, 0xee, 0x14, 0x92, 0x46, 0x91, 0x46, 0x6b, 0x36, 0xb9,
-	0xe4, 0x98, 0x63, 0x5e, 0x21, 0x39, 0xe5, 0x51, 0x38, 0x72, 0xe4, 0x18, 0xaf, 0x2f, 0x39, 0xf2,
-	0x08, 0xa9, 0x69, 0xc9, 0xd2, 0xec, 0xda, 0x98, 0x72, 0x2e, 0xaa, 0xee, 0x4f, 0xfd, 0x7d, 0x33,
-	0xd3, 0xd3, 0xd3, 0x33, 0x60, 0x05, 0x71, 0xe8, 0x85, 0x54, 0xf8, 0x2c, 0x5a, 0x4b, 0x33, 0x2e,
-	0x38, 0xe9, 0x04, 0x3c, 0x49, 0x68, 0x20, 0xd8, 0x88, 0x89, 0x71, 0xef, 0xea, 0x80, 0x89, 0x61,
-	0xb1, 0xbb, 0x16, 0xf0, 0x78, 0x7d, 0xc0, 0x07, 0x7c, 0x1d, 0x83, 0x76, 0x8b, 0xe7, 0xe8, 0xa1,
-	0x83, 0x56, 0x49, 0xee, 0xeb, 0xb0, 0xf8, 0x88, 0x87, 0x74, 0x33, 0x0e, 0xfb, 0x7f, 0xcc, 0xc3,
-	0xc2, 0x36, 0x0f, 0x37, 0xe3, 0x90, 0x7c, 0x04, 0x7a, 0xe2, 0xc7, 0x34, 0x4f, 0xfd, 0x80, 0xda,
-	0xda, 0x8a, 0xb6, 0xaa, 0xbb, 0x0d, 0x40, 0x08, 0xcc, 0x49, 0xc7, 0x3e, 0x83, 0x3f, 0xd0, 0x26,
-	0xeb, 0xb0, 0xe0, 0x07, 0x82, 0xf1, 0xc4, 0x9e, 0x5b, 0xd1, 0x56, 0x97, 0xaf, 0x9f, 0x5f, 0x53,
-	0x67, 0xb5, 0xb6, 0xcd, 0xc3, 0x0d, 0xfc, 0xed, 0x56, 0x61, 0x64, 0x0b, 0x96, 0x83, 0x8c, 0xfa,
-	0x82, 0x7a, 0x3c, 0x95, 0x40, 0x6e, 0x1b, 0x2b, 0xda, 0xaa, 0x71, 0xfd, 0xc2, 0x34, 0x71, 0x13,
-	0x63, 0x1e, 0x97, 0x21, 0xf7, 0x5b, 0xae, 0x19, 0xa8, 0x80, 0x54, 0x09, 0x69, 0x44, 0x15, 0x95,
-	0xce, 0x71, 0x2a, 0x5b, 0x18, 0xa3, 0xa8, 0x84, 0x2a, 0x40, 0x6e, 0x43, 0x27, 0x62, 0xb9, 0xa8,
-	0x35, 0x4c, 0xd4, 0xf8, 0x70, 0x5a, 0xe3, 0x21, 0xcb, 0x45, 0xa3, 0x60, 0x44, 0x8d, 0x4b, 0xbe,
-	0x06, 0x23, 0xe2, 0x83, 0x9a, 0xbe, 0x8c, 0x74, 0x7b, 0x86, 0xce, 0x07, 0x0d, 0x1b, 0xa2, 0xda,
-	0x93, 0x83, 0xd3, 0x97, 0x34, 0xa8, 0xd9, 0xdd, 0xe3, 0x06, 0xbf, 0xfb, 0x92, 0x06, 0xca, 0xe0,
-	0xb4, 0x71, 0xc9, 0x0e, 0x9c, 0x4b, 0x79, 0x26, 0xbc, 0xe7, 0x3c, 0xdb, 0xf3, 0xb3, 0xb0, 0xd6,
-	0xb1, 0x50, 0x67, 0x65, 0x76, 0x1f, 0x32, 0x71, 0xaf, 0x0c, 0x6c, 0xe4, 0x48, 0x7a, 0x04, 0x25,
-	0x1b, 0x60, 0xb2, 0x24, 0x2d, 0x9a, 0x9c, 0x9c, 0x45, 0xb9, 0xde, 0xb4, 0xdc, 0x03, 0x19, 0xd2,
-	0x08, 0x75, 0x98, 0xe2, 0x93, 0xef, 0x60, 0x39, 0xa3, 0x39, 0xfb, 0xb9, 0xd9, 0x1b, 0x82, 0x1a,
-	0xce, 0xb4, 0xc6, 0x8e, 0x18, 0xbb, 0x18, 0xa6, 0x6c, 0x4f, 0xa6, 0x02, 0x77, 0x74, 0x58, 0xac,
-	0x14, 0xfa, 0xbf, 0x80, 0xfe, 0xc8, 0x8f, 0x69, 0xb8, 0xe5, 0x0b, 0x9f, 0x7c, 0x09, 0x73, 0xa1,
-	0x2f, 0x7c, 0x5b, 0x5b, 0x69, 0xaf, 0x1a, 0xd7, 0x3f, 0x99, 0x96, 0xad, 0xc3, 0xd6, 0xe4, 0xe7,
-	0x6e, 0x22, 0xb2, 0xb1, 0x8b, 0xe1, 0xbd, 0xaf, 0x40, 0xaf, 0x21, 0x62, 0x41, 0xfb, 0x05, 0x1d,
-	0x57, 0x35, 0x2e, 0x4d, 0x72, 0x0e, 0xe6, 0x47, 0x7e, 0x54, 0x94, 0xe5, 0xdd, 0x71, 0x4b, 0xe7,
-	0xd6, 0x99, 0x1b, 0x5a, 0xff, 0x37, 0x0d, 0xcc, 0x4d, 0x9e, 0x08, 0x9f, 0x25, 0x34, 0x93, 0x99,
-	0x24, 0x3d, 0x58, 0xc2, 0x63, 0x14, 0xf0, 0xa8, 0x92, 0xa8, 0x7d, 0x72, 0x01, 0xf4, 0x21, 0xcf,
-	0x85, 0x27, 0x93, 0x8b, 0x5a, 0xf3, 0xee, 0x92, 0x04, 0x90, 0x78, 0x09, 0x96, 0x83, 0x43, 0xa5,
-	0x32, 0xa2, 0x8d, 0x11, 0x66, 0x30, 0xa5, 0x7f, 0x1e, 0x16, 0x51, 0x83, 0xa5, 0x78, 0xac, 0x74,
-	0x77, 0x41, 0xba, 0x0f, 0xd2, 0xfe, 0x4f, 0x60, 0x3c, 0xe5, 0x51, 0x11, 0xd3, 0x1f, 0x78, 0x91,
-	0x08, 0xf2, 0x31, 0x40, 0x2c, 0x0d, 0x2f, 0xf5, 0xc5, 0xf0, 0xf0, 0xc0, 0x22, 0xb2, 0xed, 0x8b,
-	0x21, 0xb9, 0x0c, 0xdd, 0x11, 0x46, 0x7b, 0x79, 0xb1, 0x5b, 0xc6, 0x94, 0x67, 0xd7, 0x2c, 0xe1,
-	0x27, 0xc5, 0x2e, 0xc6, 0x5d, 0x00, 0x3d, 0xa3, 0x7e, 0xe8, 0xf1, 0x24, 0x1a, 0xe3, 0x84, 0x96,
-	0xdc, 0x25, 0x09, 0x3c, 0x4e, 0xa2, 0xb1, 0x6c, 0x0f, 0xcd, 0xea, 0x9f, 0xa4, 0x34, 0x90, 0x99,
-	0x62, 0xb1, 0x3f, 0x38, 0xec, 0x10, 0xa5, 0x43, 0xae, 0xc0, 0x59, 0x34, 0xbc, 0xb4, 0x88, 0x22,
-	0x2f, 0xe5, 0x11, 0x0b, 0xc6, 0xd5, 0x70, 0x5d, 0xfc, 0xb1, 0x5d, 0x44, 0xd1, 0x36, 0xc2, 0xc4,
-	0x86, 0xc5, 0x80, 0xc7, 0xb1, 0x9f, 0x84, 0x76, 0x7b, 0xa5, 0xbd, 0xaa, 0xbb, 0x87, 0xae, 0xec,
-	0x31, 0x7e, 0x36, 0xc8, 0xed, 0x39, 0x84, 0xd1, 0x26, 0x17, 0xc1, 0xd8, 0xe3, 0xd9, 0x0b, 0x96,
-	0x0c, 0xbc, 0x90, 0x65, 0xf6, 0x3c, 0x6a, 0x42, 0x05, 0x6d, 0xb1, 0x4c, 0x4e, 0x28, 0x17, 0x21,
-	0x4b, 0xec, 0x05, 0x9c, 0x7b, 0xe9, 0xc8, 0x2d, 0x16, 0x62, 0x6c, 0x2f, 0x22, 0x26, 0x4d, 0xf2,
-	0x0d, 0xcc, 0xcb, 0x9c, 0xcb, 0x96, 0x23, 0x2b, 0xe7, 0xf2, 0x4c, 0xcb, 0x51, 0x17, 0x89, 0x27,
-	0x26, 0x2f, 0xcb, 0xa7, 0x24, 0x91, 0x9b, 0x30, 0x47, 0x93, 0x91, 0xec, 0x34, 0x92, 0x7c, 0xe9,
-	0x24, 0xf2, 0xdd, 0x64, 0x54, 0x71, 0x91, 0x42, 0x5c, 0xa8, 0x32, 0xee, 0xe1, 0xe6, 0xc8, 0x4e,
-	0x23, 0x35, 0xae, 0x9e, 0xa4, 0xa1, 0xec, 0x73, 0xa5, 0xd5, 0x19, 0x29, 0x10, 0x71, 0x00, 0xd2,
-	0x8c, 0x8d, 0x58, 0x44, 0x07, 0x34, 0xb4, 0xff, 0x8f, 0xab, 0x54, 0x90, 0xde, 0x8f, 0x00, 0xcd,
-	0x1a, 0x8e, 0xa9, 0xf7, 0x6b, 0x6a, 0xbd, 0x1f, 0xed, 0xbf, 0x6a, 0x3d, 0x2a, 0x87, 0x41, 0x9e,
-	0xa2, 0x7a, 0x75, 0xef, 0x3b, 0x45, 0xba, 0x4a, 0x7c, 0x06, 0x67, 0x8f, 0x2c, 0xe9, 0x18, 0x81,
-	0xf5, 0xe9, 0x69, 0xcd, 0xf4, 0x43, 0x45, 0x41, 0x3d, 0xa1, 0x7f, 0xca, 0x1a, 0x9d, 0xba, 0x20,
-	0xbe, 0x07, 0xa8, 0x8f, 0x54, 0x5e, 0x75, 0x8a, 0x4f, 0x4f, 0xb8, 0x62, 0x9a, 0x05, 0x57, 0xc9,
-	0x56, 0xe8, 0x84, 0xc1, 0x07, 0x4a, 0x69, 0xfb, 0x85, 0x18, 0x7a, 0x01, 0x4f, 0x9e, 0xb3, 0x81,
-	0x7d, 0x06, 0x85, 0xbf, 0x38, 0x49, 0xf8, 0xc1, 0x61, 0xed, 0x6f, 0x14, 0x62, 0xb8, 0x89, 0xb4,
-	0x72, 0x84, 0xff, 0xb1, 0xa3, 0x7f, 0xc8, 0x63, 0xe8, 0xe0, 0xc9, 0x2f, 0xb7, 0xfa, 0xb0, 0x52,
-	0x3f, 0x3b, 0x69, 0x80, 0xfb, 0x3c, 0x17, 0x65, 0x5e, 0xaa, 0xa9, 0x1b, 0xc3, 0x06, 0x21, 0x0f,
-	0xc1, 0xa8, 0x4a, 0x0f, 0x7b, 0xa6, 0xf9, 0xfe, 0x4c, 0x94, 0xcc, 0xa6, 0x7b, 0xc2, 0xa8, 0x06,
-	0x7a, 0xcf, 0xa0, 0x3b, 0x93, 0xa8, 0xff, 0x5e, 0x59, 0xb2, 0xca, 0xd5, 0x02, 0xb9, 0x07, 0xf6,
-	0xbb, 0x72, 0x75, 0x9a, 0x76, 0xdd, 0xbb, 0x0d, 0xd6, 0x6c, 0x4a, 0x4e, 0x55, 0xa8, 0x4f, 0xa1,
-	0x3b, 0x93, 0x82, 0x63, 0xe8, 0x57, 0xa7, 0xd7, 0x78, 0xfe, 0x1d, 0x97, 0x90, 0x5a, 0xa4, 0x6b,
-	0x60, 0x4e, 0xbd, 0x47, 0x64, 0xf7, 0x1e, 0x64, 0x7e, 0x40, 0x3d, 0xc1, 0xe2, 0xb2, 0x99, 0xb6,
-	0x5d, 0x1d, 0x91, 0x1d, 0x16, 0xd3, 0xbe, 0x09, 0x86, 0xf2, 0xf6, 0xe8, 0xdf, 0x00, 0x68, 0xde,
-	0x12, 0xe4, 0x22, 0x40, 0x75, 0x37, 0x7a, 0xa3, 0x6b, 0xc8, 0xed, 0xdc, 0x6f, 0xb9, 0x7a, 0x85,
-	0x3d, 0xbd, 0xa6, 0x5e, 0x9e, 0x37, 0xc1, 0x50, 0xde, 0x11, 0xa7, 0xa2, 0x7e, 0x0b, 0xe4, 0xe8,
-	0xd3, 0xe1, 0x54, 0x0a, 0x7d, 0xe8, 0xa8, 0xaf, 0x05, 0xd9, 0xe0, 0xab, 0xcb, 0x5b, 0x6e, 0x1b,
-	0xda, 0xfd, 0x5b, 0x60, 0xcd, 0xbe, 0x06, 0x64, 0x5c, 0xc0, 0xa3, 0x1c, 0xe3, 0x4c, 0x17, 0x6d,
-	0x89, 0x65, 0x7c, 0x2f, 0xc7, 0x9c, 0x9b, 0x2e, 0xda, 0x57, 0xf6, 0x40, 0xaf, 0x1f, 0x99, 0x04,
-	0x60, 0xa1, 0xac, 0x65, 0xab, 0x25, 0xed, 0x32, 0xdd, 0x96, 0x46, 0x96, 0x60, 0x4e, 0xa6, 0xd2,
-	0x6a, 0x4b, 0x4b, 0xe6, 0xc2, 0x32, 0xe4, 0xff, 0x0d, 0x21, 0xfc, 0x60, 0x68, 0x75, 0xc8, 0x22,
-	0xb4, 0x1f, 0xf2, 0x81, 0x65, 0x92, 0x2e, 0x18, 0xca, 0x7a, 0xad, 0x65, 0xa2, 0xc3, 0x3c, 0x4e,
-	0xdf, 0xea, 0x12, 0x13, 0xf4, 0x72, 0x8a, 0x3b, 0x62, 0x6c, 0x59, 0x77, 0x6e, 0xbc, 0xde, 0x77,
-	0x5a, 0x6f, 0xf6, 0x9d, 0xd6, 0xdb, 0x7d, 0x47, 0xfb, 0x75, 0xe2, 0x68, 0x7f, 0x4d, 0x1c, 0xed,
-	0xd5, 0xc4, 0xd1, 0x5e, 0x4f, 0x1c, 0xed, 0xef, 0x89, 0xa3, 0xfd, 0x33, 0x71, 0x5a, 0x6f, 0x27,
-	0x8e, 0xf6, 0xfb, 0x81, 0xd3, 0x7a, 0x75, 0xe0, 0x68, 0xaf, 0x0f, 0x9c, 0xd6, 0x9b, 0x03, 0xa7,
-	0xb5, 0xbb, 0x80, 0x6f, 0x85, 0xcf, 0xff, 0x0d, 0x00, 0x00, 0xff, 0xff, 0x47, 0x46, 0x41, 0xe5,
-	0xd3, 0x0b, 0x00, 0x00,
+	// 1350 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0x4d, 0x6f, 0xdb, 0x46,
+	0x13, 0x16, 0x2d, 0x5b, 0x36, 0x87, 0x92, 0xcd, 0xec, 0x9b, 0x37, 0x66, 0x9c, 0x37, 0x8c, 0x22,
+	0x20, 0x81, 0x91, 0xb7, 0xb1, 0x1b, 0xb7, 0x45, 0xd3, 0xb4, 0x08, 0xe0, 0xd8, 0xf9, 0x42, 0x53,
+	0x47, 0x61, 0x9c, 0x00, 0xcd, 0x85, 0xa0, 0xc9, 0x8d, 0xb4, 0x08, 0xc5, 0x25, 0xc8, 0x95, 0x14,
+	0xb5, 0x97, 0x1e, 0x7b, 0xec, 0x3f, 0xe8, 0xb5, 0xc7, 0xfe, 0x8c, 0x1c, 0x03, 0xf4, 0x92, 0x63,
+	0x23, 0x5f, 0x7a, 0x6b, 0x7e, 0x42, 0xb1, 0x43, 0x9a, 0x5c, 0xc9, 0x1f, 0x41, 0x8a, 0x5c, 0x88,
+	0xd9, 0x87, 0x33, 0xcf, 0xce, 0xce, 0xd7, 0x2e, 0x98, 0x7e, 0x2f, 0x70, 0x03, 0x2a, 0x3c, 0x16,
+	0xae, 0xc5, 0x09, 0x17, 0x9c, 0xd4, 0x7d, 0x1e, 0x45, 0xd4, 0x17, 0x6c, 0xc0, 0xc4, 0x68, 0xe5,
+	0x6a, 0x87, 0x89, 0x6e, 0x7f, 0x6f, 0xcd, 0xe7, 0xbd, 0xf5, 0x0e, 0xef, 0xf0, 0x75, 0x54, 0xda,
+	0xeb, 0x3f, 0xc7, 0x15, 0x2e, 0x50, 0xca, 0x8c, 0x5b, 0x3a, 0xcc, 0xef, 0xf0, 0x80, 0x6e, 0xf5,
+	0x82, 0xd6, 0xdf, 0xb3, 0x50, 0x6b, 0xf3, 0x60, 0xab, 0x17, 0x90, 0x75, 0xa8, 0x79, 0xbe, 0x60,
+	0x3c, 0xb2, 0xb4, 0xa6, 0xb6, 0xba, 0xb8, 0xb1, 0xbc, 0xa6, 0xee, 0xb1, 0xd6, 0xe6, 0xc1, 0x26,
+	0xfe, 0x76, 0x72, 0x35, 0xb2, 0x0d, 0x8b, 0x7e, 0x42, 0x3d, 0x41, 0x5d, 0x1e, 0x4b, 0x20, 0xb5,
+	0x8c, 0xa6, 0xb6, 0x6a, 0x6c, 0x9c, 0x9b, 0x34, 0xdc, 0x42, 0x9d, 0x87, 0x99, 0xca, 0xbd, 0x8a,
+	0xd3, 0xf0, 0x55, 0x40, 0xb2, 0x04, 0x34, 0xa4, 0x0a, 0x4b, 0xfd, 0x28, 0x96, 0x6d, 0xd4, 0x51,
+	0x58, 0x02, 0x15, 0x20, 0x37, 0xa1, 0x1e, 0xb2, 0x54, 0x14, 0x1c, 0x0d, 0xe4, 0x38, 0x3b, 0xc9,
+	0xf1, 0x80, 0xa5, 0xa2, 0x64, 0x30, 0xc2, 0x72, 0x49, 0xbe, 0x06, 0x23, 0xe4, 0x9d, 0xc2, 0x7c,
+	0x11, 0xcd, 0xad, 0x29, 0x73, 0xde, 0x29, 0xad, 0x21, 0x2c, 0x56, 0x72, 0x73, 0xfa, 0x92, 0xfa,
+	0x85, 0xf5, 0xd2, 0x51, 0x9b, 0xdf, 0x7e, 0x49, 0x7d, 0x65, 0x73, 0x5a, 0x2e, 0xc9, 0x2e, 0x9c,
+	0x8e, 0x79, 0x22, 0xdc, 0xe7, 0x3c, 0x19, 0x7a, 0x49, 0x50, 0xf0, 0x98, 0xc8, 0xd3, 0x9c, 0xce,
+	0x43, 0x22, 0xee, 0x64, 0x8a, 0x25, 0x1d, 0x89, 0x0f, 0xa1, 0x64, 0x13, 0x1a, 0x2c, 0x8a, 0xfb,
+	0x65, 0x4c, 0x4e, 0x21, 0xdd, 0xca, 0x24, 0xdd, 0x7d, 0xa9, 0x52, 0x12, 0xd5, 0x99, 0xb2, 0x26,
+	0x77, 0x61, 0x31, 0xa1, 0x29, 0xfb, 0xa1, 0xcc, 0x0d, 0x41, 0x0e, 0x7b, 0x92, 0x63, 0x57, 0x8c,
+	0x1c, 0x54, 0x53, 0xd2, 0x93, 0xa8, 0xc0, 0x2d, 0x1d, 0xe6, 0x73, 0x86, 0xd6, 0x8f, 0xa0, 0xef,
+	0x78, 0x3d, 0x1a, 0x6c, 0x7b, 0xc2, 0x23, 0x5f, 0xc0, 0x6c, 0xe0, 0x09, 0xcf, 0xd2, 0x9a, 0xd5,
+	0x55, 0x63, 0xe3, 0xe2, 0x24, 0x6d, 0xa1, 0xb6, 0x26, 0x3f, 0xb7, 0x23, 0x91, 0x8c, 0x1c, 0x54,
+	0x5f, 0xf9, 0x12, 0xf4, 0x02, 0x22, 0x26, 0x54, 0x5f, 0xd0, 0x11, 0x16, 0xad, 0xee, 0x48, 0x91,
+	0x9c, 0x86, 0xb9, 0x81, 0x17, 0xf6, 0xa9, 0x35, 0xd3, 0xd4, 0x56, 0xeb, 0x4e, 0xb6, 0xb8, 0x31,
+	0x73, 0x5d, 0x6b, 0xfd, 0xac, 0x41, 0x63, 0x8b, 0x47, 0xc2, 0x63, 0x11, 0x4d, 0x64, 0x24, 0xc9,
+	0x0a, 0x2c, 0x60, 0x53, 0xf8, 0x3c, 0xcc, 0x29, 0x8a, 0x35, 0x39, 0x07, 0x7a, 0x97, 0xa7, 0xc2,
+	0x95, 0xc1, 0x45, 0xae, 0x39, 0x67, 0x41, 0x02, 0x68, 0x78, 0x09, 0x16, 0xfd, 0x03, 0xa6, 0x4c,
+	0xa3, 0x8a, 0x1a, 0x0d, 0x7f, 0x82, 0x7f, 0x19, 0xe6, 0x91, 0x83, 0xc5, 0xd6, 0x2c, 0xd2, 0xd7,
+	0xe4, 0xf2, 0x7e, 0xdc, 0xfa, 0x55, 0x03, 0xe3, 0x29, 0x0f, 0xfb, 0x3d, 0xfa, 0x1d, 0xef, 0x47,
+	0x82, 0x9c, 0x07, 0xe8, 0x49, 0xc1, 0x8d, 0x3d, 0xd1, 0xcd, 0x5d, 0xd1, 0x11, 0x69, 0x7b, 0xa2,
+	0x4b, 0x2e, 0xc3, 0xd2, 0x00, 0xb5, 0xdd, 0xb4, 0xbf, 0x97, 0xe9, 0xcc, 0xa0, 0x4e, 0x23, 0x83,
+	0x1f, 0xf7, 0xf7, 0x50, 0xef, 0x1c, 0xe8, 0x09, 0xf5, 0x02, 0x97, 0x47, 0xe1, 0x08, 0x3d, 0x5a,
+	0x70, 0x16, 0x24, 0xf0, 0x30, 0x0a, 0x47, 0x84, 0xc0, 0xac, 0x18, 0xc5, 0x34, 0xf7, 0x04, 0x65,
+	0x62, 0x15, 0xa9, 0xb1, 0xe6, 0x9a, 0xd5, 0x55, 0xdd, 0x29, 0x32, 0xf5, 0xc7, 0x9c, 0x12, 0xac,
+	0xc7, 0x31, 0xf5, 0x65, 0x60, 0x59, 0xcf, 0xeb, 0xd0, 0xdc, 0xbd, 0x6c, 0x41, 0xae, 0xc0, 0x29,
+	0x14, 0xdc, 0xb8, 0x1f, 0x86, 0x6e, 0xcc, 0x43, 0xe6, 0x8f, 0x72, 0xe7, 0x96, 0xf0, 0x47, 0xbb,
+	0x1f, 0x86, 0x6d, 0x84, 0xe5, 0x6e, 0x3e, 0xef, 0xf5, 0xbc, 0x28, 0xb0, 0xaa, 0xd9, 0x6e, 0xf9,
+	0x52, 0xfa, 0xe6, 0x25, 0x9d, 0xd4, 0x9a, 0x45, 0x18, 0x65, 0x72, 0x01, 0x8c, 0x21, 0x4f, 0x5e,
+	0xb0, 0xa8, 0xe3, 0x06, 0x2c, 0xb1, 0xe6, 0x90, 0x13, 0x72, 0x68, 0x9b, 0x25, 0xd2, 0xa1, 0x54,
+	0x04, 0x2c, 0xb2, 0x6a, 0x78, 0xd2, 0x6c, 0x21, 0x2b, 0x42, 0x88, 0x91, 0x35, 0x8f, 0x98, 0x14,
+	0xc9, 0x37, 0x30, 0x27, 0x53, 0x24, 0x27, 0x94, 0x2c, 0xb4, 0xcb, 0x53, 0x13, 0x4a, 0x3d, 0x24,
+	0x36, 0x58, 0x9a, 0x55, 0x5b, 0x66, 0x44, 0xbe, 0x82, 0x59, 0x1a, 0x0d, 0xe4, 0x60, 0x92, 0xc6,
+	0x97, 0x4e, 0x32, 0xbe, 0x1d, 0x0d, 0x72, 0x5b, 0x34, 0x21, 0x0e, 0xe4, 0xf9, 0x71, 0x31, 0x95,
+	0x72, 0x30, 0x49, 0x8e, 0xab, 0x27, 0x71, 0x28, 0x55, 0x91, 0x73, 0xd5, 0x07, 0x0a, 0x44, 0x6c,
+	0x80, 0x38, 0x61, 0x03, 0x16, 0xd2, 0x0e, 0x0d, 0xac, 0xff, 0xe2, 0x29, 0x15, 0x84, 0x7c, 0x0a,
+	0xa7, 0xbd, 0x30, 0xe4, 0x43, 0x37, 0xa2, 0x43, 0xb7, 0xc0, 0x53, 0xeb, 0x0c, 0x6a, 0x12, 0xfc,
+	0xb7, 0x43, 0x87, 0xed, 0xe2, 0xcf, 0xca, 0x13, 0x80, 0xf2, 0xd4, 0x47, 0x34, 0xd4, 0x35, 0xb5,
+	0xa1, 0x0e, 0x0f, 0x78, 0xb5, 0xe0, 0x95, 0x6e, 0x93, 0x6d, 0x5a, 0xc4, 0xe3, 0x7d, 0x6d, 0xaa,
+	0xab, 0x86, 0xcf, 0xe0, 0xd4, 0xa1, 0x20, 0x1c, 0x41, 0xb0, 0x3e, 0xe9, 0xd6, 0xd4, 0xc0, 0x55,
+	0x18, 0xd4, 0x11, 0xf0, 0x7b, 0x0d, 0x1a, 0x13, 0x57, 0x92, 0x6c, 0xd1, 0x98, 0x07, 0x6e, 0x9f,
+	0x05, 0x39, 0x79, 0x2d, 0xe6, 0xc1, 0x13, 0x16, 0x90, 0x6f, 0x01, 0x8a, 0x66, 0x4e, 0xad, 0x19,
+	0xcc, 0xdc, 0xff, 0x4f, 0xb8, 0xdc, 0xca, 0x48, 0xe4, 0x79, 0x53, 0xcc, 0x09, 0x83, 0x33, 0x4a,
+	0x97, 0x78, 0x7d, 0xd1, 0x75, 0x7d, 0x1e, 0x3d, 0x67, 0x1d, 0x6c, 0x04, 0x63, 0xe3, 0xf3, 0x93,
+	0x88, 0xef, 0x1f, 0xb4, 0xd1, 0x66, 0x5f, 0x74, 0xb7, 0xd0, 0x2c, 0xdb, 0xe1, 0x3f, 0xec, 0xf0,
+	0x1f, 0xf2, 0x10, 0xea, 0x38, 0x73, 0xb2, 0xaa, 0x39, 0x28, 0xfa, 0x4f, 0x4e, 0xda, 0xe0, 0x1e,
+	0x4f, 0x45, 0x16, 0xb0, 0xdc, 0x75, 0xa3, 0x5b, 0x22, 0xe4, 0x01, 0x18, 0x79, 0x15, 0xe3, 0xb4,
+	0x6e, 0xbc, 0x3f, 0x12, 0x99, 0x65, 0x39, 0xb7, 0x61, 0x50, 0x00, 0xe4, 0x2c, 0x2c, 0xe4, 0x23,
+	0xd1, 0xcf, 0xab, 0x77, 0x3e, 0x9b, 0x89, 0x3e, 0xb9, 0x98, 0x7b, 0x1e, 0x51, 0x21, 0xbb, 0x3c,
+	0x2f, 0x59, 0xf4, 0x65, 0x27, 0x83, 0x0a, 0xeb, 0x98, 0x05, 0xd6, 0x72, 0x69, 0xdd, 0x66, 0x81,
+	0x9c, 0xe5, 0x52, 0x8c, 0xbc, 0x1e, 0xb5, 0xac, 0x6c, 0x96, 0x1f, 0xac, 0x57, 0x9e, 0xc1, 0xd2,
+	0x54, 0x76, 0xfe, 0x7d, 0x9d, 0xcb, 0x2e, 0x55, 0xcb, 0xf5, 0x0e, 0x58, 0xc7, 0x25, 0xe8, 0x43,
+	0x6e, 0xa7, 0x95, 0x9b, 0x60, 0x4e, 0xe7, 0xe1, 0x83, 0xda, 0xe6, 0x29, 0x2c, 0x4d, 0xc5, 0xfd,
+	0x08, 0xf3, 0xab, 0x93, 0x67, 0x5c, 0x3e, 0xe6, 0xce, 0x55, 0x5b, 0xe6, 0x2e, 0x34, 0x26, 0x9e,
+	0x5f, 0xc7, 0x77, 0xcc, 0x79, 0x80, 0x4e, 0xe2, 0xf9, 0xd4, 0x15, 0xac, 0x47, 0x2d, 0x68, 0x6a,
+	0xab, 0x55, 0x47, 0x47, 0x64, 0x97, 0xf5, 0x68, 0xeb, 0x11, 0x18, 0xca, 0x1b, 0x8c, 0xfc, 0x0f,
+	0x74, 0x99, 0x9b, 0x34, 0xf6, 0xfc, 0x83, 0x2b, 0xa5, 0x04, 0xe4, 0x85, 0x80, 0x99, 0xcc, 0x8e,
+	0x89, 0xb2, 0x3c, 0x8e, 0x17, 0x86, 0xf9, 0xbd, 0x26, 0xc5, 0xd6, 0x23, 0x80, 0xf2, 0x5d, 0x76,
+	0xbc, 0x63, 0x17, 0x00, 0xf2, 0x6b, 0xcd, 0x1d, 0x5c, 0x43, 0xc7, 0xea, 0xf7, 0x2a, 0x8e, 0x9e,
+	0x63, 0x4f, 0xaf, 0xa9, 0x2f, 0x14, 0x07, 0x0c, 0xe5, 0xb1, 0xf6, 0x71, 0x38, 0xbf, 0x07, 0x72,
+	0xf8, 0xe1, 0xf6, 0x71, 0xa8, 0x5b, 0x50, 0x57, 0x1f, 0x71, 0x32, 0x6e, 0xf9, 0x9b, 0x4a, 0x96,
+	0x17, 0xca, 0xad, 0x1b, 0x60, 0x4e, 0x3f, 0xd2, 0xa4, 0x9e, 0xcf, 0xc3, 0x14, 0xf5, 0x1a, 0x0e,
+	0xca, 0x12, 0x4b, 0xf8, 0x30, 0xc5, 0x98, 0x37, 0x1c, 0x94, 0xaf, 0x0c, 0x41, 0x2f, 0xde, 0xfe,
+	0x04, 0xa0, 0x96, 0x35, 0xba, 0x59, 0x91, 0x72, 0x56, 0x16, 0xa6, 0x46, 0x16, 0x60, 0x56, 0x66,
+	0xd6, 0xac, 0x4a, 0x49, 0x46, 0xcf, 0x34, 0xe4, 0xff, 0x4d, 0x21, 0x3c, 0xbf, 0x6b, 0xd6, 0xc9,
+	0x3c, 0x54, 0x1f, 0xf0, 0x8e, 0xd9, 0x20, 0x4b, 0x60, 0x28, 0x81, 0x30, 0x17, 0x89, 0x0e, 0x73,
+	0xe8, 0xbe, 0xb9, 0x44, 0x1a, 0xa0, 0x67, 0x2e, 0xee, 0x8a, 0x91, 0x69, 0xde, 0xba, 0xfe, 0xfa,
+	0xad, 0x5d, 0x79, 0xf3, 0xd6, 0xae, 0xbc, 0x7b, 0x6b, 0x6b, 0x3f, 0x8d, 0x6d, 0xed, 0xb7, 0xb1,
+	0xad, 0xbd, 0x1a, 0xdb, 0xda, 0xeb, 0xb1, 0xad, 0xfd, 0x39, 0xb6, 0xb5, 0xbf, 0xc6, 0x76, 0xe5,
+	0xdd, 0xd8, 0xd6, 0x7e, 0xd9, 0xb7, 0x2b, 0xaf, 0xf6, 0x6d, 0xed, 0xf5, 0xbe, 0x5d, 0x79, 0xb3,
+	0x6f, 0x57, 0xf6, 0x6a, 0xf8, 0x84, 0xfb, 0xec, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x13, 0xc0,
+	0x3a, 0xd7, 0x38, 0x0d, 0x00, 0x00,
 }
 
 func (x PodAction) String() string {
@@ -1591,12 +1707,6 @@ func (this *PodCmd) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
-		return false
-	}
-	if this.Namespace != that1.Namespace {
-		return false
-	}
-	if this.Name != that1.Name {
 		return false
 	}
 	if this.Action != that1.Action {
@@ -1895,6 +2005,17 @@ func (this *VolumeMount) Equal(that interface{}) bool {
 	if this.ReadOnly != that1.ReadOnly {
 		return false
 	}
+	if this.Type != that1.Type {
+		return false
+	}
+	if len(this.Options) != len(that1.Options) {
+		return false
+	}
+	for i := range this.Options {
+		if this.Options[i] != that1.Options[i] {
+			return false
+		}
+	}
 	return true
 }
 func (this *ContainerSpec) Equal(that interface{}) bool {
@@ -1974,6 +2095,9 @@ func (this *ContainerSpec) Equal(that interface{}) bool {
 	if this.Privileged != that1.Privileged {
 		return false
 	}
+	if this.AllowNewPrivileges != that1.AllowNewPrivileges {
+		return false
+	}
 	return true
 }
 func (this *CreateOptions) Equal(that interface{}) bool {
@@ -1993,6 +2117,9 @@ func (this *CreateOptions) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
+		return false
+	}
+	if this.PodUid != that1.PodUid {
 		return false
 	}
 	if len(this.Containers) != len(that1.Containers) {
@@ -2027,6 +2154,18 @@ func (this *CreateOptions) Equal(that interface{}) bool {
 			return false
 		}
 	}
+	if this.HostIpc != that1.HostIpc {
+		return false
+	}
+	if this.HostNetwork != that1.HostNetwork {
+		return false
+	}
+	if this.HostPid != that1.HostPid {
+		return false
+	}
+	if this.Hostname != that1.Hostname {
+		return false
+	}
 	return true
 }
 func (this *DeleteOptions) Equal(that interface{}) bool {
@@ -2046,6 +2185,9 @@ func (this *DeleteOptions) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
+		return false
+	}
+	if this.PodUid != that1.PodUid {
 		return false
 	}
 	if this.GraceTime != that1.GraceTime {
@@ -2072,6 +2214,15 @@ func (this *ListOptions) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
+	if this.Namespace != that1.Namespace {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if this.All != that1.All {
+		return false
+	}
 	return true
 }
 func (this *LogOptions) Equal(that interface{}) bool {
@@ -2091,6 +2242,9 @@ func (this *LogOptions) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
+		return false
+	}
+	if this.PodUid != that1.PodUid {
 		return false
 	}
 	if that1.Options == nil {
@@ -2147,6 +2301,9 @@ func (this *ExecOptions) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
+	if this.PodUid != that1.PodUid {
+		return false
+	}
 	if that1.Options == nil {
 		if this.Options != nil {
 			return false
@@ -2199,6 +2356,9 @@ func (this *PortForwardOptions) Equal(that interface{}) bool {
 	if that1 == nil {
 		return this == nil
 	} else if this == nil {
+		return false
+	}
+	if this.PodUid != that1.PodUid {
 		return false
 	}
 	if that1.Options == nil {
@@ -2300,10 +2460,8 @@ func (this *PodCmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 15)
+	s := make([]string, 0, 13)
 	s = append(s, "&connectivity.PodCmd{")
-	s = append(s, "Namespace: "+fmt.Sprintf("%#v", this.Namespace)+",\n")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
 	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	if this.Options != nil {
 		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
@@ -2414,11 +2572,13 @@ func (this *VolumeMount) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 9)
 	s = append(s, "&connectivity.VolumeMount{")
 	s = append(s, "MountPath: "+fmt.Sprintf("%#v", this.MountPath)+",\n")
 	s = append(s, "VolumeSubPath: "+fmt.Sprintf("%#v", this.VolumeSubPath)+",\n")
 	s = append(s, "ReadOnly: "+fmt.Sprintf("%#v", this.ReadOnly)+",\n")
+	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
+	s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2426,7 +2586,7 @@ func (this *ContainerSpec) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 15)
+	s := make([]string, 0, 16)
 	s = append(s, "&connectivity.ContainerSpec{")
 	s = append(s, "Image: "+fmt.Sprintf("%#v", this.Image)+",\n")
 	s = append(s, "ImagePullPolicy: "+fmt.Sprintf("%#v", this.ImagePullPolicy)+",\n")
@@ -2475,6 +2635,7 @@ func (this *ContainerSpec) GoString() string {
 		s = append(s, "VolumeMounts: "+mapStringForVolumeMounts+",\n")
 	}
 	s = append(s, "Privileged: "+fmt.Sprintf("%#v", this.Privileged)+",\n")
+	s = append(s, "AllowNewPrivileges: "+fmt.Sprintf("%#v", this.AllowNewPrivileges)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2482,8 +2643,9 @@ func (this *CreateOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
+	s := make([]string, 0, 13)
 	s = append(s, "&connectivity.CreateOptions{")
+	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	keysForContainers := make([]string, 0, len(this.Containers))
 	for k, _ := range this.Containers {
 		keysForContainers = append(keysForContainers, k)
@@ -2536,6 +2698,10 @@ func (this *CreateOptions) GoString() string {
 	if this.VolumeData != nil {
 		s = append(s, "VolumeData: "+mapStringForVolumeData+",\n")
 	}
+	s = append(s, "HostIpc: "+fmt.Sprintf("%#v", this.HostIpc)+",\n")
+	s = append(s, "HostNetwork: "+fmt.Sprintf("%#v", this.HostNetwork)+",\n")
+	s = append(s, "HostPid: "+fmt.Sprintf("%#v", this.HostPid)+",\n")
+	s = append(s, "Hostname: "+fmt.Sprintf("%#v", this.Hostname)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2543,8 +2709,9 @@ func (this *DeleteOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&connectivity.DeleteOptions{")
+	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	s = append(s, "GraceTime: "+fmt.Sprintf("%#v", this.GraceTime)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2553,8 +2720,11 @@ func (this *ListOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 4)
+	s := make([]string, 0, 7)
 	s = append(s, "&connectivity.ListOptions{")
+	s = append(s, "Namespace: "+fmt.Sprintf("%#v", this.Namespace)+",\n")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	s = append(s, "All: "+fmt.Sprintf("%#v", this.All)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2562,8 +2732,9 @@ func (this *LogOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&connectivity.LogOptions{")
+	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	if this.Options != nil {
 		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
 	}
@@ -2582,8 +2753,9 @@ func (this *ExecOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&connectivity.ExecOptions{")
+	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	if this.Options != nil {
 		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
 	}
@@ -2602,8 +2774,9 @@ func (this *PortForwardOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&connectivity.PortForwardOptions{")
+	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
 	if this.Options != nil {
 		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
 	}
@@ -2680,20 +2853,8 @@ func (m *PodCmd) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Namespace) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Namespace)))
-		i += copy(dAtA[i:], m.Namespace)
-	}
-	if len(m.Name) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Name)))
-		i += copy(dAtA[i:], m.Name)
-	}
 	if m.Action != 0 {
-		dAtA[i] = 0x20
+		dAtA[i] = 0x8
 		i++
 		i = encodeVarintCmdDetail(dAtA, i, uint64(m.Action))
 	}
@@ -2943,6 +3104,27 @@ func (m *VolumeMount) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i++
 	}
+	if len(m.Type) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Type)))
+		i += copy(dAtA[i:], m.Type)
+	}
+	if len(m.Options) > 0 {
+		for _, s := range m.Options {
+			dAtA[i] = 0x2a
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
+		}
+	}
 	return i, nil
 }
 
@@ -3114,6 +3296,18 @@ func (m *ContainerSpec) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i++
 	}
+	if m.AllowNewPrivileges {
+		dAtA[i] = 0xb0
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.AllowNewPrivileges {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
 	return i, nil
 }
 
@@ -3132,9 +3326,15 @@ func (m *CreateOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PodUid) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
+		i += copy(dAtA[i:], m.PodUid)
+	}
 	if len(m.Containers) > 0 {
 		for k, _ := range m.Containers {
-			dAtA[i] = 0xa
+			dAtA[i] = 0x12
 			i++
 			v := m.Containers[k]
 			msgSize := 0
@@ -3162,7 +3362,7 @@ func (m *CreateOptions) MarshalTo(dAtA []byte) (int, error) {
 	}
 	if len(m.ImagePullAuthConfig) > 0 {
 		for k, _ := range m.ImagePullAuthConfig {
-			dAtA[i] = 0x12
+			dAtA[i] = 0x1a
 			i++
 			v := m.ImagePullAuthConfig[k]
 			byteSize := 0
@@ -3228,6 +3428,50 @@ func (m *CreateOptions) MarshalTo(dAtA []byte) (int, error) {
 			}
 		}
 	}
+	if m.HostIpc {
+		dAtA[i] = 0xa8
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.HostIpc {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.HostNetwork {
+		dAtA[i] = 0xb0
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.HostNetwork {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.HostPid {
+		dAtA[i] = 0xb8
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.HostPid {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if len(m.Hostname) > 0 {
+		dAtA[i] = 0xc2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Hostname)))
+		i += copy(dAtA[i:], m.Hostname)
+	}
 	return i, nil
 }
 
@@ -3246,8 +3490,14 @@ func (m *DeleteOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PodUid) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
+		i += copy(dAtA[i:], m.PodUid)
+	}
 	if m.GraceTime != 0 {
-		dAtA[i] = 0x8
+		dAtA[i] = 0x50
 		i++
 		i = encodeVarintCmdDetail(dAtA, i, uint64(m.GraceTime))
 	}
@@ -3269,6 +3519,28 @@ func (m *ListOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Namespace) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Namespace)))
+		i += copy(dAtA[i:], m.Namespace)
+	}
+	if len(m.Name) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
+	}
+	if m.All {
+		dAtA[i] = 0x18
+		i++
+		if m.All {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
 	return i, nil
 }
 
@@ -3287,6 +3559,12 @@ func (m *LogOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PodUid) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
+		i += copy(dAtA[i:], m.PodUid)
+	}
 	if m.Options != nil {
 		nn14, err := m.Options.MarshalTo(dAtA[i:])
 		if err != nil {
@@ -3300,7 +3578,7 @@ func (m *LogOptions) MarshalTo(dAtA []byte) (int, error) {
 func (m *LogOptions_OptionsV1) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.OptionsV1 != nil {
-		dAtA[i] = 0xa
+		dAtA[i] = 0x52
 		i++
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.OptionsV1)))
 		i += copy(dAtA[i:], m.OptionsV1)
@@ -3322,6 +3600,12 @@ func (m *ExecOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PodUid) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
+		i += copy(dAtA[i:], m.PodUid)
+	}
 	if m.Options != nil {
 		nn15, err := m.Options.MarshalTo(dAtA[i:])
 		if err != nil {
@@ -3335,7 +3619,7 @@ func (m *ExecOptions) MarshalTo(dAtA []byte) (int, error) {
 func (m *ExecOptions_OptionsV1) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.OptionsV1 != nil {
-		dAtA[i] = 0xa
+		dAtA[i] = 0x52
 		i++
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.OptionsV1)))
 		i += copy(dAtA[i:], m.OptionsV1)
@@ -3357,6 +3641,12 @@ func (m *PortForwardOptions) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.PodUid) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
+		i += copy(dAtA[i:], m.PodUid)
+	}
 	if m.Options != nil {
 		nn16, err := m.Options.MarshalTo(dAtA[i:])
 		if err != nil {
@@ -3370,7 +3660,7 @@ func (m *PortForwardOptions) MarshalTo(dAtA []byte) (int, error) {
 func (m *PortForwardOptions_OptionsV1) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.OptionsV1 != nil {
-		dAtA[i] = 0xa
+		dAtA[i] = 0x52
 		i++
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.OptionsV1)))
 		i += copy(dAtA[i:], m.OptionsV1)
@@ -3453,14 +3743,6 @@ func (m *PodCmd) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Namespace)
-	if l > 0 {
-		n += 1 + l + sovCmdDetail(uint64(l))
-	}
-	l = len(m.Name)
-	if l > 0 {
-		n += 1 + l + sovCmdDetail(uint64(l))
-	}
 	if m.Action != 0 {
 		n += 1 + sovCmdDetail(uint64(m.Action))
 	}
@@ -3627,6 +3909,16 @@ func (m *VolumeMount) Size() (n int) {
 	if m.ReadOnly {
 		n += 2
 	}
+	l = len(m.Type)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	if len(m.Options) > 0 {
+		for _, s := range m.Options {
+			l = len(s)
+			n += 1 + l + sovCmdDetail(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -3703,6 +3995,9 @@ func (m *ContainerSpec) Size() (n int) {
 	if m.Privileged {
 		n += 3
 	}
+	if m.AllowNewPrivileges {
+		n += 3
+	}
 	return n
 }
 
@@ -3712,6 +4007,10 @@ func (m *CreateOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.PodUid)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
 	if len(m.Containers) > 0 {
 		for k, v := range m.Containers {
 			_ = k
@@ -3758,6 +4057,19 @@ func (m *CreateOptions) Size() (n int) {
 			n += mapEntrySize + 1 + sovCmdDetail(uint64(mapEntrySize))
 		}
 	}
+	if m.HostIpc {
+		n += 3
+	}
+	if m.HostNetwork {
+		n += 3
+	}
+	if m.HostPid {
+		n += 3
+	}
+	l = len(m.Hostname)
+	if l > 0 {
+		n += 2 + l + sovCmdDetail(uint64(l))
+	}
 	return n
 }
 
@@ -3767,6 +4079,10 @@ func (m *DeleteOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.PodUid)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
 	if m.GraceTime != 0 {
 		n += 1 + sovCmdDetail(uint64(m.GraceTime))
 	}
@@ -3779,6 +4095,17 @@ func (m *ListOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Namespace)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	if m.All {
+		n += 2
+	}
 	return n
 }
 
@@ -3788,6 +4115,10 @@ func (m *LogOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.PodUid)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
 	if m.Options != nil {
 		n += m.Options.Size()
 	}
@@ -3812,6 +4143,10 @@ func (m *ExecOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.PodUid)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
 	if m.Options != nil {
 		n += m.Options.Size()
 	}
@@ -3836,6 +4171,10 @@ func (m *PortForwardOptions) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.PodUid)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
 	if m.Options != nil {
 		n += m.Options.Size()
 	}
@@ -3909,8 +4248,6 @@ func (this *PodCmd) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PodCmd{`,
-		`Namespace:` + fmt.Sprintf("%v", this.Namespace) + `,`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
 		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
@@ -4038,6 +4375,8 @@ func (this *VolumeMount) String() string {
 		`MountPath:` + fmt.Sprintf("%v", this.MountPath) + `,`,
 		`VolumeSubPath:` + fmt.Sprintf("%v", this.VolumeSubPath) + `,`,
 		`ReadOnly:` + fmt.Sprintf("%v", this.ReadOnly) + `,`,
+		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
+		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4088,6 +4427,7 @@ func (this *ContainerSpec) String() string {
 		`Envs:` + mapStringForEnvs + `,`,
 		`VolumeMounts:` + mapStringForVolumeMounts + `,`,
 		`Privileged:` + fmt.Sprintf("%v", this.Privileged) + `,`,
+		`AllowNewPrivileges:` + fmt.Sprintf("%v", this.AllowNewPrivileges) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4137,10 +4477,15 @@ func (this *CreateOptions) String() string {
 	}
 	mapStringForVolumeData += "}"
 	s := strings.Join([]string{`&CreateOptions{`,
+		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Containers:` + mapStringForContainers + `,`,
 		`ImagePullAuthConfig:` + mapStringForImagePullAuthConfig + `,`,
 		`HostVolumes:` + mapStringForHostVolumes + `,`,
 		`VolumeData:` + mapStringForVolumeData + `,`,
+		`HostIpc:` + fmt.Sprintf("%v", this.HostIpc) + `,`,
+		`HostNetwork:` + fmt.Sprintf("%v", this.HostNetwork) + `,`,
+		`HostPid:` + fmt.Sprintf("%v", this.HostPid) + `,`,
+		`Hostname:` + fmt.Sprintf("%v", this.Hostname) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4150,6 +4495,7 @@ func (this *DeleteOptions) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&DeleteOptions{`,
+		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`GraceTime:` + fmt.Sprintf("%v", this.GraceTime) + `,`,
 		`}`,
 	}, "")
@@ -4160,6 +4506,9 @@ func (this *ListOptions) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ListOptions{`,
+		`Namespace:` + fmt.Sprintf("%v", this.Namespace) + `,`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`All:` + fmt.Sprintf("%v", this.All) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4169,6 +4518,7 @@ func (this *LogOptions) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&LogOptions{`,
+		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
 	}, "")
@@ -4189,6 +4539,7 @@ func (this *ExecOptions) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ExecOptions{`,
+		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
 	}, "")
@@ -4209,6 +4560,7 @@ func (this *PortForwardOptions) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PortForwardOptions{`,
+		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
 		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
 	}, "")
@@ -4336,70 +4688,6 @@ func (m *PodCmd) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Namespace = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Name = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
 			}
@@ -5171,6 +5459,70 @@ func (m *VolumeMount) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.ReadOnly = bool(v != 0)
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Type = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Options", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Options = append(m.Options, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -5829,6 +6181,26 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.Privileged = bool(v != 0)
+		case 22:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AllowNewPrivileges", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.AllowNewPrivileges = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -5883,6 +6255,38 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodUid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PodUid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Containers", wireType)
 			}
@@ -6011,7 +6415,7 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.Containers[mapkey] = mapvalue
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ImagePullAuthConfig", wireType)
 			}
@@ -6395,6 +6799,98 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.VolumeData[mapkey] = mapvalue
 			iNdEx = postIndex
+		case 21:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HostIpc", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.HostIpc = bool(v != 0)
+		case 22:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HostNetwork", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.HostNetwork = bool(v != 0)
+		case 23:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HostPid", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.HostPid = bool(v != 0)
+		case 24:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Hostname", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Hostname = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -6449,6 +6945,38 @@ func (m *DeleteOptions) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodUid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PodUid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field GraceTime", wireType)
 			}
@@ -6520,6 +7048,90 @@ func (m *ListOptions) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: ListOptions: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Namespace = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field All", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.All = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -6574,6 +7186,38 @@ func (m *LogOptions) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodUid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PodUid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OptionsV1", wireType)
 			}
@@ -6661,6 +7305,38 @@ func (m *ExecOptions) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodUid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PodUid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OptionsV1", wireType)
 			}
 			var byteLen int
@@ -6746,6 +7422,38 @@ func (m *PortForwardOptions) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodUid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PodUid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OptionsV1", wireType)
 			}

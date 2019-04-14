@@ -21,19 +21,13 @@ type fakeRuntime struct {
 	faulty bool
 }
 
-func (r *fakeRuntime) CreatePod(
-	namespace, name string,
-	containers map[string]*connectivity.ContainerSpec,
-	authConfig map[string]*criRuntime.AuthConfig,
-	volumeData map[string]*connectivity.NamedData,
-	hostVolumes map[string]string,
-) (*connectivity.Pod, error) {
+func (r *fakeRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
 
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: create pod")
 	}
 
-	return connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
+	return connectivity.NewPod(options.GetPodUid(), &criRuntime.PodSandboxStatus{
 		Metadata: &criRuntime.PodSandboxMetadata{
 			Namespace: "foo",
 			Name:      "bar",
@@ -41,12 +35,12 @@ func (r *fakeRuntime) CreatePod(
 	}, []*criRuntime.ContainerStatus{}), nil
 }
 
-func (r *fakeRuntime) DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *fakeRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: delete pod")
 	}
 
-	return connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
+	return connectivity.NewPod(options.GetPodUid(), &criRuntime.PodSandboxStatus{
 		Metadata: &criRuntime.PodSandboxMetadata{
 			Namespace: "foo",
 			Name:      "bar",
@@ -54,13 +48,13 @@ func (r *fakeRuntime) DeletePod(namespace, name string, options *connectivity.De
 	}, []*criRuntime.ContainerStatus{}), nil
 }
 
-func (r *fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, error) {
+func (r *fakeRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: list pod")
 	}
 
 	return []*connectivity.Pod{
-		connectivity.NewPod(namespace, name, &criRuntime.PodSandboxStatus{
+		connectivity.NewPod("", &criRuntime.PodSandboxStatus{
 			Metadata: &criRuntime.PodSandboxMetadata{
 				Namespace: "foo",
 				Name:      "bar",
@@ -69,7 +63,9 @@ func (r *fakeRuntime) ListPod(namespace, name string) ([]*connectivity.Pod, erro
 	}, nil
 }
 
-func (r *fakeRuntime) ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+func (r *fakeRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+	defer closeAllIfNotNil(stdout, stderr)
+
 	if r.faulty {
 		return fmt.Errorf("faulty: exec in container")
 	}
@@ -80,11 +76,12 @@ func (r *fakeRuntime) ExecInContainer(namespace, name, container string, stdin i
 	time.Sleep(time.Second)
 	_, _ = stdout.Write([]byte("bar"))
 
-	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
-func (r *fakeRuntime) AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+func (r *fakeRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+	defer closeAllIfNotNil(stdout, stderr)
+
 	if r.faulty {
 		return fmt.Errorf("faulty: attach container")
 	}
@@ -94,12 +91,12 @@ func (r *fakeRuntime) AttachContainer(namespace, name, container string, stdin i
 	_, _ = stderr.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = stdout.Write([]byte("bar"))
-
-	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
-func (r *fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error {
+func (r *fakeRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+	defer closeAllIfNotNil(stdout, stderr)
+
 	if r.faulty {
 		return fmt.Errorf("faulty: get container logs")
 	}
@@ -109,12 +106,12 @@ func (r *fakeRuntime) GetContainerLogs(namespace, name string, stdout, stderr io
 	_, _ = stderr.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = stdout.Write([]byte("bar"))
-
-	closeAllIfNotNil(stdout, stderr)
 	return nil
 }
 
-func (r *fakeRuntime) PortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *fakeRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
+	defer closeAllIfNotNil(out)
+
 	if r.faulty {
 		return fmt.Errorf("faulty: port forward")
 	}
@@ -124,13 +121,15 @@ func (r *fakeRuntime) PortForward(namespace, name string, ports []int32, in io.R
 	_, _ = out.Write([]byte("foo"))
 	time.Sleep(time.Second)
 	_, _ = out.Write([]byte("bar"))
-
-	closeAllIfNotNil(out)
 	return nil
 }
 
-func (r *fakeRuntime) Version() (name, ver string) {
-	return "fake", "0.0.1"
+func (r *fakeRuntime) Name() string {
+	return "fake"
+}
+
+func (r *fakeRuntime) Version() string {
+	return "0.0.0"
 }
 
 func closeAllIfNotNil(c ...io.Closer) {

@@ -8,11 +8,13 @@ replace (
 	github.com/PuerkitoBio/purell => github.com/PuerkitoBio/purell v1.1.1
 	github.com/blang/semver => github.com/blang/semver v3.5.1+incompatible
 	github.com/boltdb/bolt => github.com/boltdb/bolt v1.3.1
+	github.com/containerd/containerd => github.com/containerd/containerd v1.2.6
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.6.0
+	github.com/containers/libpod => github.com/containers/libpod v1.1.2
 	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.2.2
-	github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
-	github.com/docker/docker => github.com/docker/engine v0.0.0-20190327083406-200b524eff60
-	github.com/docker/docker/builder/dockerfile/parser v1.13.1 => github.com/moby/buildkit v0.4.0
+	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
+	github.com/docker/docker => github.com/docker/engine v0.0.0-20190408150954-50ebe4562dfc
+	github.com/docker/docker/builder/dockerfile/parser => github.com/moby/buildkit v0.4.0
 	github.com/docker/spdystream => github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
 	github.com/elazarl/goproxy => github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.0+incompatible
@@ -53,7 +55,7 @@ replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/client_model => github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 	github.com/prometheus/procfs => github.com/prometheus/procfs v0.0.0-20190209105433-f8d8b3f739bd
-	github.com/renstrom/dedent v1.1.0 => github.com/lithammer/dedent v1.1.0
+	github.com/renstrom/dedent => github.com/lithammer/dedent v1.1.0
 	github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.0
 	github.com/seccomp/libseccomp-golang => github.com/seccomp/libseccomp-golang v0.9.0
 	github.com/sigma/go-inotify => github.com/sigma/go-inotify v0.0.0-20181102212354-c87b6cf5033d
@@ -101,6 +103,7 @@ require (
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/checkpoint-restore/go-criu v0.0.0-20190109184317-bdb7599cd87b // indirect
 	github.com/containerd/cgroups v0.0.0-20190226200435-dbea6f2bd416 // indirect
+	github.com/containerd/containerd v1.3.0-0.20190212172151-f5b0fa220df8
 	github.com/containernetworking/cni v0.6.0 // indirect
 	github.com/containernetworking/plugins v0.7.5 // indirect
 	github.com/containers/buildah v1.7.1 // indirect
@@ -114,9 +117,10 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v1.13.1 // indirect
+	github.com/docker/docker v1.13.1
 	github.com/docker/docker-credential-helpers v0.6.1 // indirect
 	github.com/docker/docker/builder/dockerfile/parser v1.13.1 // indirect
+	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-metrics v0.0.0-20181218153428-b84716841b82 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
@@ -150,7 +154,7 @@ require (
 	github.com/klauspost/compress v1.4.1 // indirect
 	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.1 // indirect
-	github.com/lib/pq v1.0.0 // indirect
+	github.com/lib/pq v0.0.0-00010101000000-000000000000 // indirect
 	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mattn/go-shellwords v1.0.5 // indirect
 	github.com/mistifyio/go-zfs v2.1.1+incompatible // indirect
@@ -172,7 +176,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/prometheus/procfs v0.0.0-20190209105433-f8d8b3f739bd // indirect
-	github.com/satori/go.uuid v1.2.0 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/seccomp/containers-golang v0.0.0-20190312124753-8ca8945ccf5f // indirect
 	github.com/seccomp/libseccomp-golang v0.9.0 // indirect
 	github.com/sigma/go-inotify v0.0.0-20181102212354-c87b6cf5033d // indirect
@@ -205,7 +209,7 @@ require (
 	k8s.io/client-go v2.0.0-alpha.0.0.20190228174230-b40b2a5939e4+incompatible
 	k8s.io/cloud-provider v0.0.0-20190325195930-a624236cb1f2 // indirect
 	k8s.io/csi-api v0.0.0-20190325194237-b07135bbe9d0 // indirect
-	k8s.io/klog v0.2.0
+	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30
 	k8s.io/kubernetes v1.13.5
 	k8s.io/utils v0.0.0-20190221042446-c2654d5206da

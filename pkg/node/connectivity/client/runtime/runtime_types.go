@@ -3,14 +3,17 @@ package runtime
 import (
 	"io"
 
+	"arhat.dev/aranya/pkg/node/connectivity"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
-
-	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 type Interface interface {
+	// Name the runtime name
+	Name() string
+	// Version the runtime version
+	Version() string
+
 	// CreatePod create a pod according to corev1.PodSpec
 	// steps:
 	//
@@ -18,21 +21,31 @@ type Interface interface {
 	// 		- create pod with `pause` container
 	// 		- TODO: create and start init containers
 	// 		- create and start containers
-	CreatePod(
-		namespace, name string,
-		containers map[string]*connectivity.ContainerSpec,
-		authConfig map[string]*criRuntime.AuthConfig,
-		volumeData map[string]*connectivity.NamedData,
-		hostVolumes map[string]string,
-	) (*connectivity.Pod, error)
+	CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error)
+	DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error)
+	ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error)
 
-	DeletePod(namespace, name string, options *connectivity.DeleteOptions) (*connectivity.Pod, error)
-	ListPod(namespace, name string) ([]*connectivity.Pod, error)
+	ExecInContainer(
+		podUID, container string,
+		stdin io.Reader, stdout, stderr io.WriteCloser,
+		resizeCh <-chan remotecommand.TerminalSize,
+		command []string, tty bool,
+	) error
 
-	ExecInContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error
-	AttachContainer(namespace, name, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error
-	GetContainerLogs(namespace, name string, stdout, stderr io.WriteCloser, options *corev1.PodLogOptions) error
-	PortForward(namespace, name string, ports []int32, in io.Reader, out io.WriteCloser) error
+	AttachContainer(
+		podUID, container string,
+		stdin io.Reader, stdout, stderr io.WriteCloser,
+		resizeCh <-chan remotecommand.TerminalSize,
+	) error
 
-	Version() (name string, version string)
+	GetContainerLogs(
+		podUID string, options *corev1.PodLogOptions,
+		stdout, stderr io.WriteCloser,
+	) error
+
+	PortForward(
+		podUID string,
+		ports []int32,
+		in io.Reader, out io.WriteCloser,
+	) error
 }

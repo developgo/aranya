@@ -62,15 +62,18 @@ func NewPodCreateCmd(
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: pod.Namespace,
-				Name:      pod.Name,
-				Action:    Create,
+				Action: Create,
 				Options: &PodCmd_CreateOptions{
 					CreateOptions: &CreateOptions{
+						PodUid:              string(pod.UID),
 						Containers:          containers,
 						ImagePullAuthConfig: authConfigBytes,
 						VolumeData:          actualVolumeData,
 						HostVolumes:         hostVolume,
+						HostNetwork:         pod.Spec.HostNetwork,
+						HostIpc:             pod.Spec.HostIPC,
+						HostPid:             pod.Spec.HostPID,
+						Hostname:            pod.Spec.Hostname,
 					},
 				},
 			},
@@ -78,15 +81,14 @@ func NewPodCreateCmd(
 	}
 }
 
-func NewPodDeleteCmd(namespace, name string, graceTime time.Duration) *Cmd {
+func NewPodDeleteCmd(podUID string, graceTime time.Duration) *Cmd {
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    Delete,
+				Action: Delete,
 				Options: &PodCmd_DeleteOptions{
 					DeleteOptions: &DeleteOptions{
+						PodUid:    podUID,
 						GraceTime: int64(graceTime),
 					},
 				},
@@ -95,32 +97,33 @@ func NewPodDeleteCmd(namespace, name string, graceTime time.Duration) *Cmd {
 	}
 }
 
-func NewPodListCmd(namespace, name string) *Cmd {
+func NewPodListCmd(namespace, name string, all bool) *Cmd {
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    List,
+				Action: List,
 				Options: &PodCmd_ListOptions{
-					ListOptions: &ListOptions{},
+					ListOptions: &ListOptions{
+						Namespace: namespace,
+						Name:      name,
+						All:       all,
+					},
 				},
 			},
 		},
 	}
 }
 
-func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) *Cmd {
+func NewContainerExecCmd(podUID string, options corev1.PodExecOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    Exec,
+				Action: Exec,
 				Options: &PodCmd_ExecOptions{
 					ExecOptions: &ExecOptions{
+						PodUid: podUID,
 						Options: &ExecOptions_OptionsV1{
 							OptionsV1: optionBytes,
 						},
@@ -131,17 +134,16 @@ func NewContainerExecCmd(namespace, name string, options corev1.PodExecOptions) 
 	}
 }
 
-func NewContainerAttachCmd(namespace, name string, options corev1.PodExecOptions) *Cmd {
+func NewContainerAttachCmd(podUID string, options corev1.PodExecOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    Attach,
+				Action: Attach,
 				Options: &PodCmd_ExecOptions{
 					ExecOptions: &ExecOptions{
+						PodUid: podUID,
 						Options: &ExecOptions_OptionsV1{
 							OptionsV1: optionBytes,
 						},
@@ -152,17 +154,16 @@ func NewContainerAttachCmd(namespace, name string, options corev1.PodExecOptions
 	}
 }
 
-func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *Cmd {
+func NewContainerLogCmd(podUID string, options corev1.PodLogOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    Log,
+				Action: Log,
 				Options: &PodCmd_LogOptions{
 					LogOptions: &LogOptions{
+						PodUid: podUID,
 						Options: &LogOptions_OptionsV1{
 							OptionsV1: optionBytes,
 						},
@@ -173,17 +174,16 @@ func NewContainerLogCmd(namespace, name string, options corev1.PodLogOptions) *C
 	}
 }
 
-func NewPortForwardCmd(namespace, name string, options corev1.PodPortForwardOptions) *Cmd {
+func NewPortForwardCmd(podUID string, options corev1.PodPortForwardOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
 	return &Cmd{
 		Cmd: &Cmd_PodCmd{
 			PodCmd: &PodCmd{
-				Namespace: namespace,
-				Name:      name,
-				Action:    PortForward,
+				Action: PortForward,
 				Options: &PodCmd_PortForwardOptions{
 					PortForwardOptions: &PortForwardOptions{
+						PodUid: podUID,
 						Options: &PortForwardOptions_OptionsV1{
 							OptionsV1: optionBytes,
 						},

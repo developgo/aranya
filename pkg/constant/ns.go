@@ -1,5 +1,5 @@
 package constant
 
 const (
-	ContainerNamespace = "aranya.arhat.dev"
+	ContainerManagementNamespace = "aranya.arhat.dev"
 )

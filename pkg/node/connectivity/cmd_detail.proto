@@ -44,13 +44,8 @@ enum PodAction {
 }
 
 message PodCmd {
-
-    // pod namespace
-    string namespace = 1;
-    // pod name
-    string name = 2;
     // action type
-    PodAction action = 4;
+    PodAction action = 1;
 
     // options for action
     oneof options {
@@ -88,6 +83,8 @@ message VolumeMount {
     string mount_path = 1;
     string volume_sub_path = 2;
     bool read_only = 3;
+    string type = 4;
+    repeated string options = 5;
 }
 
 message ContainerSpec {
@@ -95,9 +92,9 @@ message ContainerSpec {
     string image = 1;
     string image_pull_policy = 2;
 
-    // Command (ENTRYPOINT in docker)
+    // Command (ENTRYPOINT in Dockerfile)
     repeated string command = 3;
-    // Args (CMD in docker)
+    // Args (CMD in Dockerfile)
     repeated string args = 4;
 
     string working_dir = 5;
@@ -118,17 +115,21 @@ message ContainerSpec {
     // security opts
     //
     bool privileged = 21;
+    bool allow_new_privileges = 22;
 }
 
 message CreateOptions {
+    // kubernetes pod uid
+    string pod_uid = 1;
+
     // key: container name in the pod
     // value: container creation spec
-    map<string, ContainerSpec> containers = 1;
+    map<string, ContainerSpec> containers = 2;
 
     // key: image name
     // value: bytes of criRuntime.AuthConfig
     // used to pull private images
-    map<string, bytes> image_pull_auth_config = 2;
+    map<string, bytes> image_pull_auth_config = 3;
 
     //
     // Volumes
@@ -141,33 +142,54 @@ message CreateOptions {
     // value: data from {ConfigMap, Secret}
     // used to populate file(s) in container(s)
     map<string, NamedData> volume_data = 13;
+
+    // other options
+    bool host_ipc = 21;
+    bool host_network = 22;
+    bool host_pid = 23;
+    string hostname = 24;
 }
 
 message DeleteOptions {
-    int64 grace_time = 1;
+    // pods to delete
+    string pod_uid = 1;
+
+    int64 grace_time = 10;
 }
 
 message ListOptions {
+    // pod namespace
+    string namespace = 1;
+    // pod name
+    string name = 2;
+    // show all pods available
+    bool all = 3;
 }
 
 message LogOptions {
+    string pod_uid = 1;
+
     oneof options {
         // protobuf bytes of corev1.LogOptions
-        bytes options_v1 = 1;
+        bytes options_v1 = 10;
     }
 }
 
 message ExecOptions {
+    string pod_uid = 1;
+
     oneof options {
         // protobuf bytes of corev1.ExecOptions
-        bytes options_v1 = 1;
+        bytes options_v1 = 10;
     }
 }
 
 message PortForwardOptions {
+    string pod_uid = 1;
+
     oneof options {
         // protobuf bytes of corev1.PortForwardOptions
-        bytes options_v1 = 1;
+        bytes options_v1 = 10;
     }
 }
 

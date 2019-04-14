@@ -21,10 +21,8 @@ message Pod {
         repeated bytes v1alpha2 = 1;
     }
 
-    string namespace = 1;
-    string name = 2;
-    string uid = 3;
-    string ip = 4;
+    string uid = 1;
+    string ip = 2;
 
     oneof sandbox_status {
         bytes sandbox_v1alpha2 = 11;

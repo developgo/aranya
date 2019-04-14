@@ -20,8 +20,6 @@ func (m *Pod) GetResolvedKubePodStatus() (*kubeletContainer.PodStatus, error) {
 	}
 
 	return &kubeletContainer.PodStatus{
-		Namespace:         m.Namespace,
-		Name:              m.Name,
 		ID:                types.UID(m.Uid),
 		IP:                m.Ip,
 		ContainerStatuses: containerStatuses,

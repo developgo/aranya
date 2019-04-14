@@ -19,11 +19,11 @@ arhat-podman-grpc:
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
-.PHONY: arhat-containerd-grpc
-arhat-containerd-grpc:
+.PHONY: arhat-cri-grpc
+arhat-cri-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_containerd conn_grpc' \
+		-tags='rt_cri conn_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -32,6 +32,22 @@ arhat-fake-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_fake conn_grpc' \
+		-o $(BUILD_DIR)/$@ \
+		$(ARHAT_SRC)
+
+.PHONY: arhat-containerd-grpc
+arhat-containerd-grpc:
+	CGO_ENABLED=0 \
+	$(GOBUILD) \
+		-tags='rt_containerd conn_grpc' \
+		-o $(BUILD_DIR)/$@ \
+		$(ARHAT_SRC)
+
+.PHONY: arhat-docker-grpc
+arhat-docker-grpc:
+	CGO_ENABLED=0 \
+	$(GOBUILD) \
+		-tags='rt_docker conn_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -47,11 +63,11 @@ arhat-podman-mqtt:
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
-.PHONY: arhat-containerd-mqtt
-arhat-containerd-mqtt:
+.PHONY: arhat-cri-mqtt
+arhat-cri-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_containerd conn_mqtt' \
+		-tags='rt_cri conn_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -60,5 +76,21 @@ arhat-fake-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
 		-tags='rt_fake conn_mqtt' \
+		-o $(BUILD_DIR)/$@ \
+		$(ARHAT_SRC)
+
+.PHONY: arhat-containerd-mqtt
+arhat-containerd-mqtt:
+	CGO_ENABLED=0 \
+	$(GOBUILD) \
+		-tags='rt_containerd conn_mqtt' \
+		-o $(BUILD_DIR)/$@ \
+		$(ARHAT_SRC)
+
+.PHONY: arhat-docker-mqtt
+arhat-docker-mqtt:
+	CGO_ENABLED=0 \
+	$(GOBUILD) \
+		-tags='rt_docker conn_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)

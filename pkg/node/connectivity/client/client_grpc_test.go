@@ -123,33 +123,32 @@ func TestNewGrpcClient(t *testing.T) {
 		createCmd := connectivity.NewPodCreateCmd(podReq, nil, nil, nil, nil)
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			createCmd,
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			connectivity.NewPodListCmd(podReq.Namespace, podReq.Name),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
+			connectivity.NewPodListCmd(podReq.Namespace, podReq.Name, false),
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
-			connectivity.NewPodDeleteCmd(podReq.Namespace, podReq.Name, time.Second),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(podReq.Namespace, podReq.Name, podStatus, nil)))
+			connectivity.NewPodDeleteCmd(string(podReq.UID), time.Second),
+			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			connectivity.NewPortForwardCmd(podReq.Namespace, podReq.Name,
-				corev1.PodPortForwardOptions{Ports: []int32{2048}}),
+			connectivity.NewPortForwardCmd(string(podReq.UID), corev1.PodPortForwardOptions{Ports: []int32{2048}}),
 			expectedDataMsgList())
 
 		execOptions := corev1.PodExecOptions{Stdin: true, Stdout: true, Stderr: true, TTY: true, Container: "", Command: []string{}}
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			connectivity.NewContainerExecCmd(podReq.Namespace, podReq.Name, execOptions),
+			connectivity.NewContainerExecCmd(string(podReq.UID), execOptions),
 			expectedDataMsgList())
 
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			connectivity.NewContainerAttachCmd(podReq.Namespace, podReq.Name, execOptions),
+			connectivity.NewContainerAttachCmd(string(podReq.UID), execOptions),
 			expectedDataMsgList())
 
 		logOptions := corev1.PodLogOptions{Container: "", Follow: true, Previous: true, Timestamps: true}
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			connectivity.NewContainerLogCmd(podReq.Namespace, podReq.Name, logOptions),
+			connectivity.NewContainerLogCmd(string(podReq.UID), logOptions),
 			expectedDataMsgList())
 
 		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerInputCmd(0, []byte("foo")))
@@ -221,8 +220,6 @@ func assertMsgEqual(t *testing.T, expectedMsg, msg connectivity.Msg) {
 	} else {
 		assert.NotNil(t, msg.GetPod())
 		// assert.True(t, expectedMsg.GetPod().Equal(msg.GetPod()))
-		assert.Equal(t, expectedMsg.GetPod().GetNamespace(), msg.GetPod().GetNamespace())
-		assert.Equal(t, expectedMsg.GetPod().GetName(), msg.GetPod().GetName())
 		assert.Equal(t, expectedMsg.GetPod().GetUid(), msg.GetPod().GetUid())
 		assert.Equal(t, expectedMsg.GetPod().GetIp(), msg.GetPod().GetIp())
 	}

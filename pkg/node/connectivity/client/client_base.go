@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	goruntime "runtime"
 	"sync"
 	"time"
@@ -134,59 +135,69 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 
 	switch cm := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
+		log.Printf("recv node cmd")
 		c.doNodeInfo(sid)
 	case *connectivity.Cmd_PodCmd:
-		ns := cm.PodCmd.GetNamespace()
-		name := cm.PodCmd.GetName()
-
 		switch cm.PodCmd.GetAction() {
-
 		// pod scope commands
 		case connectivity.Create:
-			c.doPodCreate(sid, ns, name, cm.PodCmd.GetCreateOptions())
+			log.Printf("recv pod create cmd")
+			go c.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
 		case connectivity.Delete:
-			c.doPodDelete(sid, ns, name, cm.PodCmd.GetDeleteOptions())
+			log.Printf("recv pod delete cmd")
+			go c.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
 		case connectivity.List:
-			c.doPodList(sid, ns, name)
+			log.Printf("recv pod list cmd")
+			go c.doPodList(sid, cm.PodCmd.GetListOptions())
 		case connectivity.PortForward:
+			log.Printf("recv pod port forward cmd")
 			inputCh := make(chan []byte, 1)
 			c.openedStreams.add(sid, inputCh, nil)
-			c.doPortForward(sid, ns, name, cm.PodCmd.GetPortForwardOptions(), inputCh)
+			go c.doPortForward(sid, cm.PodCmd.GetPortForwardOptions(), inputCh)
 
 		// container scope commands
 		case connectivity.Exec:
+			log.Printf("recv pod exec cmd")
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
 			c.openedStreams.add(sid, inputCh, resizeCh)
 
-			c.doContainerExec(sid, ns, name, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+			go c.doContainerExec(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Attach:
+			log.Printf("recv pod attach cmd")
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
 			c.openedStreams.add(sid, inputCh, resizeCh)
 
-			c.doContainerAttach(sid, ns, name, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+			go c.doContainerAttach(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Log:
-			c.doContainerLog(sid, ns, name, cm.PodCmd.GetLogOptions())
+			log.Printf("recv pod log cmd")
+			go c.doContainerLog(sid, cm.PodCmd.GetLogOptions())
 		case connectivity.Input:
+			log.Printf("recv pod input data")
 			inputCh, ok := c.openedStreams.getInputChan(sid)
 			if !ok {
 				c.handleError(sid, ErrStreamSessionClosed)
 				return
 			}
 
-			inputCh <- cm.PodCmd.GetInputOptions().GetData()
+			go func() {
+				inputCh <- cm.PodCmd.GetInputOptions().GetData()
+			}()
 		case connectivity.ResizeTty:
+			log.Printf("recv pod resize tty cmd")
 			resizeCh, ok := c.openedStreams.getResizeChan(sid)
 			if !ok {
 				c.handleError(sid, ErrStreamSessionClosed)
 				return
 			}
 
-			resizeCh <- remotecommand.TerminalSize{
-				Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
-				Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
-			}
+			go func() {
+				resizeCh <- remotecommand.TerminalSize{
+					Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
+					Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
+				}
+			}()
 		}
 	}
 }
@@ -196,6 +207,7 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 func (c *baseClient) handleError(sid uint64, e error) {
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		// TODO: log error
+		log.Printf("handle error: %v", err)
 	}
 }
 
@@ -208,9 +220,7 @@ func (c baseClient) doNodeInfo(sid uint64) {
 	nodeSystemInfo.Architecture = goruntime.GOARCH
 	nodeSystemInfo.KubeletVersion = "1.13.5"
 	nodeSystemInfo.KubeProxyVersion = "1.13.5"
-
-	runtimeName, runtimeVersion := c.runtime.Version()
-	nodeSystemInfo.ContainerRuntimeVersion = runtimeName + "://" + runtimeVersion
+	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
 
 	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
 		Status: corev1.NodeStatus{
@@ -228,12 +238,12 @@ func (c baseClient) doNodeInfo(sid uint64) {
 			},
 			Phase: corev1.NodeRunning,
 			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastTransitionTime: now},
-				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastTransitionTime: now},
-				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
-				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
-				{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastTransitionTime: now},
-				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastTransitionTime: now},
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: now, LastTransitionTime: now},
+				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+				{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
 			},
 			NodeInfo:        *nodeSystemInfo,
 			Images:          []corev1.ContainerImage{},
@@ -248,19 +258,8 @@ func (c baseClient) doNodeInfo(sid uint64) {
 	}
 }
 
-func (c *baseClient) doPodCreate(sid uint64, namespace, name string, options *connectivity.CreateOptions) {
-	authConfig, err := options.GetResolvedImagePullAuthConfig()
-	if err != nil {
-		c.handleError(sid, err)
-		return
-	}
-
-	podResp, err := c.runtime.CreatePod(
-		namespace, name,
-		options.GetContainers(),
-		authConfig,
-		options.GetVolumeData(),
-		options.GetHostVolumes())
+func (c *baseClient) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
+	podResp, err := c.runtime.CreatePod(options)
 
 	if err != nil {
 		c.handleError(sid, err)
@@ -273,8 +272,8 @@ func (c *baseClient) doPodCreate(sid uint64, namespace, name string, options *co
 	}
 }
 
-func (c *baseClient) doPodDelete(sid uint64, namespace, name string, options *connectivity.DeleteOptions) {
-	podDeleted, err := c.runtime.DeletePod(namespace, name, options)
+func (c *baseClient) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
+	podDeleted, err := c.runtime.DeletePod(options)
 	if err != nil {
 		c.handleError(sid, err)
 		return
@@ -286,8 +285,8 @@ func (c *baseClient) doPodDelete(sid uint64, namespace, name string, options *co
 	}
 }
 
-func (c *baseClient) doPodList(sid uint64, namespace, name string) {
-	pods, err := c.runtime.ListPod(namespace, name)
+func (c *baseClient) doPodList(sid uint64, options *connectivity.ListOptions) {
+	pods, err := c.runtime.ListPod(options)
 	if err != nil {
 		c.handleError(sid, err)
 		return
@@ -309,7 +308,7 @@ func (c *baseClient) doPodList(sid uint64, namespace, name string) {
 	}
 }
 
-func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (c *baseClient) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer c.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedExecOptions()
@@ -379,13 +378,13 @@ func (c *baseClient) doContainerAttach(sid uint64, namespace, name string, optio
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.AttachContainer(namespace, name, opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
+	if err := c.runtime.AttachContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer c.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedExecOptions()
@@ -456,13 +455,13 @@ func (c *baseClient) doContainerExec(sid uint64, namespace, name string, options
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.ExecInContainer(namespace, name, opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
+	if err := c.runtime.ExecInContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) doContainerLog(sid uint64, namespace, name string, options *connectivity.LogOptions) {
+func (c *baseClient) doContainerLog(sid uint64, options *connectivity.LogOptions) {
 	opt, err := options.GetResolvedLogOptions()
 	if err != nil {
 		c.handleError(sid, err)
@@ -502,13 +501,13 @@ func (c *baseClient) doContainerLog(sid uint64, namespace, name string, options 
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.GetContainerLogs(namespace, name, stdout, stderr, opt); err != nil {
+	if err := c.runtime.GetContainerLogs(options.GetPodUid(), opt, stdout, stderr); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
+func (c *baseClient) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
 	defer c.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedOptions()
@@ -548,7 +547,7 @@ func (c *baseClient) doPortForward(sid uint64, namespace, name string, options *
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.PortForward(namespace, name, opt, input, output); err != nil {
+	if err := c.runtime.PortForward(options.GetPodUid(), opt, input, output); err != nil {
 		c.handleError(sid, err)
 		return
 	}

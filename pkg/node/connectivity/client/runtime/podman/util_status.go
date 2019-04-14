@@ -7,7 +7,7 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func translateLibpodStatusToCriStatus(runtime *libpodRuntime.Runtime, namespace, name string, pod *libpodRuntime.Pod, infraCtrID string) (*criRuntime.PodSandboxStatus, []*criRuntime.ContainerStatus, error) {
+func translateLibpodStatusToCriStatus(runtime *libpodRuntime.Runtime, podUID string, pod *libpodRuntime.Pod, infraCtrID string) (*criRuntime.PodSandboxStatus, []*criRuntime.ContainerStatus, error) {
 	infraCtr, err := runtime.GetContainer(infraCtrID)
 	if err != nil {
 		return nil, nil, err
@@ -25,9 +25,8 @@ func translateLibpodStatusToCriStatus(runtime *libpodRuntime.Runtime, namespace,
 	podStatus := &criRuntime.PodSandboxStatus{
 		Id: pod.ID(),
 		Metadata: &criRuntime.PodSandboxMetadata{
-			Namespace: namespace,
-			Name:      name,
-			Attempt:   1,
+			Uid:     podUID,
+			Attempt: 1,
 		},
 		State:     criRuntime.PodSandboxState_SANDBOX_READY,
 		CreatedAt: pod.CreatedTime().UnixNano(),

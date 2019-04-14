@@ -1,4 +1,4 @@
-package containerd
+package cri
 
 import (
 	"context"
@@ -89,11 +89,11 @@ func (r *Runtime) remotePodSandboxStatus(podSandBoxID string) (*criRuntime.PodSa
 		return nil, err
 	}
 
-	// if resp.Status != nil {
-	// 	if err := verifySandboxStatus(resp.Status); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	if resp.Status != nil {
+		if err := verifySandboxStatus(resp.Status); err != nil {
+			return nil, err
+		}
+	}
 
 	return resp.Status, nil
 }
@@ -114,4 +114,26 @@ func (r *Runtime) remotePortForward(req *criRuntime.PortForwardRequest) (*criRun
 	}
 
 	return resp, nil
+}
+
+// verifySandboxStatus verified whether all required fields are set in PodSandboxStatus.
+func verifySandboxStatus(status *criRuntime.PodSandboxStatus) error {
+	if status.Id == "" {
+		return fmt.Errorf("Id is not set ")
+	}
+
+	if status.Metadata == nil {
+		return fmt.Errorf("Metadata is not set ")
+	}
+
+	metadata := status.Metadata
+	if metadata.Name == "" || metadata.Namespace == "" || metadata.Uid == "" {
+		return fmt.Errorf("Name, Namespace or Uid is not in metadata %q ", metadata)
+	}
+
+	if status.CreatedAt == 0 {
+		return fmt.Errorf("CreatedAt is not set ")
+	}
+
+	return nil
 }

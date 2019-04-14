@@ -13,10 +13,10 @@ import (
 
 // GetContainerLogs
 // custom implementation
-func (m *Manager) GetContainerLogs(namespace, pod, container string, options corev1.PodLogOptions) (io.ReadCloser, error) {
+func (m *Manager) GetContainerLogs(uid types.UID, container string, options corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
-	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(namespace, pod, options))
+	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), options))
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (m *Manager) ExecInContainer(name string, uid types.UID, container string, 
 		Command:   cmd,
 	}
 
-	execCmd := connectivity.NewContainerExecCmd("", name, options)
+	execCmd := connectivity.NewContainerExecCmd(string(uid), options)
 	return m.handleBidirectionalStream(execCmd, timeout, stdin, stdout, stderr, resize)
 }
 
@@ -62,7 +62,7 @@ func (m *Manager) AttachContainer(name string, uid types.UID, container string, 
 		Container: container,
 	}
 
-	attachCmd := connectivity.NewContainerAttachCmd("", name, options)
+	attachCmd := connectivity.NewContainerAttachCmd(string(uid), options)
 	return m.handleBidirectionalStream(attachCmd, 0, stdin, stdout, stderr, resize)
 }
 
@@ -72,6 +72,6 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 	options := corev1.PodPortForwardOptions{
 		Ports: []int32{port},
 	}
-	portForwardCmd := connectivity.NewPortForwardCmd("", name, options)
+	portForwardCmd := connectivity.NewPortForwardCmd(string(uid), options)
 	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
 }

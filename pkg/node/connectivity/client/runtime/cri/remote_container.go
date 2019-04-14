@@ -1,4 +1,4 @@
-package containerd
+package cri
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (r *Runtime) remoteContainerStatus(containerID string) (*criRuntime.Contain
 	return resp.Status, nil
 }
 
-// verifyContainerStatus verified whether all required fields are set in remoteContainerStatus.
+// verifyContainerStatus verified whether all required fields are set in ContainerStatus.
 func verifyContainerStatus(status *criRuntime.ContainerStatus) error {
 	if status.Id == "" {
 		return fmt.Errorf("Id is not set ")

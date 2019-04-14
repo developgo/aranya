@@ -2,6 +2,7 @@ package pod
 
 import (
 	"io"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 
@@ -26,7 +27,7 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logReader, err := m.GetContainerLogs(namespace, podID, container, opt)
+	logReader, err := m.GetContainerLogs(types.UID(podID), container, opt)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err, "Get container log failed", "Pod.Namespace", namespace, "Pod.Name", podID, "Container.Name", container)

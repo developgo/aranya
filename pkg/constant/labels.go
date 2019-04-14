@@ -11,5 +11,19 @@ const (
 )
 
 const (
-	LabelName = "arhat.dev/name"
+	LabelNamespace = "arhat.dev/namespace"
+	LabelName      = "arhat.dev/name"
+)
+
+const (
+	ContainerLabelPodNamespace     = "container.arhat.dev/pod-namespace"
+	ContainerLabelPodName          = "container.arhat.dev/pod-name"
+	ContainerLabelPodUID           = "container.arhat.dev/pod-uid"
+	ContainerLabelPodContainer     = "container.arhat.dev/pod-container"
+	ContainerLabelPodContainerRole = "container.arhat.dev/pod-container-role"
+)
+
+const (
+	ContainerRoleInfra = "infra"
+	ContainerRoleWork  = "work"
 )

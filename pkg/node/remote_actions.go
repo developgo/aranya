@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"sync"
 	"time"
 
@@ -58,7 +59,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 // generate in cluster pod cache for remote device
 func (n *Node) generateCacheForPodsInDevice() error {
-	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewPodListCmd("", ""))
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (n *Node) generateCacheForPodsInDevice() error {
 				return err
 			}
 
-			n.deletePodInDevice(podStatus.Namespace, podStatus.Name)
+			n.deletePodInDevice(podStatus.ID)
 			continue
 		}
 
@@ -153,7 +154,7 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 		apiPod, err := n.podManager.GetMirrorPod(podStatus.Namespace, podStatus.Name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				n.deletePodInDevice(podStatus.Namespace, podStatus.Name)
+				n.deletePodInDevice(podStatus.ID)
 				return
 			}
 			n.log.Error(err, "get mirror pod failed")
@@ -244,8 +245,8 @@ func (n *Node) createPodInDevice(pod *corev1.Pod) {
 	}
 }
 
-func (n *Node) deletePodInDevice(namespace, name string) {
-	podDeleteCmd := connectivity.NewPodDeleteCmd(namespace, name, time.Minute)
+func (n *Node) deletePodInDevice(podUID types.UID) {
+	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Minute)
 	msgCh, err := n.connectivityManager.PostCmd(n.ctx, podDeleteCmd)
 	if err != nil {
 		n.log.Error(err, "failed to post pod delete command")

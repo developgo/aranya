@@ -1,7 +1,8 @@
-package containerd
+package cri
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"google.golang.org/grpc"
@@ -15,9 +16,18 @@ func dialSvcEndpoint(endpoint string, dialTimeout time.Duration) (*grpc.ClientCo
 	}
 
 	dialCtx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	_ = cancel
+	defer cancel()
 
-	conn, err := grpc.DialContext(dialCtx, addr, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithDialer(dialer))
+	dialOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (conn net.Conn, e error) {
+			deadline, _ := ctx.Deadline()
+			return dialer(addr, deadline.Sub(time.Now()))
+		}),
+	}
+
+	conn, err := grpc.DialContext(dialCtx, addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
