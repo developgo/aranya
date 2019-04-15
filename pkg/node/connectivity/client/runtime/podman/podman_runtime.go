@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	goruntime "runtime"
 	"time"
 
 	libpodRuntime "github.com/containers/libpod/libpod"
@@ -47,7 +48,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	}
 
 	return &podmanRuntime{
-		Base: runtime.NewRuntimeBase(ctx, "podman", podmanVersion.Version, config),
+		Base: runtime.NewRuntimeBase(ctx, config, "podman", podmanVersion.Version, goruntime.GOOS, goruntime.GOARCH, ""),
 	}, nil
 }
 

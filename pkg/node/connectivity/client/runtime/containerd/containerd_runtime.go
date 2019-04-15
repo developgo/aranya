@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	goruntime "runtime"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -47,7 +48,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	}
 
 	return &containerdRuntime{
-		Base:          runtime.NewRuntimeBase(ctx, "containerd", ver.Version, config),
+		Base:          runtime.NewRuntimeBase(ctx, config, "containerd", ver.Version, goruntime.GOOS, goruntime.GOARCH, ""),
 		imageClient:   imageClient,
 		runtimeClient: runtimeClient,
 	}, nil

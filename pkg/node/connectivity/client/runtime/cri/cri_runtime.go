@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	goruntime "runtime"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
@@ -53,7 +54,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (*Runtime, error) {
 	}
 
 	return &Runtime{
-		Base: runtime.NewRuntimeBase(ctx, typedVersion.GetRuntimeName(), typedVersion.GetRuntimeVersion(), config),
+		Base: runtime.NewRuntimeBase(ctx, config, typedVersion.GetRuntimeName(), typedVersion.GetRuntimeVersion(), goruntime.GOOS, goruntime.GOARCH, ""),
 
 		runtimeSvcClient:    runtimeSvcClient,
 		imageSvcClient:      criRuntime.NewImageServiceClient(imageSvcConn),

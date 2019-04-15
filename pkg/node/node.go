@@ -81,21 +81,18 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	//
 	// containerLogs (kubectl logs)
 	// m.HandleFunc("/containerLogs/{namespace}/{podID}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
-	m.HandleFunc("/containerLogs/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
+	m.HandleFunc("/containerLogs/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
 	// logs
 	m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
-	// run (kubectl run) is basically a exec in new pod
-	// m.HandleFunc("/run/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/run/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// exec (kubectl exec)
-	// m.HandleFunc("/exec/{namespace}/{podID}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/exec/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/exec/{namespace}/{name}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// attach (kubectl attach)
-	// m.HandleFunc("/attach/{namespace}/{podID}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/attach/{namespace}/{podID}/{uid}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/attach/{namespace}/{name}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/attach/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
 	// portForward (kubectl proxy)
-	// m.HandleFunc("/portForward/{namespace}/{podID}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/portForward/{namespace}/{podID}/{uid}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
+	// m.HandleFunc("/portForward/{namespace}/{name}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/portForward/{namespace}/{name}/{uid}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 
 	//
 	// routes for stats
@@ -106,17 +103,19 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// TODO: handle metrics
 
 	srv := &Node{
-		log:                 logger,
-		ctx:                 ctx,
-		exit:                exit,
-		name:                nodeObj.Name,
-		kubeClient:          client,
-		connectivityManager: connectivityManager,
-		kubeletListener:     kubeletListener,
-		grpcListener:        grpcListener,
-		httpSrv:             &http.Server{Handler: m},
-		status:              statusReady,
+		log:        logger,
+		ctx:        ctx,
+		exit:       exit,
+		name:       nodeObj.Name,
+		kubeClient: client,
 
+		httpSrv:         &http.Server{Handler: m},
+		kubeletListener: kubeletListener,
+
+		connectivityManager: connectivityManager,
+		grpcListener:        grpcListener,
+
+		status:          statusReady,
 		podManager:      podManager,
 		nodeStatusCache: newNodeCache(nodeObj.Status),
 	}

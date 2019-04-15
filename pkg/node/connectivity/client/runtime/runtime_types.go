@@ -15,6 +15,10 @@ type Interface interface {
 	// Version the runtime version
 	Version() string
 
+	OS() string
+	Arch() string
+	KernelVersion() string
+
 	// CreatePod create a pod according to corev1.PodSpec
 	// steps:
 	//

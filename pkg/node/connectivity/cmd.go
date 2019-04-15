@@ -66,14 +66,17 @@ func NewPodCreateCmd(
 				Options: &PodCmd_CreateOptions{
 					CreateOptions: &CreateOptions{
 						PodUid:              string(pod.UID),
+						Namespace:           pod.Namespace,
+						Name:                pod.Name,
 						Containers:          containers,
 						ImagePullAuthConfig: authConfigBytes,
 						VolumeData:          actualVolumeData,
 						HostVolumes:         hostVolume,
-						HostNetwork:         pod.Spec.HostNetwork,
-						HostIpc:             pod.Spec.HostIPC,
-						HostPid:             pod.Spec.HostPID,
-						Hostname:            pod.Spec.Hostname,
+
+						HostNetwork: pod.Spec.HostNetwork,
+						HostIpc:     pod.Spec.HostIPC,
+						HostPid:     pod.Spec.HostPID,
+						Hostname:    pod.Spec.Hostname,
 					},
 				},
 			},

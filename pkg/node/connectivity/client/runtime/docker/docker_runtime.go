@@ -83,7 +83,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	}
 
 	return &dockerRuntime{
-		Base:          runtime.NewRuntimeBase(ctx, "docker", version, config),
+		Base:          runtime.NewRuntimeBase(ctx, config, "docker", version, versions.Os, versions.Arch, versions.KernelVersion),
 		imageClient:   imageClient,
 		runtimeClient: runtimeClient,
 	}, nil
@@ -97,27 +97,29 @@ type dockerRuntime struct {
 }
 
 func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.Pod, err error) {
-	imagePullCtx, cancelPull := r.ImageActionContext()
-	defer cancelPull()
+	createLog := r.Log().WithValues("namespace", options.GetNamespace(), "name", options.GetName(), "uid", options.GetPodUid(), "action", "create")
 
 	// ensure pause image (infra image to claim namespaces) exists
-	_, err = r.ensureImages(imagePullCtx, map[string]*connectivity.ContainerSpec{
+	_, err = r.ensureImages(map[string]*connectivity.ContainerSpec{
 		"pause": {
 			Image:           r.PauseImage,
 			ImagePullPolicy: string(corev1.PullIfNotPresent),
 		},
 	}, nil)
 	if err != nil {
+		createLog.Error(err, "failed to ensure pause image")
 		return nil, err
 	}
 
 	authConfig, err := options.GetResolvedImagePullAuthConfig()
 	if err != nil {
+		createLog.Error(err, "failed to resolve image pull auth config")
 		return nil, err
 	}
 	// ensure all images exists
-	_, err = r.ensureImages(imagePullCtx, options.GetContainers(), authConfig)
+	_, err = r.ensureImages(options.GetContainers(), authConfig)
 	if err != nil {
+		createLog.Error(err, "failed to ensure container images")
 		return nil, err
 	}
 
@@ -128,14 +130,16 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 		createCtx, options.GetNamespace(), options.GetName(), options.GetPodUid(),
 		options.GetHostNetwork(), options.GetHostPid(), options.GetHostIpc(), options.GetHostname())
 	if err != nil {
+		createLog.Error(err, "failed to create pause container")
 		return nil, err
 	}
 	defer func() {
 		if err != nil {
 			// delete pause container if any error happened
+			createLog.Info("delete pause container due to error")
 			e := r.deleteContainer(pauseContainerSpec.ID, 0)
 			if e != nil {
-				r.Log().Error(e, "failed to delete pause container after start failure")
+				createLog.Error(e, "failed to delete pause container after start failure")
 			}
 		}
 	}()
@@ -147,6 +151,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 			containerName, options.GetHostname(), ns, containerSpec, options.GetVolumeData(),
 			options.GetHostVolumes(), networkSettings)
 		if err != nil {
+			createLog.Error(err, "failed to create container", "container", containerName)
 			return nil, err
 		}
 		containersCreated = append(containersCreated, ctrID)
@@ -155,14 +160,16 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	for _, ctrID := range containersCreated {
 		err = r.runtimeClient.ContainerStart(createCtx, ctrID, dockerType.ContainerStartOptions{})
 		if err != nil {
+			createLog.Error(err, "failed to start container", "containerID", ctrID)
 			return nil, err
 		}
 
 		defer func() {
 			if err != nil {
+				createLog.Info("delete container due to error", "containerID", ctrID)
 				e := r.deleteContainer(ctrID, 0)
 				if e != nil {
-					r.Log().Error(e, "failed to delete container after start failure")
+					createLog.Error(e, "failed to delete container after start failure")
 				}
 			}
 		}()
@@ -172,6 +179,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	for i, ctrID := range containersCreated {
 		ctrInfo, err := r.runtimeClient.ContainerInspect(createCtx, ctrID)
 		if err != nil {
+			createLog.Error(err, "failed to inspect docker container")
 			return nil, err
 		}
 		containersStatus[i] = translateDockerContainerStatusToCRIContainerStatus(&ctrInfo)
@@ -181,13 +189,16 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 }
 
 func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error) {
-	deleteCtx, cancelDelete := r.RuntimeActionContext()
-	defer cancelDelete()
+	deleteLog := r.Log().WithValues("uid", options.GetPodUid())
 
 	infraCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
 	if err != nil {
+		deleteLog.Error(err, "failed to find pause container")
 		return nil, err
 	}
+
+	deleteCtx, cancelDelete := r.RuntimeActionContext()
+	defer cancelDelete()
 
 	timeout := time.Duration(options.GraceTime)
 	now := time.Now()
@@ -304,13 +315,17 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 }
 
 func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+	execLog := r.Log().WithValues("uid", podUID, "container", container, "action", "exec")
+
 	ctr, err := r.findContainer(podUID, container)
 	if err != nil {
+		execLog.Error(err, "failed to find container")
 		return err
 	}
 
 	execCtx, cancelExec := r.ActionContext()
 	defer cancelExec()
+
 	resp, err := r.runtimeClient.ContainerExecCreate(execCtx, ctr.ID, dockerType.ExecConfig{
 		Tty:          tty,
 		AttachStdin:  stdin != nil,
@@ -319,11 +334,13 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		Cmd:          command,
 	})
 	if err != nil {
+		execLog.Error(err, "failed to create exec")
 		return err
 	}
 
 	attachResp, err := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
 	if err != nil {
+		execLog.Error(err, "failed to attach exec")
 		return err
 	}
 	defer func() { _ = attachResp.Conn.Close() }()
@@ -335,7 +352,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 
 		_, err := io.Copy(attachResp.Conn, stdin)
 		if err != nil {
-			r.Log().Error(err, "exception when copy to attach stream")
+			execLog.Error(err, "exception when copy to attach stream")
 		}
 	}()
 
@@ -345,7 +362,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 
 		_, err := dockerStdCopy.StdCopy(stdout, stderr, attachResp.Reader)
 		if err != nil {
-			r.Log().Error(err, "exception when copy from attach stream")
+			execLog.Error(err, "exception when copy from attach stream")
 		}
 	}()
 
@@ -355,8 +372,11 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 }
 
 func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+	attachLog := r.Log().WithValues("uid", podUID, "container", container, "action", "attach")
+
 	ctr, err := r.findContainer(podUID, container)
 	if err != nil {
+		attachLog.Error(err, "failed to find container")
 		return err
 	}
 
@@ -369,6 +389,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		Stderr: stderr != nil,
 	})
 	if err != nil {
+		attachLog.Error(err, "failed to attach to container")
 		return err
 	}
 	defer func() { _ = resp.Conn.Close() }()
@@ -381,7 +402,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		if stdin != nil {
 			_, err := io.Copy(resp.Conn, stdin)
 			if err != nil {
-				r.Log().Error(err, "exception when copy to attach stream")
+				attachLog.Error(err, "exception when copy to attach stream")
 			}
 		}
 	}()
@@ -392,7 +413,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 
 		_, err := dockerStdCopy.StdCopy(stdout, stderr, resp.Reader)
 		if err != nil {
-			r.Log().Error(err, "exception when copy from attach stream")
+			attachLog.Error(err, "exception when copy from attach stream")
 		}
 	}()
 
@@ -402,23 +423,40 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 }
 
 func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+	logLog := r.Log().WithValues("uid", podUID, "container", options.Container, "action", "log")
+
 	ctr, err := r.findContainer(podUID, options.Container)
 	if err != nil {
+		logLog.Error(err, "failed to find container")
 		return err
 	}
 
 	logCtx, cancelLog := r.ActionContext()
 	defer cancelLog()
-	return runtimeutil.ReadLogs(logCtx, ctr.LogPath, options, stdout, stderr)
+
+	err = runtimeutil.ReadLogs(logCtx, ctr.LogPath, options, stdout, stderr)
+	if err != nil {
+		logLog.Error(err, "failed to read logs")
+		return err
+	}
+
+	return nil
 }
 
 func (r *dockerRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
+	pfLog := r.Log().WithValues("uid", podUID)
+	pfLog.Error(errors.New("method not implemented"), "method not implemented")
 	return errors.New("method not implemented")
 }
 
-func (r *dockerRuntime) ensureImages(ctx context.Context, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*dockerType.ImageSummary, error) {
-	imageMap := make(map[string]*dockerType.ImageSummary)
-	imageToPull := make([]string, 0)
+func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*dockerType.ImageSummary, error) {
+	var (
+		imageMap    = make(map[string]*dockerType.ImageSummary)
+		imageToPull = make([]string, 0)
+	)
+
+	pullCtx, cancelPull := r.ImageActionContext()
+	defer cancelPull()
 
 	for _, ctr := range containers {
 		if ctr.GetImagePullPolicy() == string(corev1.PullAlways) {
@@ -426,7 +464,7 @@ func (r *dockerRuntime) ensureImages(ctx context.Context, containers map[string]
 			continue
 		}
 
-		image, err := r.getImage(ctx, ctr.Image)
+		image, err := r.getImage(pullCtx, ctr.Image)
 		if err == nil {
 			// image exists
 			switch ctr.GetImagePullPolicy() {
@@ -464,7 +502,7 @@ func (r *dockerRuntime) ensureImages(ctx context.Context, containers map[string]
 			}
 		}
 
-		out, err := r.imageClient.ImagePull(ctx, imageName, dockerType.ImagePullOptions{
+		out, err := r.imageClient.ImagePull(pullCtx, imageName, dockerType.ImagePullOptions{
 			RegistryAuth: authStr,
 		})
 		if err != nil {
@@ -492,7 +530,7 @@ func (r *dockerRuntime) ensureImages(ctx context.Context, containers map[string]
 			return nil, err
 		}
 
-		image, err := r.getImage(ctx, imageName)
+		image, err := r.getImage(pullCtx, imageName)
 		if err != nil {
 			return nil, err
 		}

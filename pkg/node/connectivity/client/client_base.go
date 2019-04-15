@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	goruntime "runtime"
 	"sync"
 	"time"
 
@@ -206,7 +205,6 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 
 func (c *baseClient) handleError(sid uint64, e error) {
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
-		// TODO: log error
 		log.Printf("handle error: %v", err)
 	}
 }
@@ -216,11 +214,16 @@ func (c baseClient) doNodeInfo(sid uint64) {
 
 	nodeSystemInfo := systemInfo()
 	nodeSystemInfo.MachineID, _ = machineid.ID()
-	nodeSystemInfo.OperatingSystem = goruntime.GOOS
-	nodeSystemInfo.Architecture = goruntime.GOARCH
-	nodeSystemInfo.KubeletVersion = "1.13.5"
-	nodeSystemInfo.KubeProxyVersion = "1.13.5"
+	nodeSystemInfo.OperatingSystem = c.runtime.OS()
+	nodeSystemInfo.Architecture = c.runtime.Arch()
+	nodeSystemInfo.KernelVersion = c.runtime.KernelVersion()
 	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
+	nodeSystemInfo.SystemUUID = ""
+	nodeSystemInfo.BootID = ""
+	nodeSystemInfo.OSImage = ""
+	// set KubeletVersion and KubeProxyVersion at server side
+	// nodeSystemInfo.KubeletVersion = ""
+	// nodeSystemInfo.KubeProxyVersion = ""
 
 	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
 		Status: corev1.NodeStatus{

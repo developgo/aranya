@@ -7,26 +7,45 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-func NewRuntimeBase(ctx context.Context, name, version string, config *Config) Base {
+func NewRuntimeBase(ctx context.Context, config *Config, name, version, os, arch, kernelVersion string) Base {
 	return Base{
 		Config: *config,
 
-		ctx:     ctx,
-		name:    name,
-		version: version,
+		ctx:           ctx,
+		name:          name,
+		version:       version,
+		os:            os,
+		arch:          arch,
+		kernelVersion: kernelVersion,
+
+		logger: logf.Log.WithName("runtime"),
 	}
 }
 
 type Base struct {
 	Config
 
-	ctx     context.Context
-	name    string
-	version string
+	ctx    context.Context
+	logger logr.Logger
+
+	name, version, os, arch,
+	kernelVersion string
 }
 
 func (b *Base) Log() logr.Logger {
-	return logf.Log
+	return b.logger
+}
+
+func (b *Base) OS() string {
+	return b.os
+}
+
+func (b *Base) Arch() string {
+	return b.arch
+}
+
+func (b *Base) KernelVersion() string {
+	return b.kernelVersion
 }
 
 func (b *Base) Name() string {

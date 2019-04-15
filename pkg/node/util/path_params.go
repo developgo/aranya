@@ -13,23 +13,23 @@ import (
 
 const (
 	PathParamNamespace = "namespace"
-	PathParamPodID     = "podID"
-	PathParamUID       = "uid"
+	PathParamPodName   = "name"
+	PathParamPodUID    = "uid"
 	PathParamContainer = "containerName"
 )
 
-func GetParamsForExec(req *http.Request) (namespace, podID string, uid types.UID, containerName string, command []string) {
+func GetParamsForExec(req *http.Request) (namespace, podName string, uid types.UID, containerName string, command []string) {
 	pathVars := mux.Vars(req)
-	return pathVars[PathParamNamespace], pathVars[PathParamPodID], types.UID(pathVars[PathParamUID]),
+	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID]),
 		pathVars[PathParamContainer], req.URL.Query()[corev1.ExecCommandParam]
 }
 
-func GetParamsForPortForward(req *http.Request) (namespace, podID string, uid types.UID) {
+func GetParamsForPortForward(req *http.Request) (namespace, podName string, uid types.UID) {
 	pathVars := mux.Vars(req)
-	return pathVars[PathParamNamespace], pathVars[PathParamPodID], types.UID(pathVars[PathParamUID])
+	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID])
 }
 
-func GetParamsForContainerLog(req *http.Request) (namespace, podID, containerName string, opt corev1.PodLogOptions, err error) {
+func GetParamsForContainerLog(req *http.Request) (namespace, podName string, podUID types.UID, containerName string, opt corev1.PodLogOptions, err error) {
 	pathVars := mux.Vars(req)
 
 	query := req.URL.Query()
@@ -53,5 +53,5 @@ func GetParamsForContainerLog(req *http.Request) (namespace, podID, containerNam
 		return
 	}
 
-	return pathVars[PathParamNamespace], pathVars[PathParamPodID], pathVars[PathParamContainer], *logOptions, nil
+	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID]), pathVars[PathParamContainer], *logOptions, nil
 }
