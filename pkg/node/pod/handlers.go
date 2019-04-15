@@ -2,10 +2,10 @@ package pod
 
 import (
 	"io"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
 	kubeletportforward "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	kubeletremotecommand "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 

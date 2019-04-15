@@ -9,12 +9,12 @@ import (
 	"io"
 	"time"
 
-	"arhat.dev/aranya/pkg/constant"
 	libpodRuntime "github.com/containers/libpod/libpod"
 	podmanVersion "github.com/containers/libpod/version"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtimeutil"

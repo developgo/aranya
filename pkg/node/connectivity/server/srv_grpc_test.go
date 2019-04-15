@@ -110,8 +110,7 @@ func TestGrpcSrv(t *testing.T) {
 			SessionId: cmdRecv.GetSessionId(),
 			Completed: true,
 			Msg: &connectivity.Msg_Pod{
-				Pod: &connectivity.Pod{
-				},
+				Pod: &connectivity.Pod{},
 			},
 		})
 		assert.NoError(t, err)

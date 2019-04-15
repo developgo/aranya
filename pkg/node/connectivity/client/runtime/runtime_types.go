@@ -3,9 +3,10 @@ package runtime
 import (
 	"io"
 
-	"arhat.dev/aranya/pkg/node/connectivity"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
 type Interface interface {

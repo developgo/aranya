@@ -77,8 +77,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 
 	version := ""
 	for _, ver := range versions.Components {
-		switch strings.ToLower(ver.Name) {
-		case "engine":
+		if strings.ToLower(ver.Name) == "engine" {
 			version = ver.Version
 		}
 	}
