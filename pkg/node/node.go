@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"reflect"
 	"sync"
 	"time"
 
@@ -13,30 +12,14 @@ import (
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	kubeInformers "k8s.io/client-go/informers"
-	kubeInformersCoreV1 "k8s.io/client-go/informers/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
-	kubeClientTypedCoreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
-	kubeletConfigMap "k8s.io/kubernetes/pkg/kubelet/configmap"
-	kubeletPod "k8s.io/kubernetes/pkg/kubelet/pod"
-	kubeletSecret "k8s.io/kubernetes/pkg/kubelet/secret"
-	kubeletStatus "k8s.io/kubernetes/pkg/kubelet/status"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/pod"
-	"arhat.dev/aranya/pkg/node/stats"
 	"arhat.dev/aranya/pkg/node/util"
-)
-
-const (
-	resyncInterval = time.Minute
 )
 
 var (
@@ -50,22 +33,18 @@ type Node struct {
 	name string
 
 	kubeClient kubeClient.Interface
-	nodeClient kubeClientTypedCoreV1.NodeInterface
-	wq         workqueue.RateLimitingInterface
 
-	httpSrv             *http.Server
-	kubeletListener     net.Listener
-	grpcSrv             *grpc.Server
-	grpcListener        net.Listener
+	// kubelet http server and listener
+	httpSrv         *http.Server
+	kubeletListener net.Listener
+	// grpc server and listener
+	grpcSrv      *grpc.Server
+	grpcListener net.Listener
+	// remote device manager
 	connectivityManager connectivitySrv.Interface
 
-	podInformerFactory kubeInformers.SharedInformerFactory
-	podInformer        kubeInformersCoreV1.PodInformer
+	podManager *pod.Manager
 
-	podManager       *pod.Manager
-	podStatusManager kubeletStatus.Manager
-
-	podCache        *PodCache
 	nodeStatusCache *NodeCache
 
 	// status
@@ -80,19 +59,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	podInformerFactory := kubeInformers.NewSharedInformerFactoryWithOptions(client, resyncInterval,
-		kubeInformers.WithNamespace(corev1.NamespaceAll),
-		kubeInformers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeObj.Name).String()
-		}))
-	podInformer := podInformerFactory.Core().V1().Pods()
-
-	basicPodManager := kubeletPod.NewBasicPodManager(
-		kubeletPod.NewBasicMirrorClient(client),
-		kubeletSecret.NewWatchingSecretManager(client),
-		kubeletConfigMap.NewWatchingConfigMapManager(client),
-		nil)
-
 	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
 		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
@@ -101,10 +67,10 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	}
 
 	ctx, exit := context.WithCancel(ctx)
-	podManager := pod.NewManager(ctx, podInformer.Lister(), basicPodManager, connectivityManager)
-	statsManager := stats.NewManager()
+	podManager := pod.NewManager(ctx, nodeObj.Name, client, connectivityManager)
+	// statsManager := stats.NewManager()
 
-	logger := log.WithValues("name", nodeObj.Name)
+	logger := log.WithValues("node", nodeObj.Name)
 
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler()}
 	// register http routes
@@ -135,7 +101,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// routes for stats
 	//
 	// stats summary
-	m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
+	// m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
 
 	// TODO: handle metrics
 
@@ -145,19 +111,14 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		exit:                exit,
 		name:                nodeObj.Name,
 		kubeClient:          client,
-		nodeClient:          client.CoreV1().Nodes(),
 		connectivityManager: connectivityManager,
 		kubeletListener:     kubeletListener,
 		grpcListener:        grpcListener,
 		httpSrv:             &http.Server{Handler: m},
-		podInformerFactory:  podInformerFactory,
-		podInformer:         podInformer,
-		wq:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), nodeObj.Name+"-wq"),
 		status:              statusReady,
-		podStatusManager:    kubeletStatus.NewManager(client, podManager, podManager),
-		podManager:          podManager,
-		podCache:            newPodCache(),
-		nodeStatusCache:     newNodeCache(nodeObj.Status),
+
+		podManager:      podManager,
+		nodeStatusCache: newNodeCache(nodeObj.Status),
 	}
 
 	return srv, nil
@@ -195,7 +156,6 @@ func (n *Node) Start() error {
 		n.mu.Lock()
 		defer n.mu.Unlock()
 		// force close to ensure node closed
-		n.wq.ShutDown()
 		n.status = statusStopped
 	}()
 
@@ -224,41 +184,9 @@ func (n *Node) Start() error {
 		n.log.Info("mqtt connectivity not implemented")
 	}
 
-	go n.podStatusManager.Start()
-	// informer routine
-	go n.podInformerFactory.Start(n.ctx.Done())
-
-	// handle node change
-	n.podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(newObj interface{}) {
-			n.log.Info("create pod in device")
-			n.createPodInDevice(newObj.(*corev1.Pod))
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			oldPod := oldObj.(*corev1.Pod)
-			newPod := newObj.(*corev1.Pod)
-
-			// TODO: more delicate equal judgement
-			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
-				// do nothing if no changes
-				return
-			}
-
-			n.log.Info("update pod in device")
-			// delete and create
-			n.deletePodInDevice(oldPod.UID)
-			n.createPodInDevice(newObj.(*corev1.Pod))
-		},
-		DeleteFunc: func(oldObj interface{}) {
-			n.log.Info("delete pod in device")
-			oldPod := oldObj.(*corev1.Pod)
-			n.deletePodInDevice(oldPod.UID)
-		},
-	})
-
 	go n.InitializeRemoteDevice()
 
-	return nil
+	return n.podManager.Start()
 }
 
 // ForceClose close this node immediately

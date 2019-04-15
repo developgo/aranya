@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -36,19 +35,20 @@ import (
 )
 
 func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
-	dialCtxFunc := func(timeout time.Duration) func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-		return func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-			ctx, cancel := context.WithTimeout(ctx, timeout)
-			defer cancel()
-
-			var dialer net.Dialer
-			return dialer.DialContext(ctx, network, addr)
-		}
-	}
+	// dialCtxFunc := func(timeout time.Duration) func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+	// 	return func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+	// 		ctx, cancel := context.WithTimeout(ctx, timeout)
+	// 		defer cancel()
+	//
+	// 		var dialer net.Dialer
+	// 		log.Printf("docker dial: %v %v", network, addr)
+	// 		return dialer.DialContext(ctx, network, addr)
+	// 	}
+	// }
 
 	runtimeClient, err := dockerClient.NewClientWithOpts(
 		dockerClient.WithHost(config.EndPoints.Runtime.Address),
-		dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
+		// dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
 		dockerClient.FromEnv,
 	)
 	if err != nil {
@@ -59,7 +59,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	if config.EndPoints.Image.Address != config.EndPoints.Runtime.Address {
 		imageClient, err = dockerClient.NewClientWithOpts(
 			dockerClient.WithHost(config.EndPoints.Runtime.Address),
-			dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
+			// dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
 			dockerClient.FromEnv,
 		)
 		if err != nil {
@@ -124,14 +124,28 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	createCtx, cancelCreate := r.RuntimeActionContext()
 	defer cancelCreate()
 
-	pauseContainerSpec, ns, err := r.createPauseContainer(createCtx, options.GetPodUid(), options.GetHostNetwork(), options.GetHostPid(), options.GetHostIpc(), options.GetHostname())
+	pauseContainerSpec, ns, networkSettings, err := r.createPauseContainer(
+		createCtx, options.GetNamespace(), options.GetName(), options.GetPodUid(),
+		options.GetHostNetwork(), options.GetHostPid(), options.GetHostIpc(), options.GetHostname())
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			// delete pause container if any error happened
+			e := r.deleteContainer(pauseContainerSpec.ID, 0)
+			if e != nil {
+				r.Log().Error(e, "failed to delete pause container after start failure")
+			}
+		}
+	}()
 
 	var containersCreated []string
 	for containerName, containerSpec := range options.GetContainers() {
-		ctrID, err := r.createContainer(createCtx, options.GetPodUid(), containerName, options.GetHostname(), ns, containerSpec, options.GetVolumeData(), options.GetHostVolumes())
+		ctrID, err := r.createContainer(
+			createCtx, options.GetNamespace(), options.GetName(), options.GetPodUid(),
+			containerName, options.GetHostname(), ns, containerSpec, options.GetVolumeData(),
+			options.GetHostVolumes(), networkSettings)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +160,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 
 		defer func() {
 			if err != nil {
-				e := r.runtimeClient.ContainerRemove(context.Background(), ctrID, dockerType.ContainerRemoveOptions{Force: true})
+				e := r.deleteContainer(ctrID, 0)
 				if e != nil {
 					r.Log().Error(e, "failed to delete container after start failure")
 				}
@@ -166,7 +180,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	return connectivity.NewPod(options.GetPodUid(), translateDockerContainerStatusToCRISandboxStatus(pauseContainerSpec), containersStatus), nil
 }
 
-func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error) {
 	deleteCtx, cancelDelete := r.RuntimeActionContext()
 	defer cancelDelete()
 
@@ -175,9 +189,15 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (*connect
 		return nil, err
 	}
 
+	timeout := time.Duration(options.GraceTime)
+	now := time.Now()
+	err = r.runtimeClient.ContainerStop(deleteCtx, infraCtr.ID, &timeout)
+	if err != nil {
+		return nil, err
+	}
+
 	err = r.runtimeClient.ContainerRemove(deleteCtx, infraCtr.ID, dockerType.ContainerRemoveOptions{
 		RemoveVolumes: true,
-		RemoveLinks:   true,
 		Force:         options.GetGraceTime() == 0,
 	})
 	if err != nil {
@@ -196,14 +216,21 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (*connect
 	}
 
 	for _, ctr := range containers {
-		err := r.runtimeClient.ContainerRemove(deleteCtx, ctr.ID, dockerType.ContainerRemoveOptions{
-			RemoveLinks:   true,
+		timeout = timeout - time.Since(now)
+
+		err := r.runtimeClient.ContainerStop(deleteCtx, ctr.ID, &timeout)
+		if err != nil {
+			return nil, err
+		}
+
+		err = r.runtimeClient.ContainerRemove(deleteCtx, ctr.ID, dockerType.ContainerRemoveOptions{
 			RemoveVolumes: true,
 			Force:         options.GetGraceTime() == 0,
 		})
 		if err != nil {
 			return nil, err
 		}
+		now = time.Now()
 	}
 
 	return connectivity.NewPod(options.GetPodUid(), nil, nil), nil
@@ -213,17 +240,67 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 	listCtx, cancelList := r.RuntimeActionContext()
 	defer cancelList()
 
+	filter := dockerFilter.NewArgs()
+	if !options.GetAll() {
+		if options.GetNamespace() != "" {
+			filter.Add("label", constant.ContainerLabelPodNamespace+"="+options.GetNamespace())
+		}
+
+		if options.GetName() != "" {
+			filter.Add("label", constant.ContainerLabelPodName+"="+options.GetName())
+		}
+	}
+
 	containers, err := r.runtimeClient.ContainerList(listCtx, dockerType.ContainerListOptions{
 		All:     options.GetAll(),
 		Quiet:   true,
-		Filters: runtimeutil.DockerContainerFilter(options.GetNamespace(), options.GetName(), "", false),
+		Filters: filter,
 	})
 	if err != nil {
 		return nil, err
 	}
-	_ = containers
 
-	return nil, nil
+	var (
+		results []*connectivity.Pod
+		// podUID -> pause container
+		pauseContainers = make(map[string]dockerType.Container)
+		// podUID -> containers
+		podContainers = make(map[string][]dockerType.Container)
+	)
+
+	for _, ctr := range containers {
+		podUID, hasUID := ctr.Labels[constant.ContainerLabelPodUID]
+		if !hasUID {
+			continue
+		}
+
+		_, isInfra := ctr.Labels[constant.ContainerRoleInfra]
+		if isInfra {
+			pauseContainers[podUID] = ctr
+			continue
+		}
+
+		podContainers[podUID] = append(podContainers[podUID], ctr)
+	}
+
+	for podUID, pauseContainer := range pauseContainers {
+		pauseCtrSpec, err := r.runtimeClient.ContainerInspect(listCtx, pauseContainer.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		var containerStatus []*criRuntime.ContainerStatus
+		for _, ctr := range podContainers[podUID] {
+			ctrInfo, err := r.runtimeClient.ContainerInspect(listCtx, ctr.ID)
+			if err != nil {
+				return nil, err
+			}
+			containerStatus = append(containerStatus, translateDockerContainerStatusToCRIContainerStatus(&ctrInfo))
+		}
+		results = append(results, connectivity.NewPod(podUID, translateDockerContainerStatusToCRISandboxStatus(&pauseCtrSpec), containerStatus))
+	}
+
+	return results, nil
 }
 
 func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
@@ -459,15 +536,16 @@ func (r *dockerRuntime) findContainer(podUID, container string) (*dockerType.Con
 
 func (r *dockerRuntime) createPauseContainer(
 	ctx context.Context,
-	podUID string,
+	podNamespace, podName, podUID string,
 	hostNetwork, hostPID, hostIPC bool, hostname string,
-) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, err error) {
+) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, netSettings map[string]*dockerNetwork.EndpointSettings, err error) {
 	pauseContainerName := runtimeutil.GetContainerName(podUID, constant.ContainerNamePause)
+	containerNsName := fmt.Sprintf("container:%s", pauseContainerName)
 	pauseContainer, err := r.runtimeClient.ContainerCreate(ctx,
 		&dockerContainer.Config{
 			Hostname: hostname,
 			Image:    r.PauseImage,
-			Labels:   runtimeutil.ContainerLabels(podUID, constant.ContainerNamePause),
+			Labels:   runtimeutil.ContainerLabels(podNamespace, podName, podUID, constant.ContainerNamePause),
 		},
 		&dockerContainer.HostConfig{
 			Resources: dockerContainer.Resources{
@@ -478,74 +556,62 @@ func (r *dockerRuntime) createPauseContainer(
 				if hostNetwork {
 					return "host"
 				}
-				return "default"
+				return dockerContainer.NetworkMode(containerNsName)
 			}(),
 			IpcMode: func() dockerContainer.IpcMode {
 				if hostIPC {
 					return "host"
 				}
-				return ""
+				return dockerContainer.IpcMode(containerNsName)
 			}(),
 			PidMode: func() dockerContainer.PidMode {
 				if hostPID {
 					return "host"
 				}
-				return ""
+				return dockerContainer.PidMode(containerNsName)
 			}(),
+			UsernsMode: dockerContainer.UsernsMode(":" + pauseContainerName),
+			UTSMode:    dockerContainer.UTSMode(":" + pauseContainerName),
 		},
 		&dockerNetwork.NetworkingConfig{
 			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{},
 		}, pauseContainerName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	err = r.runtimeClient.ContainerStart(ctx, pauseContainer.ID, dockerType.ContainerStartOptions{})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	pauseContainerSpec, err := r.runtimeClient.ContainerInspect(ctx, pauseContainer.ID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	ns = make(map[string]string)
-	hostConfig := pauseContainerSpec.HostConfig
-	if hostConfig != nil {
-		if hostConfig.NetworkMode.IsHost() {
-			ns["net"] = "host"
-		} else if hostConfig.NetworkMode.IsContainer() {
-			ns["net"] = fmt.Sprintf("container:%s", hostConfig.NetworkMode.ConnectedContainer())
-		} else {
-			return nil, nil, errors.New("failed to share net ns")
-		}
-
-		if hostConfig.IpcMode.IsHost() {
-			ns["ipc"] = "host"
-		} else if hostConfig.IpcMode.IsContainer() {
-			ns["ipc"] = fmt.Sprintf("container:%s", hostConfig.IpcMode.Container())
-		} else {
-			return nil, nil, errors.New("failed to share ipc ns")
-		}
-
-		// DO NOT share pid ns if it's not host
-		if hostConfig.PidMode.IsHost() {
-			ns["pid"] = "host"
-		}
-
-		// TODO: share uts and user ns
+	ns = map[string]string{
+		"net":  string(pauseContainerSpec.HostConfig.NetworkMode),
+		"ipc":  string(pauseContainerSpec.HostConfig.IpcMode),
+		"uts":  string(pauseContainerSpec.HostConfig.UTSMode),
+		"user": string(pauseContainerSpec.HostConfig.UsernsMode),
 	}
-	return &pauseContainerSpec, ns, nil
+	// DO NOT share pid ns if it's not host
+	if pauseContainerSpec.HostConfig.PidMode.IsHost() {
+		ns["pid"] = "host"
+	}
+
+	return &pauseContainerSpec, ns, pauseContainerSpec.NetworkSettings.Networks, nil
 }
 
 func (r *dockerRuntime) createContainer(
 	ctx context.Context,
-	podUID, container, hostname string,
+	podNamespace, podName, podUID, container, hostname string,
 	namespaces map[string]string,
 	spec *connectivity.ContainerSpec,
 	volumeData map[string]*connectivity.NamedData,
 	hostVolumes map[string]string,
+	endpointSettings map[string]*dockerNetwork.EndpointSettings,
 ) (ctrID string, err error) {
 	containerName := runtimeutil.GetContainerName(podUID, container)
 	var (
@@ -604,7 +670,7 @@ func (r *dockerRuntime) createContainer(
 	containerConfig := &dockerContainer.Config{
 		Hostname:     hostname,
 		ExposedPorts: exposedPorts,
-		Labels:       runtimeutil.ContainerLabels(podUID, container),
+		Labels:       runtimeutil.ContainerLabels(podNamespace, podName, podUID, container),
 		Image:        spec.GetImage(),
 		Env:          envs,
 		Tty:          spec.GetTty(),
@@ -631,13 +697,27 @@ func (r *dockerRuntime) createContainer(
 		// shared only when it's host
 		PidMode: dockerContainer.PidMode(namespaces["pid"]),
 	}
-	networkingConfig := &dockerNetwork.NetworkingConfig{}
+	networkingConfig := &dockerNetwork.NetworkingConfig{
+		EndpointsConfig: endpointSettings,
+	}
 
 	ctr, err := r.runtimeClient.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, containerName)
 	if err != nil {
 		return "", err
 	}
 	return ctr.ID, nil
+}
+
+func (r *dockerRuntime) deleteContainer(containerID string, timeout time.Duration) error {
+	err := r.runtimeClient.ContainerStop(context.Background(), containerID, &timeout)
+	if err != nil {
+		return err
+	}
+
+	return r.runtimeClient.ContainerRemove(context.Background(), containerID, dockerType.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	})
 }
 
 func dockerNetworkNamespacePath(ctrInfo dockerType.ContainerJSON) (string, error) {

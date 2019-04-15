@@ -224,7 +224,7 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 		specOpts = append(specOpts, commonOCISpecOpts...)
 
 		ctr, err := r.runtimeClient.NewContainer(createCtx, containerID,
-			containerd.WithContainerLabels(runtimeutil.ContainerLabels(options.GetPodUid(), ctrName)),
+			containerd.WithContainerLabels(runtimeutil.ContainerLabels(options.GetNamespace(), options.GetName(), options.GetPodUid(), ctrName)),
 			containerd.WithImage(image),
 			containerd.WithImageStopSignal(image, "SIGTERM"),
 			containerd.WithNewSnapshot(containerID, image),
