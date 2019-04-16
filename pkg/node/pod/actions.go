@@ -48,7 +48,7 @@ func (m *Manager) ExecInContainer(name string, uid types.UID, container string, 
 	}
 
 	execCmd := connectivity.NewContainerExecCmd(string(uid), options)
-	return m.handleBidirectionalStream(execCmd, timeout, stdin, stdout, stderr, resize)
+	return m.handleBidirectionalStream(execCmd, stdin, stdout, stderr, resize)
 }
 
 // AttachContainer
@@ -63,7 +63,7 @@ func (m *Manager) AttachContainer(name string, uid types.UID, container string, 
 	}
 
 	attachCmd := connectivity.NewContainerAttachCmd(string(uid), options)
-	return m.handleBidirectionalStream(attachCmd, 0, stdin, stdout, stderr, resize)
+	return m.handleBidirectionalStream(attachCmd, stdin, stdout, stderr, resize)
 }
 
 // PortForward
@@ -73,5 +73,5 @@ func (m *Manager) PortForward(name string, uid types.UID, port int32, stream io.
 		Ports: []int32{port},
 	}
 	portForwardCmd := connectivity.NewPortForwardCmd(string(uid), options)
-	return m.handleBidirectionalStream(portForwardCmd, 0, stream, stream, nil, nil)
+	return m.handleBidirectionalStream(portForwardCmd, stream, stream, nil, nil)
 }

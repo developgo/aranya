@@ -415,7 +415,7 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 			defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
 			for inputData := range inputCh {
-				log.Printf("input: %v", string(inputData))
+				log.Printf("stdin: %v", string(inputData))
 				_, err := remoteStdin.Write(inputData)
 				if err != nil {
 					return
@@ -426,7 +426,7 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 
 	if opt.Stdout {
 		remoteStdout, stdout = io.Pipe()
-		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
+		defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
 		go func() {
 			defer log.Printf("fininshed stdout")
@@ -455,7 +455,7 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 
 			for s.Scan() {
 				data := s.Bytes()
-				log.Printf("stdout: %v", string(data))
+				log.Printf("stderr: %v", string(data))
 				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, data)); err != nil {
 					c.handleError(sid, err)
 					return

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -13,14 +12,15 @@ import (
 	"arhat.dev/aranya/pkg/node/util"
 )
 
-func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeout time.Duration, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
+func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
 	defer log.Error(err, "finished stream handle")
 
-	ctx, cancel := context.WithTimeout(m.ctx, timeout)
+	ctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
+
 	msgCh, err := m.remoteManager.PostCmd(ctx, initialCmd)
 	if err != nil {
 		log.Error(err, "failed to post initial command")
