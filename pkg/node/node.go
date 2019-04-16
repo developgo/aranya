@@ -111,11 +111,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	cert, err := newTLSCert(nodeObj)
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*cert},
-	}
-
 	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
 		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
@@ -158,6 +153,16 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
 
 	// TODO: handle metrics
+
+	cert, err := newTLSCert(nodeObj)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+	}
+
 	srv := &Node{
 		log:        logger,
 		ctx:        ctx,
