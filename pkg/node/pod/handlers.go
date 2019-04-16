@@ -5,18 +5,23 @@ import (
 	"net/http"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/types"
 	kubeletportforward "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	kubeletremotecommand "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/util"
 )
 
-func (m *Manager) HandleNodeLog(w http.ResponseWriter, r *http.Request) {
-	log.Info("HandlePodContainerLog")
+func (m *Manager) getPodUIDInCache(namespace, name string, podUID types.UID) types.UID {
+	if podUID != "" {
+		return podUID
+	} else {
+		pod, _ := m.podCache.GetByName(namespace, name)
+		return pod.UID
+	}
 }
 
 // HandlePodContainerLog
-// GET /containerLogs/{namespace}/{name}/{containerName}
 func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodContainerLog")
 
@@ -26,10 +31,10 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logReader, err := m.GetContainerLogs(podUID, container, opt)
+	logReader, err := m.GetContainerLogs(m.getPodUIDInCache(namespace, podName, podUID), container, opt)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Error(err, "failed to get container logs", "pod.namespace", namespace, "pod.name", podName, "pod.container", container)
+		log.Error(err, "failed to get container logs")
 		return
 	}
 	defer func() { _ = logReader.Close() }()
@@ -37,7 +42,7 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 	// read until EOF (err = nil)
 	w.WriteHeader(http.StatusOK)
 	if _, err := io.Copy(w, logReader); err != nil {
-		log.Error(err, "Send container log response failed")
+		log.Error(err, "failed to send container log response")
 		return
 	}
 }
@@ -47,7 +52,6 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodExec")
 
 	namespace, podName, uid, containerName, cmd := util.GetParamsForExec(r)
-	_, _ = namespace, podName
 
 	kubeletremotecommand.ServeExec(
 		// http context
@@ -57,7 +61,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		// namespaced pod name
 		"",
 		// unique id of pod
-		uid,
+		m.getPodUIDInCache(namespace, podName, uid),
 		// container to execute in
 		containerName,
 		// commands to execute
@@ -74,7 +78,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodAttach")
 	namespace, podName, uid, containerName, _ := util.GetParamsForExec(r)
-	_, _ = namespace, podName
+
 	kubeletremotecommand.ServeAttach(
 		// http context
 		w, r,
@@ -83,7 +87,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		// namespaced pod name (not used)
 		"",
 		// unique id of pod
-		uid,
+		m.getPodUIDInCache(namespace, podName, uid),
 		// container to execute in
 		containerName,
 		// stream options
@@ -94,10 +98,10 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
 
+// HandlePodPortForward
 func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodAttach")
 	namespace, podName, uid := util.GetParamsForPortForward(r)
-	_, _ = namespace, podName
 
 	portForwardOptions, err := kubeletportforward.NewV4Options(r)
 	if err != nil {
@@ -113,7 +117,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		// namespaced pod name (not used)
 		"",
 		// unique id of pod
-		uid,
+		m.getPodUIDInCache(namespace, podName, uid),
 		// port forward options (ports)
 		portForwardOptions,
 		// timeout options

@@ -9,12 +9,13 @@ import (
 )
 
 func PanicRecoverMiddleware(logger logr.Logger) mux.MiddlewareFunc {
+	log := logger
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			defer func() {
 				err := recover()
 				if err != nil {
-					logger.V(2).Info("recovered from panic", "panic", err)
+					log.Info("recovered from panic", "panic", err)
 				}
 			}()
 
@@ -38,8 +39,10 @@ func LogMiddleware(logger logr.Logger) mux.MiddlewareFunc {
 	}
 }
 
-func NotFoundHandler() http.Handler {
+func NotFoundHandler(logger logr.Logger) http.Handler {
+	log := logger.WithName("request.notFound")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Info("request url not handled", "uri", r.URL.RequestURI())
 		http.Error(w, "404 page not found", http.StatusNotFound)
 	})
 }

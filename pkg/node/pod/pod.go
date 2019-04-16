@@ -2,6 +2,7 @@ package pod
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -135,7 +136,10 @@ func (m *Manager) UpdateMirrorPod(devicePod *connectivity.Pod) error {
 		log.Error(err, "failed to get resolved kube pod status")
 		return err
 	}
-	oldPod := m.podCache.Get(status.ID)
+	oldPod, ok := m.podCache.GetByID(status.ID)
+	if !ok {
+		return fmt.Errorf("failed to find pod cache by id: %v", status.ID)
+	}
 
 	apiPod, err := m.GetMirrorPod(oldPod.Namespace, oldPod.Name)
 	if err != nil {
@@ -164,7 +168,10 @@ func (m *Manager) UpdateMirrorPod(devicePod *connectivity.Pod) error {
 }
 
 func (m *Manager) DeleteMirrorPod(podUID types.UID) error {
-	oldPod := m.podCache.Get(podUID)
+	oldPod, ok := m.podCache.GetByID(podUID)
+	if !ok {
+		return fmt.Errorf("failed to find pod cache by id: %v", podUID)
+	}
 	err := m.kubeClient.CoreV1().Pods(oldPod.Namespace).Delete(oldPod.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err

@@ -60,7 +60,7 @@ func (m *Manager) ConvertPodStatusToAPIPodStatus(pod *corev1.Pod, podStatus *kub
 	// set status for Pods created on versions of kube older than 1.6
 	apiPodStatus.QOSClass = v1qos.GetPodQOS(pod)
 
-	oldPod := m.podCache.Get(pod.UID)
+	oldPod, _ := m.podCache.GetByID(pod.UID)
 	if oldPod == nil {
 		oldPodStatus = pod.Status
 	} else {
