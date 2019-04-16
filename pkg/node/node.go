@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -135,8 +134,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		}},
 		Hosts: hosts,
 	})
-	csrEncodedBytes := make([]byte, base64.StdEncoding.EncodedLen(len(csrBytes)))
-	base64.StdEncoding.Encode(csrEncodedBytes, csrBytes)
 
 	csrObj := &certv1beta1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
@@ -144,7 +141,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 			Namespace: constant.CurrentNamespace(),
 		},
 		Spec: certv1beta1.CertificateSigningRequestSpec{
-			Request: csrEncodedBytes,
+			Request: csrBytes,
 			Groups: []string{
 				"system:nodes",
 				"system:authenticated",
@@ -174,14 +171,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	certEncodedBytes := result.Status.Certificate
-	certBytes := make([]byte, base64.StdEncoding.DecodedLen(len(certEncodedBytes)))
-	_, err = base64.StdEncoding.Decode(certBytes, certEncodedBytes)
-	if err != nil {
-		log.Error(err, "failed to decode base64 encoded cert", "raw", string(certEncodedBytes))
-		return nil, err
-	}
-
 	keyOut := &bytes.Buffer{}
 	b, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
@@ -194,7 +183,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	cert, err := tls.X509KeyPair(certBytes, keyOut.Bytes())
+	cert, err := tls.X509KeyPair(result.Status.Certificate, keyOut.Bytes())
 	if err != nil {
 		log.Error(err, "failed to load certificate")
 		return nil, err
