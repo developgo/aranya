@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/util"
 )
 
 func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
@@ -38,7 +37,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, in io.
 	inputCh := make(chan *connectivity.Cmd, 1)
 	if in != nil {
 		s := bufio.NewScanner(in)
-		s.Split(util.ScanAnyAvail)
+		s.Split(bufio.ScanLines)
 
 		go func() {
 			// defer close(inputCh)
@@ -107,7 +106,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, in io.
 				log.Info("resize ch closed")
 				return nil
 			}
-			log.Info("resize")
+			log.Info("resize", "width", size.Width, "height", size.Height)
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.remoteManager.PostCmd(ctx, resizeCmd)

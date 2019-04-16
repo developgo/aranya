@@ -187,7 +187,6 @@ func ensureNodeCert(client kubeClient.Interface, nodeObj *corev1.Node) (*tls.Cer
 		}
 	}
 
-	log.Info("certificate pair", "cert", string(certBytes), "key", string(privateKeyBytes))
 	cert, err := tls.X509KeyPair(certBytes, privateKeyBytes)
 	if err != nil {
 		log.Error(err, "failed to load certificate")
