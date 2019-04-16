@@ -1,35 +1,22 @@
 package node
 
 import (
-	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"errors"
-	"fmt"
-	"math/big"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/cloudflare/cfssl/csr"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
-	certv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/pod"
@@ -40,75 +27,6 @@ var (
 	log = logf.Log.WithName("aranya.node")
 )
 
-func newTLSCert(nodeObj *corev1.Node) (*tls.Certificate, error) {
-	var (
-		ipAddresses []net.IP
-		domainNames []string
-	)
-	for _, nodeAddr := range nodeObj.Status.Addresses {
-		switch nodeAddr.Type {
-		case corev1.NodeHostName, corev1.NodeExternalDNS, corev1.NodeInternalDNS:
-			domainNames = append(domainNames, nodeAddr.Address)
-		case corev1.NodeInternalIP, corev1.NodeExternalIP:
-			ipAddresses = append(ipAddresses, net.ParseIP(nodeAddr.Address))
-		}
-	}
-
-	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	validSince := time.Now()
-	validUntil := time.Time{}
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		log.Error(err, "failed to generate serial number")
-	}
-
-	template := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			StreetAddress: []string{},
-			Locality:      []string{},
-			Organization:  []string{"system:nodes"},
-		},
-		NotBefore: validSince,
-		NotAfter:  validUntil,
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		IPAddresses:           ipAddresses,
-		DNSNames:              domainNames,
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, priv.PublicKey, priv)
-
-	// create pem encoded bytes
-	certOut, keyOut := &bytes.Buffer{}, &bytes.Buffer{}
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	if err != nil {
-		return nil, err
-	}
-	b, err := x509.MarshalECPrivateKey(priv)
-	if err != nil {
-		return nil, err
-	}
-	err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b})
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := tls.X509KeyPair(certOut.Bytes(), keyOut.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return &cert, nil
-}
-
 func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
 	// create a new kubernetes client with provided config
 	client, err := kubeClient.NewForConfig(&config)
@@ -116,76 +34,8 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	cert, err := ensureNodeCert(client, nodeObj)
 	if err != nil {
-		log.Error(err, "failed to generate private key for node cert")
-		return nil, err
-	}
-
-	var hosts []string
-	for _, nodeAddr := range nodeObj.Status.Addresses {
-		hosts = append(hosts, nodeAddr.Address)
-	}
-
-	csrBytes, err := csr.Generate(privateKey, &csr.CertificateRequest{
-		CN: fmt.Sprintf("system:node:%s", nodeObj.Name),
-		Names: []csr.Name{{
-			O: "system:nodes",
-		}},
-		Hosts: hosts,
-	})
-
-	csrObj := &certv1beta1.CertificateSigningRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s", nodeObj.Name),
-			Namespace: constant.CurrentNamespace(),
-		},
-		Spec: certv1beta1.CertificateSigningRequestSpec{
-			Request: csrBytes,
-			Groups: []string{
-				"system:nodes",
-				"system:authenticated",
-			},
-			Usages: []certv1beta1.KeyUsage{
-				certv1beta1.UsageServerAuth,
-				certv1beta1.UsageDigitalSignature,
-				certv1beta1.UsageKeyEncipherment,
-			},
-		},
-	}
-	req, err := client.CertificatesV1beta1().CertificateSigningRequests().Create(csrObj)
-	if err != nil {
-		log.Error(err, "failed to create csr")
-		return nil, err
-	}
-
-	req.Status.Conditions = append(req.Status.Conditions, certv1beta1.CertificateSigningRequestCondition{
-		Type:    certv1beta1.CertificateApproved,
-		Reason:  "AutoApproved",
-		Message: "self approved by aranya node",
-	})
-
-	result, err := client.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(req)
-	if err != nil {
-		log.Error(err, "failed to approve csr")
-		return nil, err
-	}
-
-	keyOut := &bytes.Buffer{}
-	b, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		log.Error(err, "failed to marshal elliptic curve private key")
-		return nil, err
-	}
-	err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b})
-	if err != nil {
-		log.Error(err, "failed to encode private key pem")
-		return nil, err
-	}
-
-	cert, err := tls.X509KeyPair(result.Status.Certificate, keyOut.Bytes())
-	if err != nil {
-		log.Error(err, "failed to load certificate")
 		return nil, err
 	}
 
@@ -239,7 +89,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		name:       nodeObj.Name,
 		kubeClient: client,
 
-		httpSrv:         &http.Server{Handler: m, TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}}},
+		httpSrv:         &http.Server{Handler: m, TLSConfig: &tls.Config{Certificates: []tls.Certificate{*cert}}},
 		kubeletListener: kubeletListener,
 
 		connectivityManager: connectivityManager,
