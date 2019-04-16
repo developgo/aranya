@@ -41,7 +41,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		s.Split(util.ScanAnyAvail)
 
 		go func() {
-			defer log.Info("finished stream input")
+			defer log.Error(s.Err(), "finished stream input")
 			defer close(inputCh)
 
 			for s.Scan() {
