@@ -1,10 +1,17 @@
 package node
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"net"
 	"net/http"
 	"sync"
@@ -28,30 +35,73 @@ var (
 	log = logf.Log.WithName("aranya.node")
 )
 
-type Node struct {
-	log  logr.Logger
-	ctx  context.Context
-	exit context.CancelFunc
-	name string
+func newTLSCert(nodeObj *corev1.Node) (*tls.Certificate, error) {
+	var (
+		ipAddresses []net.IP
+		domainNames []string
+	)
+	for _, nodeAddr := range nodeObj.Status.Addresses {
+		switch nodeAddr.Type {
+		case corev1.NodeHostName, corev1.NodeExternalDNS, corev1.NodeInternalDNS:
+			domainNames = append(domainNames, nodeAddr.Address)
+		case corev1.NodeInternalIP, corev1.NodeExternalIP:
+			ipAddresses = append(ipAddresses, net.ParseIP(nodeAddr.Address))
+		}
+	}
 
-	kubeClient kubeClient.Interface
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
 
-	// kubelet http server and listener
-	httpSrv         *http.Server
-	kubeletListener net.Listener
-	// grpc server and listener
-	grpcSrv      *grpc.Server
-	grpcListener net.Listener
-	// remote device manager
-	connectivityManager connectivitySrv.Interface
+	validSince := time.Now()
+	validUntil := time.Time{}
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		log.Error(err, "failed to generate serial number")
+	}
 
-	podManager *pod.Manager
+	template := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			StreetAddress: []string{},
+			Locality:      []string{},
+			Organization:  []string{"system:nodes"},
+		},
+		NotBefore: validSince,
+		NotAfter:  validUntil,
 
-	nodeStatusCache *NodeCache
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           ipAddresses,
+		DNSNames:              domainNames,
+	}
 
-	// status
-	status uint32
-	mu     sync.RWMutex
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, priv.PublicKey, priv)
+
+	// create pem encoded bytes
+	certOut, keyOut := &bytes.Buffer{}, &bytes.Buffer{}
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return nil, err
+	}
+	b, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return nil, err
+	}
+	err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b})
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := tls.X509KeyPair(certOut.Bytes(), keyOut.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return &cert, nil
 }
 
 func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
@@ -61,20 +111,9 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
-	err = rest.LoadTLSFiles(&config)
-	if err != nil {
-		return nil, err
-	}
-
-	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(config.CAData)
-	cert, err := tls.X509KeyPair(config.CertData, config.KeyData)
-	if err != nil {
-		return nil, err
-	}
+	cert, err := newTLSCert(nodeObj)
 	tlsConfig := &tls.Config{
-		ClientCAs:    caPool,
-		Certificates: []tls.Certificate{cert},
+		Certificates: []tls.Certificate{*cert},
 	}
 
 	var connectivityManager connectivitySrv.Interface
@@ -138,6 +177,32 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	}
 
 	return srv, nil
+}
+
+type Node struct {
+	log  logr.Logger
+	ctx  context.Context
+	exit context.CancelFunc
+	name string
+
+	kubeClient kubeClient.Interface
+
+	// kubelet http server and listener
+	httpSrv         *http.Server
+	kubeletListener net.Listener
+	// grpc server and listener
+	grpcSrv      *grpc.Server
+	grpcListener net.Listener
+	// remote device manager
+	connectivityManager connectivitySrv.Interface
+
+	podManager *pod.Manager
+
+	nodeStatusCache *NodeCache
+
+	// status
+	status uint32
+	mu     sync.RWMutex
 }
 
 func (n *Node) Start() error {
