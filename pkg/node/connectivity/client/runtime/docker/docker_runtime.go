@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -324,6 +325,12 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		return err
 	}
 
+	err = r.runtimeClient.ContainerExecStart(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
+	if err != nil {
+		execLog.Error(err, "failed to start exec")
+		return err
+	}
+
 	attachResp, err := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
 	if err != nil {
 		execLog.Error(err, "failed to attach exec")
@@ -335,6 +342,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer execLog.Info("finished copy stdin")
 
 		_, err := io.Copy(attachResp.Conn, stdin)
 		if err != nil {
@@ -345,10 +353,36 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer execLog.Info("finished copy stdout and stderr")
 
-		_, err := dockerStdCopy.StdCopy(stdout, stderr, attachResp.Reader)
+		var stdOut, stdErr io.Writer
+		stdOut, stdErr = stdout, stderr
+		if stdout == nil {
+			stdOut = ioutil.Discard
+		}
+		if stderr == nil {
+			stdErr = ioutil.Discard
+		}
+
+		_, err := dockerStdCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
 		if err != nil {
 			execLog.Error(err, "exception when copy from attach stream")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer execLog.Info("finished resize tty")
+
+		for size := range resizeCh {
+			err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
+				Height: uint(size.Height),
+				Width:  uint(size.Width),
+			})
+			if err != nil {
+				execLog.Error(err, "failed to resize container tty")
+			}
 		}
 	}()
 
@@ -397,9 +431,16 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 	go func() {
 		defer wg.Done()
 
-		_, err := dockerStdCopy.StdCopy(stdout, stderr, resp.Reader)
-		if err != nil {
-			attachLog.Error(err, "exception when copy from attach stream")
+		if stderr != nil {
+			_, err := dockerStdCopy.StdCopy(stdout, stderr, resp.Reader)
+			if err != nil {
+				attachLog.Error(err, "exception when stdCopy from attach stream")
+			}
+		} else {
+			_, err := io.Copy(stdout, resp.Reader)
+			if err != nil {
+				attachLog.Error(err, "exception when copy from attach stream")
+			}
 		}
 	}()
 

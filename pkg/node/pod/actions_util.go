@@ -17,11 +17,13 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
+	defer log.Error(err, "finished stream handle")
 
 	ctx, cancel := context.WithTimeout(m.ctx, timeout)
 	defer cancel()
 	msgCh, err := m.remoteManager.PostCmd(ctx, initialCmd)
 	if err != nil {
+		log.Error(err, "failed to post initial command")
 		return err
 	}
 
@@ -39,6 +41,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		s.Split(util.ScanAnyAvail)
 
 		go func() {
+			defer log.Info("finished stream input")
 			defer close(inputCh)
 
 			for s.Scan() {
@@ -62,15 +65,18 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
+			log.Info("send data", "data", string(userInput.GetPodCmd().GetInputOptions().GetData()))
 
 			_, err = m.remoteManager.PostCmd(ctx, userInput)
 			if err != nil {
-				return nil
+				log.Error(err, "failed to post user input")
+				return err
 			}
 		case msg, more := <-msgCh:
 			if !more {
 				return nil
 			}
+			log.Info("recv data", "data", string(msg.GetData().GetData()))
 			// only PodData will be received in this session
 			switch m := msg.GetMsg().(type) {
 			case *connectivity.Msg_Data:
@@ -88,6 +94,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 
 				_, err = targetOutput.Write(m.Data.GetData())
 				if err != nil {
+					log.Error(err, "failed to write output")
 					return err
 				}
 			}
@@ -95,6 +102,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			if !more {
 				return nil
 			}
+			log.Info("resize")
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.remoteManager.PostCmd(ctx, resizeCmd)

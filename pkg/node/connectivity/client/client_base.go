@@ -389,6 +389,7 @@ func (c *baseClient) doContainerAttach(sid uint64, options *connectivity.ExecOpt
 
 func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer c.openedStreams.del(sid)
+	defer log.Printf("fininshed exec")
 
 	opt, err := options.GetResolvedExecOptions()
 	if err != nil {
@@ -410,9 +411,11 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		stdin, remoteStdin = io.Pipe()
 
 		go func() {
+			defer log.Printf("fininshed stdin")
 			defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
 			for inputData := range inputCh {
+				log.Printf("input: %v", string(inputData))
 				_, err := remoteStdin.Write(inputData)
 				if err != nil {
 					return
@@ -426,11 +429,14 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
+			defer log.Printf("fininshed stdout")
 			s := bufio.NewScanner(remoteStdout)
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+				data := s.Bytes()
+				log.Printf("stdout: %v", string(data))
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, data)); err != nil {
 					c.handleError(sid, err)
 					return
 				}
@@ -443,11 +449,14 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
+			defer log.Printf("fininshed stderr")
 			s := bufio.NewScanner(remoteStderr)
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+				data := s.Bytes()
+				log.Printf("stdout: %v", string(data))
+				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, data)); err != nil {
 					c.handleError(sid, err)
 					return
 				}
@@ -457,7 +466,6 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
-
 	if err := c.runtime.ExecInContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
 		c.handleError(sid, err)
 		return
