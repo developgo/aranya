@@ -1,0 +1,14 @@
+controller:
+  svc:
+    grpc:
+      auto_create: true
+      address_type: ClusterIP
+      address: ""
+  cert:
+    node:
+      auto_approve: true
+      names:
+        state: ""
+        province: ""
+
+services:

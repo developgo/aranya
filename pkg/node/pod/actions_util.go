@@ -41,12 +41,12 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		s.Split(util.ScanAnyAvail)
 
 		go func() {
-			defer log.Error(s.Err(), "finished stream input")
-			defer close(inputCh)
+			// defer close(inputCh)
 
 			for s.Scan() {
 				inputCh <- connectivity.NewContainerInputCmd(sid, s.Bytes())
 			}
+			log.Error(s.Err(), "finished stream input", "remains", s.Text())
 		}()
 	}
 

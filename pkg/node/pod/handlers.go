@@ -52,6 +52,8 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodExec")
 
 	namespace, podName, uid, containerName, cmd := util.GetParamsForExec(r)
+	streamOptions := util.NewRemoteCommandOptions(r)
+	log.Info("exec stream options", "opt", streamOptions)
 
 	kubeletremotecommand.ServeExec(
 		// http context
@@ -59,7 +61,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		// edge pod executor provided by Manager (implements ExecInContainer)
 		kubeletremotecommand.Executor(m),
 		// namespaced pod name
-		"",
+		"", // unused
 		// unique id of pod
 		m.getPodUIDInCache(namespace, podName, uid),
 		// container to execute in
@@ -67,7 +69,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		// commands to execute
 		cmd,
 		// stream options
-		util.NewRemoteCommandOptions(r),
+		streamOptions,
 		// timeout options
 		idleTimeout, streamCreationTimeout,
 		// supported protocols
@@ -78,6 +80,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodAttach")
 	namespace, podName, uid, containerName, _ := util.GetParamsForExec(r)
+	streamOptions := util.NewRemoteCommandOptions(r)
 
 	kubeletremotecommand.ServeAttach(
 		// http context
@@ -85,13 +88,13 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		// edge pod executor provided by Manager (implements ExecInContainer)
 		kubeletremotecommand.Attacher(m),
 		// namespaced pod name (not used)
-		"",
+		"", // unused
 		// unique id of pod
 		m.getPodUIDInCache(namespace, podName, uid),
 		// container to execute in
 		containerName,
 		// stream options
-		util.NewRemoteCommandOptions(r),
+		streamOptions,
 		// timeout options
 		idleTimeout, streamCreationTimeout,
 		// supported protocols
