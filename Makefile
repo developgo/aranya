@@ -12,5 +12,9 @@ include scripts/private.mk
 check-log:
 	$(shell scripts/log.sh current)
 
+.PHONY: check-log-all
+check-log-all:
+	$(shell scripts/log.sh current-all)
+
 check-log-prev:
 	$(shell scripts/log.sh previous)

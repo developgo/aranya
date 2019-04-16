@@ -2,6 +2,8 @@ package node
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"net"
 	"net/http"
@@ -59,6 +61,22 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
+	err = rest.LoadTLSFiles(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(config.CAData)
+	cert, err := tls.X509KeyPair(config.CertData, config.KeyData)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig := &tls.Config{
+		ClientCAs:    caPool,
+		Certificates: []tls.Certificate{cert},
+	}
+
 	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
 		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
@@ -101,7 +119,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 	// m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
 
 	// TODO: handle metrics
-
 	srv := &Node{
 		log:        logger,
 		ctx:        ctx,
@@ -109,7 +126,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		name:       nodeObj.Name,
 		kubeClient: client,
 
-		httpSrv:         &http.Server{Handler: m},
+		httpSrv:         &http.Server{Handler: m, TLSConfig: tlsConfig},
 		kubeletListener: kubeletListener,
 
 		connectivityManager: connectivityManager,

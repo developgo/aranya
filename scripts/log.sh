@@ -14,4 +14,10 @@ previous() {
         1>&2
 }
 
+current-all () {
+    kubectl logs -n edge ${POD_NAME} -f \
+        | jq -R -c '. as $line | try fromjson catch $line' \
+        1>&2
+}
+
 "$@"

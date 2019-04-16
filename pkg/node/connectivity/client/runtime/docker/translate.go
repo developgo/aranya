@@ -7,16 +7,16 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func translateDockerContainerStatusToCRISandboxStatus(ctrInfo *dockerType.ContainerJSON) *criRuntime.PodSandboxStatus {
+func (r *dockerRuntime) translateDockerContainerStatusToCRISandboxStatus(ctrInfo *dockerType.ContainerJSON) *criRuntime.PodSandboxStatus {
 	podCreatedAt, _ := time.Parse(time.RFC3339Nano, ctrInfo.Created)
 	return &criRuntime.PodSandboxStatus{
-		Id:        ctrInfo.ID,
+		Id:        r.Name() + "://" + ctrInfo.ID,
 		State:     translateDockerContainerStateToCRISandboxState(ctrInfo),
 		CreatedAt: podCreatedAt.UnixNano(),
 	}
 }
 
-func translateDockerContainerStatusToCRIContainerStatus(ctrInfo *dockerType.ContainerJSON) *criRuntime.ContainerStatus {
+func (r *dockerRuntime) translateDockerContainerStatusToCRIContainerStatus(ctrInfo *dockerType.ContainerJSON) *criRuntime.ContainerStatus {
 	ctrCreatedAt, _ := time.Parse(time.RFC3339Nano, ctrInfo.Created)
 	ctrStartedAt := time.Time{}
 	ctrFinishedAt := time.Time{}
@@ -25,10 +25,7 @@ func translateDockerContainerStatusToCRIContainerStatus(ctrInfo *dockerType.Cont
 		ctrFinishedAt, _ = time.Parse(time.RFC3339Nano, ctrInfo.State.FinishedAt)
 	}
 	return &criRuntime.ContainerStatus{
-		Id: ctrInfo.ID,
-		Metadata: &criRuntime.ContainerMetadata{
-			Name: ctrInfo.Name,
-		},
+		Id:         r.Name() + "://" + ctrInfo.ID,
 		State:      translateDockerContainerStateToCRIContainerState(ctrInfo),
 		CreatedAt:  ctrCreatedAt.UnixNano(),
 		StartedAt:  ctrStartedAt.UnixNano(),

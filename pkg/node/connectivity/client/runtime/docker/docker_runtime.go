@@ -182,39 +182,29 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 			createLog.Error(err, "failed to inspect docker container")
 			return nil, err
 		}
-		containersStatus[i] = translateDockerContainerStatusToCRIContainerStatus(&ctrInfo)
+		containersStatus[i] = r.translateDockerContainerStatusToCRIContainerStatus(&ctrInfo)
 	}
 
-	return connectivity.NewPod(options.GetPodUid(), translateDockerContainerStatusToCRISandboxStatus(pauseContainerSpec), containersStatus), nil
+	r.Log().Info("pod created")
+	return connectivity.NewPod(options.GetPodUid(), r.translateDockerContainerStatusToCRISandboxStatus(pauseContainerSpec), containersStatus), nil
 }
 
 func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error) {
 	deleteLog := r.Log().WithValues("uid", options.GetPodUid())
 
-	infraCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
+	pauseCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
 	if err != nil {
 		deleteLog.Error(err, "failed to find pause container")
 		return nil, err
 	}
 
+	timeout := time.Duration(options.GetGraceTime())
+	now := time.Now()
+
 	deleteCtx, cancelDelete := r.RuntimeActionContext()
 	defer cancelDelete()
 
-	timeout := time.Duration(options.GraceTime)
-	now := time.Now()
-	err = r.runtimeClient.ContainerStop(deleteCtx, infraCtr.ID, &timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	err = r.runtimeClient.ContainerRemove(deleteCtx, infraCtr.ID, dockerType.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		Force:         options.GetGraceTime() == 0,
-	})
-	if err != nil {
-		return nil, err
-	}
-
+	// delete work containers first
 	containers, err := r.runtimeClient.ContainerList(deleteCtx, dockerType.ContainerListOptions{
 		Quiet: true,
 		Filters: dockerFilter.NewArgs(
@@ -223,27 +213,24 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 		),
 	})
 	if err != nil {
+		deleteLog.Error(err, "failed to list containers")
 		return nil, err
 	}
 
+	containers = append(containers, dockerType.Container{ID: pauseCtr.ID})
+	deleteLog.Info("delete containers", "containers", containers)
 	for _, ctr := range containers {
 		timeout = timeout - time.Since(now)
-
-		err := r.runtimeClient.ContainerStop(deleteCtx, ctr.ID, &timeout)
-		if err != nil {
-			return nil, err
-		}
-
-		err = r.runtimeClient.ContainerRemove(deleteCtx, ctr.ID, dockerType.ContainerRemoveOptions{
-			RemoveVolumes: true,
-			Force:         options.GetGraceTime() == 0,
-		})
-		if err != nil {
-			return nil, err
-		}
 		now = time.Now()
+
+		err = r.deleteContainer(ctr.ID, timeout)
+		if err != nil {
+			deleteLog.Error(err, "failed to delete container")
+			return nil, err
+		}
 	}
 
+	r.Log().Info("pod deleted")
 	return connectivity.NewPod(options.GetPodUid(), nil, nil), nil
 }
 
@@ -306,9 +293,9 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 			if err != nil {
 				return nil, err
 			}
-			containerStatus = append(containerStatus, translateDockerContainerStatusToCRIContainerStatus(&ctrInfo))
+			containerStatus = append(containerStatus, r.translateDockerContainerStatusToCRIContainerStatus(&ctrInfo))
 		}
-		results = append(results, connectivity.NewPod(podUID, translateDockerContainerStatusToCRISandboxStatus(&pauseCtrSpec), containerStatus))
+		results = append(results, connectivity.NewPod(podUID, r.translateDockerContainerStatusToCRISandboxStatus(&pauseCtrSpec), containerStatus))
 	}
 
 	return results, nil
@@ -578,7 +565,7 @@ func (r *dockerRuntime) createPauseContainer(
 	hostNetwork, hostPID, hostIPC bool, hostname string,
 ) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, netSettings map[string]*dockerNetwork.EndpointSettings, err error) {
 	pauseContainerName := runtimeutil.GetContainerName(podUID, constant.ContainerNamePause)
-	containerNsName := fmt.Sprintf("container:%s", pauseContainerName)
+
 	pauseContainer, err := r.runtimeClient.ContainerCreate(ctx,
 		&dockerContainer.Config{
 			Hostname: hostname,
@@ -594,22 +581,22 @@ func (r *dockerRuntime) createPauseContainer(
 				if hostNetwork {
 					return "host"
 				}
-				return dockerContainer.NetworkMode(containerNsName)
+				return "default"
 			}(),
 			IpcMode: func() dockerContainer.IpcMode {
 				if hostIPC {
 					return "host"
 				}
-				return dockerContainer.IpcMode(containerNsName)
+				return "shareable"
 			}(),
 			PidMode: func() dockerContainer.PidMode {
 				if hostPID {
 					return "host"
 				}
-				return dockerContainer.PidMode(containerNsName)
+				return "container"
 			}(),
-			UsernsMode: dockerContainer.UsernsMode(":" + pauseContainerName),
-			UTSMode:    dockerContainer.UTSMode(":" + pauseContainerName),
+			// UsernsMode: "host",
+			// UTSMode:    "host",
 		},
 		&dockerNetwork.NetworkingConfig{
 			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{},
@@ -629,14 +616,10 @@ func (r *dockerRuntime) createPauseContainer(
 	}
 
 	ns = map[string]string{
-		"net":  string(pauseContainerSpec.HostConfig.NetworkMode),
-		"ipc":  string(pauseContainerSpec.HostConfig.IpcMode),
-		"uts":  string(pauseContainerSpec.HostConfig.UTSMode),
-		"user": string(pauseContainerSpec.HostConfig.UsernsMode),
-	}
-	// DO NOT share pid ns if it's not host
-	if pauseContainerSpec.HostConfig.PidMode.IsHost() {
-		ns["pid"] = "host"
+		"net":  "container:" + pauseContainer.ID,
+		"ipc":  "container:" + pauseContainer.ID,
+		"uts":  "container:" + pauseContainer.ID,
+		"user": "container:" + pauseContainer.ID,
 	}
 
 	return &pauseContainerSpec, ns, pauseContainerSpec.NetworkSettings.Networks, nil
@@ -656,6 +639,7 @@ func (r *dockerRuntime) createContainer(
 		exposedPorts     = make(dockerNat.PortSet)
 		portBindings     = make(dockerNat.PortMap)
 		containerVolumes = make(map[string]struct{})
+		containerBinds   []string
 		containerMounts  []dockerMount.Mount
 		envs             []string
 	)
@@ -720,9 +704,9 @@ func (r *dockerRuntime) createContainer(
 		WorkingDir:   spec.GetWorkingDir(),
 	}
 	hostConfig := &dockerContainer.HostConfig{
+		Binds:        containerBinds,
 		Privileged:   spec.GetPrivileged(),
 		PortBindings: portBindings,
-		AutoRemove:   true,
 		Mounts:       containerMounts,
 		Resources: dockerContainer.Resources{
 			MemorySwap: 0,

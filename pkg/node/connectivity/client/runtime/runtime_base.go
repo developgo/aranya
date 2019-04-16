@@ -18,7 +18,7 @@ func NewRuntimeBase(ctx context.Context, config *Config, name, version, os, arch
 		arch:          arch,
 		kernelVersion: kernelVersion,
 
-		logger: logf.Log.WithName("runtime"),
+		logger: logf.ZapLogger(true).WithName("runtime"),
 	}
 }
 
@@ -33,6 +33,7 @@ type Base struct {
 }
 
 func (b *Base) Log() logr.Logger {
+
 	return b.logger
 }
 

@@ -10,8 +10,8 @@ ingress-cleanup:
 
 .PHONY: run-arhat-fake-grpc
 run-arhat-fake-grpc: arhat-fake-grpc
-	./$(BUILD_DIR)/arhat-fake-grpc -c config/arhat/private_fake_grpc.yaml
+	./$(BUILD_DIR)/arhat-fake-grpc -c config/arhat/private_fake_grpc.yaml 1>&2
 
 .PHONY: run-arhat-docker-grpc
 run-arhat-docker-grpc: arhat-docker-grpc
-	./$(BUILD_DIR)/arhat-docker-grpc -c config/arhat/private_docker_grpc.yaml
+	./$(BUILD_DIR)/arhat-docker-grpc -c config/arhat/private_docker_grpc.yaml 1>&2

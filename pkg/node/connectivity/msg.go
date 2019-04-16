@@ -43,7 +43,10 @@ func NewPod(podUID string, podStatus *criRuntime.PodSandboxStatus, containerStat
 		containerStatusBytes = make([][]byte, len(containerStatuses))
 	)
 
-	podStatusBytes, _ = podStatus.Marshal()
+	if podStatus != nil {
+		podStatusBytes, _ = podStatus.Marshal()
+	}
+
 	for i, containerStatus := range containerStatuses {
 		containerStatusBytes[i], _ = containerStatus.Marshal()
 	}
