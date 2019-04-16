@@ -9,7 +9,8 @@ import (
 
 func newCache() *Cache {
 	return &Cache{
-		m: make(map[types.UID]*corev1.Pod),
+		m:  make(map[types.UID]*corev1.Pod),
+		ma: make(map[types.NamespacedName]*corev1.Pod),
 	}
 }
 
