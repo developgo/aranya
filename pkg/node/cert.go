@@ -108,7 +108,7 @@ func ensureNodeCert(client kubernetes.Interface, nodeObj *corev1.Node) (*tls.Cer
 		}
 
 		certBytes, ok = pkSecret.Data[corev1.TLSCertKey]
-		if ok {
+		if ok && len(certBytes) > 0 {
 			needToGetKubeCSR = false
 		}
 	}
