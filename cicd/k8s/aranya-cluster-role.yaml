@@ -4,40 +4,44 @@ kind: ClusterRole
 metadata:
   name: aranya
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - services
-      - endpoints
-      - persistentvolumeclaims
-      - events
-      - configmaps
-      - secrets
-      # aranya needs to create and manage virtual nodes and its pods for edge deivces
-      - nodes
-      - nodes/status
-      - pods
-      - pods/status
-    verbs:
-      - '*'
-  - apiGroups:
-      - ""
-    resources:
-      - namespaces
-    verbs:
-      - get
-  - apiGroups:
-      - apps
-    resources:
-      - deployments
-      - daemonsets
-      - replicasets
-      - statefulsets
-    verbs:
-      - '*'
-  - apiGroups:
-      - aranya.arhat.dev
-    resources:
-      - '*'
-    verbs:
-      - '*'
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  # aranya needs to create and manage virtual nodes and its pods for edge deivces
+  - nodes
+  - nodes/status
+  - pods
+  - pods/status
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups: [ 'aranya.arhat.dev' ]
+  resources: [ '*' ]
+  verbs: [ '*' ]
+# required if you want aranya to auto approve node certs csrs
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+# - apiGroups:
+#   - apps
+#   resources:
+#   - deployments
+#   - daemonsets
+#   - replicasets
+#   - statefulsets
+#   verbs:
+#   - '*'

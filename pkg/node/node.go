@@ -9,22 +9,28 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
+	certv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/pod"
@@ -111,6 +117,89 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		return nil, err
 	}
 
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		log.Error(err, "failed to generate private key for node cert")
+		return nil, err
+	}
+
+	var hosts []string
+	for _, nodeAddr := range nodeObj.Status.Addresses {
+		hosts = append(hosts, nodeAddr.Address)
+	}
+
+	csrBytes, err := csr.Generate(privateKey, &csr.CertificateRequest{
+		CN: fmt.Sprintf("system:node:%s", nodeObj.Name),
+		Names: []csr.Name{{
+			O: "system:nodes",
+		}},
+		Hosts: hosts,
+	})
+	csrEncodedBytes := make([]byte, base64.StdEncoding.EncodedLen(len(csrBytes)))
+	base64.StdEncoding.Encode(csrEncodedBytes, csrBytes)
+
+	csrObj := &certv1beta1.CertificateSigningRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s", nodeObj.Name),
+			Namespace: constant.CurrentNamespace(),
+		},
+		Spec: certv1beta1.CertificateSigningRequestSpec{
+			Request: csrEncodedBytes,
+			Groups: []string{
+				"system:nodes",
+				"system:authenticated",
+			},
+			Usages: []certv1beta1.KeyUsage{
+				certv1beta1.UsageServerAuth,
+				certv1beta1.UsageDigitalSignature,
+				certv1beta1.UsageKeyEncipherment,
+			},
+		},
+	}
+	req, err := client.CertificatesV1beta1().CertificateSigningRequests().Create(csrObj)
+	if err != nil {
+		log.Error(err, "failed to create csr")
+		return nil, err
+	}
+
+	req.Status.Conditions = append(req.Status.Conditions, certv1beta1.CertificateSigningRequestCondition{
+		Type:    certv1beta1.CertificateApproved,
+		Reason:  "AutoApproved",
+		Message: "self approved by aranya node",
+	})
+
+	result, err := client.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(req)
+	if err != nil {
+		log.Error(err, "failed to approve csr")
+		return nil, err
+	}
+
+	certEncodedBytes := result.Status.Certificate
+	certBytes := make([]byte, base64.StdEncoding.DecodedLen(len(certEncodedBytes)))
+	_, err = base64.StdEncoding.Decode(certBytes, certEncodedBytes)
+	if err != nil {
+		log.Error(err, "failed to decode base64 encoded cert", "raw", string(certEncodedBytes))
+		return nil, err
+	}
+
+	keyOut := &bytes.Buffer{}
+	b, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		log.Error(err, "failed to marshal elliptic curve private key")
+		return nil, err
+	}
+	err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: b})
+	if err != nil {
+		log.Error(err, "failed to encode private key pem")
+		return nil, err
+	}
+
+	cert, err := tls.X509KeyPair(certBytes, keyOut.Bytes())
+	if err != nil {
+		log.Error(err, "failed to load certificate")
+		return nil, err
+	}
+
 	var connectivityManager connectivitySrv.Interface
 	if grpcListener != nil {
 		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
@@ -154,15 +243,6 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 
 	// TODO: handle metrics
 
-	cert, err := newTLSCert(nodeObj)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*cert},
-	}
-
 	srv := &Node{
 		log:        logger,
 		ctx:        ctx,
@@ -170,7 +250,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		name:       nodeObj.Name,
 		kubeClient: client,
 
-		httpSrv:         &http.Server{Handler: m, TLSConfig: tlsConfig},
+		httpSrv:         &http.Server{Handler: m, TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}}},
 		kubeletListener: kubeletListener,
 
 		connectivityManager: connectivityManager,

@@ -102,6 +102,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/checkpoint-restore/go-criu v0.0.0-20190109184317-bdb7599cd87b // indirect
+	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
 	github.com/containerd/cgroups v0.0.0-20190226200435-dbea6f2bd416 // indirect
 	github.com/containerd/containerd v1.3.0-0.20190212172151-f5b0fa220df8
 	github.com/containernetworking/cni v0.6.0 // indirect
@@ -141,6 +142,7 @@ require (
 	github.com/golang/mock v1.2.0 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/btree v0.0.0-00010101000000-000000000000 // indirect
+	github.com/google/certificate-transparency-go v1.0.21 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
