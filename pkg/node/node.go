@@ -82,6 +82,7 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 
 	// TODO: handle metrics
 
+	tlsConfig := &tls.Config{Certificates: []tls.Certificate{*cert}}
 	srv := &Node{
 		log:        logger,
 		ctx:        ctx,
@@ -89,8 +90,8 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 		name:       nodeObj.Name,
 		kubeClient: client,
 
-		httpSrv:         &http.Server{Handler: m, TLSConfig: &tls.Config{Certificates: []tls.Certificate{*cert}}},
-		kubeletListener: kubeletListener,
+		httpSrv:         &http.Server{Handler: m, TLSConfig: tlsConfig},
+		kubeletListener: tls.NewListener(kubeletListener, tlsConfig.Clone()),
 
 		connectivityManager: connectivityManager,
 		grpcListener:        grpcListener,

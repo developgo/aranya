@@ -218,7 +218,6 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	}
 
 	containers = append(containers, dockerType.Container{ID: pauseCtr.ID})
-	deleteLog.Info("delete containers", "containers", containers)
 	for _, ctr := range containers {
 		timeout = timeout - time.Since(now)
 		now = time.Now()

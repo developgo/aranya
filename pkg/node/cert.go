@@ -15,12 +15,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	kubeClient "k8s.io/client-go/kubernetes"
 
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func ensureNodeCert(client kubernetes.Interface, nodeObj *corev1.Node) (*tls.Certificate, error) {
+func ensureNodeCert(client kubeClient.Interface, nodeObj *corev1.Node) (*tls.Certificate, error) {
 	var (
 		secretObjName = fmt.Sprintf("aranya.%s", nodeObj.Name)
 		csrObjName    = fmt.Sprintf("aranya.%s", nodeObj.Name)
