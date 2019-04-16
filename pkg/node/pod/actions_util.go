@@ -52,9 +52,11 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 
 	defer func() {
 		// close out and stderr with best effort
+		log.Info("close out writer")
 		_ = out.Close()
 
 		if stderr != nil {
+			log.Info("close err writer")
 			_ = stderr.Close()
 		}
 	}()
@@ -63,6 +65,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 		select {
 		case userInput, more := <-inputCh:
 			if !more {
+				log.Info("input ch closed")
 				return nil
 			}
 			log.Info("send data", "data", string(userInput.GetPodCmd().GetInputOptions().GetData()))
@@ -74,6 +77,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			}
 		case msg, more := <-msgCh:
 			if !more {
+				log.Info("msg ch closed")
 				return nil
 			}
 			log.Info("recv data", "data", string(msg.GetData().GetData()))
@@ -100,6 +104,7 @@ func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, timeou
 			}
 		case size, more := <-resizeCh:
 			if !more {
+				log.Info("resize ch closed")
 				return nil
 			}
 			log.Info("resize")

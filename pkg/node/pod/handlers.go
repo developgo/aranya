@@ -53,7 +53,6 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	namespace, podName, uid, containerName, cmd := util.GetParamsForExec(r)
 	streamOptions := util.NewRemoteCommandOptions(r)
-	log.Info("exec stream options", "opt", streamOptions)
 
 	kubeletremotecommand.ServeExec(
 		// http context
