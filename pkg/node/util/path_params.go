@@ -42,10 +42,12 @@ func GetParamsForContainerLog(req *http.Request) (namespace, podName string, pod
 		}
 	}
 
+	containerName = pathVars[PathParamContainer]
 	logOptions := &corev1.PodLogOptions{}
 	if err = legacyscheme.ParameterCodec.DecodeParameters(query, corev1.SchemeGroupVersion, logOptions); err != nil {
 		return
 	}
+	logOptions.Container = containerName
 
 	logOptions.TypeMeta = metav1.TypeMeta{}
 	if errs := validation.ValidatePodLogOptions(logOptions); len(errs) > 0 {
@@ -53,5 +55,5 @@ func GetParamsForContainerLog(req *http.Request) (namespace, podName string, pod
 		return
 	}
 
-	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID]), pathVars[PathParamContainer], *logOptions, nil
+	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID]), containerName, *logOptions, nil
 }

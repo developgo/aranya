@@ -18,15 +18,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
 	"arhat.dev/aranya/pkg/node/resolver"
-)
-
-const (
-	idleTimeout           = time.Second * 30
-	streamCreationTimeout = time.Second * 30
-	resyncInterval        = time.Minute
 )
 
 var (
@@ -39,7 +34,7 @@ func NewManager(
 	client kubeClient.Interface,
 	remoteManager connectivitySrv.Interface,
 ) *Manager {
-	podInformerFactory := kubeInformers.NewSharedInformerFactoryWithOptions(client, resyncInterval,
+	podInformerFactory := kubeInformers.NewSharedInformerFactoryWithOptions(client, constant.DefaultPodReSyncInterval,
 		kubeInformers.WithNamespace(corev1.NamespaceAll),
 		kubeInformers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()

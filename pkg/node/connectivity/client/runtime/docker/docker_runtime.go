@@ -313,6 +313,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	execCtx, cancelExec := r.ActionContext()
 	defer cancelExec()
 
+	execLog.Info("start exec create")
 	resp, err := r.runtimeClient.ContainerExecCreate(execCtx, ctr.ID, dockerType.ExecConfig{
 		Tty:          tty,
 		AttachStdin:  stdin != nil,
@@ -325,12 +326,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		return err
 	}
 
-	err = r.runtimeClient.ContainerExecStart(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
-	if err != nil {
-		execLog.Error(err, "failed to start exec")
-		return err
-	}
-
+	execLog.Info("start exec attach")
 	attachResp, err := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
 	if err != nil {
 		execLog.Error(err, "failed to attach exec")
@@ -341,8 +337,11 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		defer execLog.Info("finished copy stdin")
+		execLog.Info("start copy stdin")
+		defer func() {
+			wg.Done()
+			execLog.Info("finished copy stdin")
+		}()
 
 		_, err := io.Copy(attachResp.Conn, stdin)
 		if err != nil {
@@ -352,10 +351,16 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		defer execLog.Info("finished copy stdout and stderr")
+		execLog.Info("start copy stdout and stderr")
+		defer func() {
+			wg.Done()
+			execLog.Info("finished copy stdout and stderr")
+		}()
 
-		var stdOut, stdErr io.Writer
+		var (
+			stdOut, stdErr io.Writer
+			err            error
+		)
 		stdOut, stdErr = stdout, stderr
 		if stdout == nil {
 			stdOut = ioutil.Discard
@@ -364,18 +369,21 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 			stdErr = ioutil.Discard
 		}
 
-		_, err := dockerStdCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
+		if tty {
+			_, err = io.Copy(stdOut, attachResp.Reader)
+		} else {
+			_, err = dockerStdCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
+		}
 		if err != nil {
 			execLog.Error(err, "exception when copy from attach stream")
 		}
 	}()
 
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		defer execLog.Info("finished resize tty")
 
 		for size := range resizeCh {
+			execLog.Info("resize tty", "height", size.Height, "width", size.Width)
 			err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
 				Height: uint(size.Height),
 				Width:  uint(size.Width),
@@ -402,6 +410,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 
 	attachCtx, cancelAttach := r.ActionContext()
 	defer cancelAttach()
+	attachLog.Info("start attach")
 	resp, err := r.runtimeClient.ContainerAttach(attachCtx, ctr.ID, dockerType.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  stdin != nil,
@@ -440,6 +449,18 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 			_, err := io.Copy(stdout, resp.Reader)
 			if err != nil {
 				attachLog.Error(err, "exception when copy from attach stream")
+			}
+		}
+	}()
+
+	go func() {
+		for size := range resizeCh {
+			err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockerType.ResizeOptions{
+				Height: uint(size.Height),
+				Width:  uint(size.Width),
+			})
+			if err != nil {
+				attachLog.Error(err, "exception when resize tty")
 			}
 		}
 	}()

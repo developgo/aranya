@@ -3,11 +3,11 @@ package node
 import (
 	"context"
 	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
@@ -34,14 +34,14 @@ func (n *Node) InitializeRemoteDevice() {
 			goto waitForDeviceDisconnect
 		}
 
-		n.log.Info("sync device node")
+		n.log.Info("sync device info")
 		if err := n.generateCacheForNodeInDevice(); err != nil {
 			n.log.Error(err, "failed to sync device node info")
 			goto waitForDeviceDisconnect
 		}
 
 		// sync node status after device has been connected
-		go wait.Until(n.syncNodeStatus, 10*time.Second, connCtx.Done())
+		go wait.Until(n.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, connCtx.Done())
 	waitForDeviceDisconnect:
 		wg.Wait()
 		cancel()

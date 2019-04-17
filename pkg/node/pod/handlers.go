@@ -9,6 +9,7 @@ import (
 	kubeletportforward "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	kubeletremotecommand "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/util"
 )
 
@@ -70,7 +71,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		// stream options
 		streamOptions,
 		// timeout options
-		idleTimeout, streamCreationTimeout,
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
 		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
@@ -95,7 +96,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		// stream options
 		streamOptions,
 		// timeout options
-		idleTimeout, streamCreationTimeout,
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
 		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
@@ -123,7 +124,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		// port forward options (ports)
 		portForwardOptions,
 		// timeout options
-		idleTimeout, streamCreationTimeout,
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
 		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }

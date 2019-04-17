@@ -134,46 +134,46 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 
 	switch cm := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
-		log.Printf("recv node cmd")
+		log.Printf("recv node cmd session: %v", sid)
 		c.doNodeInfo(sid)
 	case *connectivity.Cmd_PodCmd:
 		switch cm.PodCmd.GetAction() {
 		// pod scope commands
 		case connectivity.Create:
-			log.Printf("recv pod create cmd")
+			log.Printf("recv pod create cmd session: %v", sid)
 			go c.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
 		case connectivity.Delete:
-			log.Printf("recv pod delete cmd")
+			log.Printf("recv pod delete cmd session: %v", sid)
 			go c.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
 		case connectivity.List:
-			log.Printf("recv pod list cmd")
+			log.Printf("recv pod list cmd session: %v", sid)
 			go c.doPodList(sid, cm.PodCmd.GetListOptions())
 		case connectivity.PortForward:
-			log.Printf("recv pod port forward cmd")
+			log.Printf("recv pod port forward cmd session: %v", sid)
 			inputCh := make(chan []byte, 1)
 			c.openedStreams.add(sid, inputCh, nil)
 			go c.doPortForward(sid, cm.PodCmd.GetPortForwardOptions(), inputCh)
 
 		// container scope commands
 		case connectivity.Exec:
-			log.Printf("recv pod exec cmd")
+			log.Printf("recv pod exec cmd session: %v", sid)
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
 			c.openedStreams.add(sid, inputCh, resizeCh)
 
 			go c.doContainerExec(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Attach:
-			log.Printf("recv pod attach cmd")
+			log.Printf("recv pod attach cmd session: %v", sid)
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
 			c.openedStreams.add(sid, inputCh, resizeCh)
 
 			go c.doContainerAttach(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 		case connectivity.Log:
-			log.Printf("recv pod log cmd")
+			log.Printf("recv pod log cmd session: %v", sid)
 			go c.doContainerLog(sid, cm.PodCmd.GetLogOptions())
 		case connectivity.Input:
-			log.Printf("recv pod input data")
+			log.Printf("recv input cmd for session: %v", sid)
 			inputCh, ok := c.openedStreams.getInputChan(sid)
 			if !ok {
 				c.handleError(sid, ErrStreamSessionClosed)
@@ -184,7 +184,7 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 				inputCh <- cm.PodCmd.GetInputOptions().GetData()
 			}()
 		case connectivity.ResizeTty:
-			log.Printf("recv pod resize tty cmd")
+			log.Printf("recv resize cmd for session: %v", sid)
 			resizeCh, ok := c.openedStreams.getResizeChan(sid)
 			if !ok {
 				c.handleError(sid, ErrStreamSessionClosed)
@@ -192,10 +192,12 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 			}
 
 			go func() {
+				log.Printf("send resize cmd for session: %v", sid)
 				resizeCh <- remotecommand.TerminalSize{
 					Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
 					Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
 				}
+				log.Printf("send resize cmd for session: %v", sid)
 			}()
 		}
 	}
@@ -204,6 +206,7 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 // Internal processing
 
 func (c *baseClient) handleError(sid uint64, e error) {
+	log.Printf("exception happened in session %v: %v", sid, e)
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		log.Printf("handle error: %v", err)
 	}
@@ -388,8 +391,10 @@ func (c *baseClient) doContainerAttach(sid uint64, options *connectivity.ExecOpt
 }
 
 func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
-	defer c.openedStreams.del(sid)
-	defer log.Printf("fininshed exec")
+	defer func() {
+		c.openedStreams.del(sid)
+		log.Printf("finished contaienr exec")
+	}()
 
 	opt, err := options.GetResolvedExecOptions()
 	if err != nil {
@@ -411,11 +416,9 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		stdin, remoteStdin = io.Pipe()
 
 		go func() {
-			defer log.Printf("fininshed stdin")
 			defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
 			for inputData := range inputCh {
-				log.Printf("stdin: %v", string(inputData))
 				_, err := remoteStdin.Write(inputData)
 				if err != nil {
 					return
@@ -429,13 +432,11 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
 		go func() {
-			defer log.Printf("fininshed stdout")
 			s := bufio.NewScanner(remoteStdout)
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
 				data := s.Bytes()
-				log.Printf("stdout: %v", string(data))
 				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, data)); err != nil {
 					c.handleError(sid, err)
 					return
@@ -449,13 +450,11 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
 		go func() {
-			defer log.Printf("fininshed stderr")
 			s := bufio.NewScanner(remoteStderr)
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
 				data := s.Bytes()
-				log.Printf("stderr: %v", string(data))
 				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, data)); err != nil {
 					c.handleError(sid, err)
 					return
