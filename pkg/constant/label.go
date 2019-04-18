@@ -5,9 +5,9 @@ const (
 )
 
 const (
-	LabelRoleValueNode       = "node"
-	LabelRoleValueService    = "service"
-	LabelRoleValueController = "controller"
+	LabelRoleValueEdgeDevice = "EdgeDevice"
+	LabelRoleValueService    = "Service"
+	LabelRoleValueController = "Controller"
 )
 
 const (
@@ -15,6 +15,7 @@ const (
 	LabelName      = "arhat.dev/name"
 )
 
+// labels used by container runtime
 const (
 	ContainerLabelPodNamespace     = "container.arhat.dev/pod-namespace"
 	ContainerLabelPodName          = "container.arhat.dev/pod-name"

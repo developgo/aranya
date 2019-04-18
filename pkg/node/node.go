@@ -2,23 +2,18 @@ package node
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
-	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"arhat.dev/aranya/pkg/node/connectivity"
-	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/server"
+	connectivityManager "arhat.dev/aranya/pkg/node/connectivity/manager"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -27,30 +22,24 @@ var (
 	log = logf.Log.WithName("aranya.node")
 )
 
-func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListener, grpcListener net.Listener, config rest.Config) (*Node, error) {
-	// create a new kubernetes client with provided config
-	client, err := kubeClient.NewForConfig(&config)
-	if err != nil {
-		return nil, err
-	}
+type CreationOptions struct {
+	// required fields
+	NodeObject            *corev1.Node
+	KubeClient            kubeClient.Interface
+	KubeletServerListener net.Listener
 
-	cert, err := ensureNodeCert(client, nodeObj)
-	if err != nil {
-		return nil, err
-	}
+	ConnectivityManager connectivityManager.Interface
 
-	var connectivityManager connectivitySrv.Interface
-	if grpcListener != nil {
-		connectivityManager = connectivitySrv.NewGrpcManager(nodeObj.Name)
-	} else {
-		connectivityManager = connectivitySrv.NewMqttManager(nodeObj.Name)
-	}
+	// optional
+	GRPCServerListener net.Listener
+}
 
-	ctx, exit := context.WithCancel(ctx)
-	podManager := pod.NewManager(ctx, nodeObj.Name, client, connectivityManager)
-	// statsManager := stats.NewManager()
+func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, error) {
+	ctx, exit := context.WithCancel(parentCtx)
 
-	logger := log.WithValues("node", nodeObj.Name)
+	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.ConnectivityManager)
+
+	logger := log.WithValues("node", opt.NodeObject.Name)
 
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler(logger)}
 	// register http routes
@@ -82,47 +71,39 @@ func CreateVirtualNode(ctx context.Context, nodeObj *corev1.Node, kubeletListene
 
 	// TODO: handle metrics
 
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{*cert}}
 	srv := &Node{
-		log:        logger,
-		ctx:        ctx,
-		exit:       exit,
-		name:       nodeObj.Name,
-		kubeClient: client,
+		opt: opt,
 
-		httpSrv:         &http.Server{Handler: m, TLSConfig: tlsConfig},
-		kubeletListener: tls.NewListener(kubeletListener, tlsConfig.Clone()),
+		log:  logger,
+		ctx:  ctx,
+		exit: exit,
+		name: opt.NodeObject.Name,
 
-		connectivityManager: connectivityManager,
-		grpcListener:        grpcListener,
+		kubeClient:          opt.KubeClient,
+		connectivityManager: opt.ConnectivityManager,
 
-		status:          statusReady,
+		kubeletSrv:      &http.Server{Handler: m},
 		podManager:      podManager,
-		nodeStatusCache: newNodeCache(nodeObj.Status),
+		nodeStatusCache: newNodeCache(opt.NodeObject.Status),
 	}
 
 	return srv, nil
 }
 
 type Node struct {
+	once sync.Once
+	opt  *CreationOptions
+
 	log  logr.Logger
 	ctx  context.Context
 	exit context.CancelFunc
 	name string
 
-	kubeClient kubeClient.Interface
+	kubeClient          kubeClient.Interface
+	connectivityManager connectivityManager.Interface
 
-	// kubelet http server and listener
-	httpSrv         *http.Server
-	kubeletListener net.Listener
-	// grpc server and listener
-	grpcSrv      *grpc.Server
-	grpcListener net.Listener
-	// remote device manager
-	connectivityManager connectivitySrv.Interface
-
-	podManager *pod.Manager
-
+	kubeletSrv      *http.Server
+	podManager      *pod.Manager
 	nodeStatusCache *NodeCache
 
 	// status
@@ -130,69 +111,43 @@ type Node struct {
 	mu     sync.RWMutex
 }
 
-func (n *Node) Start() error {
-	if err := func() error {
-		n.mu.RLock()
-		defer n.mu.RUnlock()
-
-		if n.status == statusRunning || n.status == statusStopped {
-			return errors.New("node already started or stopped, do not reuse")
-		}
-		return nil
-	}(); err != nil {
-		return err
-	}
-
-	// we need to get the lock to change this virtual node's status
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	// add to the pool of running server
-	if err := Add(n); err != nil {
-		return err
-	}
-
-	// added, expected to run
-	n.status = statusRunning
-
-	// handle final status change
-	go func() {
-		<-n.ctx.Done()
-
-		n.mu.Lock()
-		defer n.mu.Unlock()
-		// force close to ensure node closed
-		n.status = statusStopped
-	}()
-
-	// start a kubelet http server
-	go func() {
-		n.log.Info("serve kubelet services")
-		if err := n.httpSrv.Serve(n.kubeletListener); err != nil && err != http.ErrServerClosed {
-			n.log.Error(err, "failed to serve kubelet services")
+func (n *Node) Start() (err error) {
+	err = fmt.Errorf("server has started, do not start again")
+	n.once.Do(func() {
+		if err = Add(n); err != nil {
+			n.log.Error(err, "failed to add virtual node to collections")
 			return
 		}
-	}()
 
-	// start a grpc server if used
-	if n.grpcListener != nil {
-		n.grpcSrv = grpc.NewServer()
-
-		connectivity.RegisterConnectivityServer(n.grpcSrv, n.connectivityManager.(*connectivitySrv.GrpcManager))
+		// start a kubelet http server
 		go func() {
-			n.log.Info("serve grpc services")
-			if err := n.grpcSrv.Serve(n.grpcListener); err != nil && err != grpc.ErrServerStopped {
-				n.log.Error(err, "failed to serve grpc services")
+			n.log.Info("starting kubelet http server")
+			err := n.kubeletSrv.Serve(n.opt.KubeletServerListener)
+			if err != nil && err != http.ErrServerClosed {
+				n.log.Error(err, "failed to start kubelet http server")
 			}
 		}()
-	} else {
-		// TODO: setup mqtt connection to broker
-		n.log.Info("mqtt connectivity not implemented")
-	}
 
-	go n.InitializeRemoteDevice()
+		go func() {
+			n.log.Info("starting connectivity manager")
+			err := n.connectivityManager.Start()
+			if err != nil {
+				n.log.Error(err, "failed to start connectivity manager")
+			}
+		}()
 
-	return n.podManager.Start()
+		go func() {
+			err := n.podManager.Start()
+			if err != nil {
+				n.log.Error(err, "failed to start pod manager")
+			}
+		}()
+
+		go n.InitializeRemoteDevice()
+
+		return
+	})
+	return
 }
 
 // ForceClose close this node immediately
@@ -202,36 +157,18 @@ func (n *Node) ForceClose() {
 
 	if n.status == statusRunning {
 		n.log.Info("force close virtual node")
-		_ = n.httpSrv.Close()
-		if n.grpcSrv != nil {
-			n.grpcSrv.Stop()
-		}
+		_ = n.kubeletSrv.Close()
+		n.connectivityManager.Close()
 
 		n.exit()
 	}
 }
 
-func (n *Node) Shutdown(grace time.Duration) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
+func (n *Node) CreationOptions() CreationOptions {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
 
-	if n.status == statusRunning {
-		n.log.Info("shutting down virtual node")
-
-		ctx, _ := context.WithTimeout(n.ctx, grace)
-
-		if n.grpcSrv != nil {
-			go n.grpcSrv.GracefulStop()
-			go func() {
-				time.Sleep(grace)
-				n.grpcSrv.Stop()
-			}()
-		}
-
-		_ = n.httpSrv.Shutdown(ctx)
-
-		n.exit()
-	}
+	return *n.opt
 }
 
 func (n *Node) closing() bool {

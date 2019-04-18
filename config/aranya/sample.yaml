@@ -1,14 +1,6 @@
-controller:
-  svc:
-    grpc:
-      auto_create: true
-      address_type: ClusterIP
-      address: ""
-  cert:
-    node:
-      auto_approve: true
-      names:
-        state: ""
-        province: ""
+controller: {}
 
 services:
+  metrics:
+    address: "0.0.0.0"
+    port: 8383

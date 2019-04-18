@@ -22,6 +22,17 @@ func Add(node *Node) error {
 	return nil
 }
 
+func Get(name string) (*Node, bool) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	node, ok := runningServers[name]
+	if ok {
+		return node, true
+	}
+	return nil, false
+}
+
 func Delete(name string) {
 	mutex.Lock()
 	defer mutex.Unlock()

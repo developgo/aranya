@@ -1,9 +1,8 @@
-package server
+package manager
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -18,16 +17,20 @@ const (
 )
 
 var (
-	ErrDeviceNotConnected = errors.New("error device not connected ")
-	ErrSessionNotValid    = errors.New("session must present in this Cmd ")
+	ErrDeviceAlreadyConnected = errors.New("device has already connected")
+	ErrDeviceNotConnected     = errors.New("device is not connected")
+	ErrSessionNotValid        = errors.New("session must present in this command")
+	ErrManagerClosed          = errors.New("connectivity manager has been closed")
 )
 
 type Interface interface {
+	Start() error
 	DeviceConnected() <-chan struct{}
 	GlobalMessages() <-chan *connectivity.Msg
 	// send a command to remote device with timeout
 	// return a channel of message for this session
 	PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error)
+	Close()
 }
 
 type baseServer struct {
@@ -36,6 +39,7 @@ type baseServer struct {
 	deviceConnected chan struct{}
 	globalMsgChan   chan *connectivity.Msg
 	sessionTimeout  time.Duration
+	closed          bool
 
 	mu sync.RWMutex
 }
@@ -68,6 +72,10 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.closed {
+		return ErrManagerClosed
+	}
+
 	if setConnected() {
 		// signal device connected
 		close(s.deviceConnected)
@@ -75,12 +83,16 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 		return nil
 	}
 
-	return fmt.Errorf("device already connected")
+	return ErrDeviceAlreadyConnected
 }
 
 func (s *baseServer) onDeviceMsg(msg *connectivity.Msg) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	if s.closed {
+		return
+	}
 
 	if ch, ok := s.sessions.get(msg.GetSessionId()); ok {
 		ch <- msg
@@ -113,6 +125,10 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	if s.closed {
+		return nil, ErrManagerClosed
+	}
 
 	var (
 		sid                uint64
@@ -150,4 +166,16 @@ func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCm
 	}
 
 	return ch, nil
+}
+
+func (s baseServer) onClose(closeManager func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return
+	}
+
+	closeManager()
+	s.closed = true
 }

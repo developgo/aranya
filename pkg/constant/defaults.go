@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// sync defaults
 const (
 	DefaultNodeStatusSyncInterval = 10 * time.Second
 	DefaultPodReSyncInterval      = time.Minute

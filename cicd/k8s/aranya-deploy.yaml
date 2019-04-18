@@ -1,3 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aranya-config
+data:
+  config.yaml: |-
+    services:
+      metrics:
+        address: "0.0.0.0"
+        port: 8383
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,32 +19,43 @@ spec:
   selector:
     matchLabels:
       name: aranya
-      arhat.dev/role: controller
+      arhat.dev/role: Controller
   template:
     metadata:
       labels:
         name: aranya
         # required label to get grpc services working
-        arhat.dev/role: controller
+        arhat.dev/role: Controller
     spec:
       serviceAccountName: aranya
-      # required to work with host network to serve as virtual node
+      # required to work in host network mode to serve kubelet http service
       hostNetwork: true
+      volumes:
+      - name: config
+        configMap:
+          name: aranya-config
+          optional: true
       containers:
-        - name: aranya
-          image: arhatdev/aranya:latest
-          command:
-            - /app
-          imagePullPolicy: Always
-          env:
-            # namespace to watch (also deployed to this namespace)
-            - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "aranya"
+      - name: aranya
+        image: arhatdev/aranya:latest
+        imagePullPolicy: Always
+        command: [ "/app" ]
+        env:
+        # namespace to watch (also deployed to this namespace)
+        - name: WATCH_NAMESPACE
+          valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: "aranya"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/aranya
+        resources:
+          limits:
+            cpu: 1
+            memory: "100Mi"

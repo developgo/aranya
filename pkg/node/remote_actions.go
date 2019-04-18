@@ -89,7 +89,7 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 			return
 		}
 	default:
-		// we don't know how to handle this kind of message, discard
+		// we don't know how to handle this kind of messages, discard
 	}
 }
 

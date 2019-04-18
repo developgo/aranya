@@ -1,10 +1,9 @@
 package edgedevice
 
 import (
-	"fmt"
 	"net"
-	"strconv"
 
+	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,45 +14,41 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createSvcForGrpc(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
-	grpcListenPort := getFreePort()
-	if grpcListenPort < 1 {
-		return
+func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
+	grpcListenPort, err := freeport.GetFreePort()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// claim this address immediately
-	l, err = net.Listen("tcp", fmt.Sprintf(":%s", strconv.FormatInt(int64(grpcListenPort), 10)))
+	l, err = net.Listen("tcp", GetListenAllAddress(int32(grpcListenPort)))
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 	defer func() {
 		if err != nil {
 			_ = l.Close()
-			l = nil
 		}
 	}()
 
-	svcObject = newServiceForEdgeDevice(device, grpcListenPort)
+	svcObject = newServiceForEdgeDevice(device, int32(grpcListenPort))
 	err = controllerutil.SetControllerReference(device, svcObject, r.scheme)
 	if err != nil {
-		log.Error(err, "set svc controller reference failed")
-		return
+		return nil, nil, err
 	}
 
-	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObject, func(existing runtime.Object) error {
-		return nil
-	})
+	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObject, func(existing runtime.Object) error { return nil })
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	return
+	return svcObject, l, nil
 }
 
 func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort int32) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        device.Name,
+			Name:        ServiceName(device.Name),
 			Namespace:   device.Namespace,
 			Labels:      map[string]string{constant.LabelRole: constant.LabelRoleValueService},
 			ClusterName: device.ClusterName,

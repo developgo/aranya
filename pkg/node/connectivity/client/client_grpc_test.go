@@ -16,7 +16,7 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity/client/runtime/fake"
-	"arhat.dev/aranya/pkg/node/connectivity/server"
+	"arhat.dev/aranya/pkg/node/connectivity/manager"
 )
 
 var (
@@ -30,8 +30,8 @@ var (
 	}
 )
 
-func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *server.GrpcManager, srvStop func(), client *GrpcClient) {
-	mgr = server.NewGrpcManager("client.test").(*server.GrpcManager)
+func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager, srvStop func(), client *GrpcClient) {
+	mgr = manager.NewGRPCManager("client.test").(*manager.GRPCManager)
 	srv := grpc.NewServer()
 	connectivity.RegisterConnectivityServer(srv, mgr)
 
@@ -65,7 +65,7 @@ func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *server.GrpcManager, 
 
 func TestNewGrpcClient(t *testing.T) {
 	var (
-		mgr     *server.GrpcManager
+		mgr     *manager.GRPCManager
 		srvStop func()
 		client  *GrpcClient
 
@@ -169,12 +169,12 @@ func TestNewGrpcClient(t *testing.T) {
 	wg.Wait()
 }
 
-func testOnetimeCmdWithNoExpectedMsg(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd) {
+func testOnetimeCmdWithNoExpectedMsg(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd) {
 	_, err := mgr.PostCmd(context.TODO(), cmd)
-	assert.Equal(t, server.ErrSessionNotValid, err)
+	assert.Equal(t, manager.ErrSessionNotValid, err)
 }
 
-func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd, expectedMsg connectivity.Msg) {
+func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd, expectedMsg connectivity.Msg) {
 	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)
@@ -189,7 +189,7 @@ func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr server.Interface, cmd *conn
 	assert.False(t, more)
 }
 
-func testStreamCmdWithExpectedMsgList(t *testing.T, mgr server.Interface, cmd *connectivity.Cmd, expectedMsgList []*connectivity.Msg) {
+func testStreamCmdWithExpectedMsgList(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd, expectedMsgList []*connectivity.Msg) {
 	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)

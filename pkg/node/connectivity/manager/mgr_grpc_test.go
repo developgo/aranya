@@ -1,4 +1,4 @@
-package server
+package manager
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GrpcManager, stub connectivity.ConnectivityClient) {
-	connectivitySrv = NewGrpcManager("test").(*GrpcManager)
+func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GRPCManager, stub connectivity.ConnectivityClient) {
+	connectivitySrv = NewGRPCManager("test").(*GRPCManager)
 	srv := grpc.NewServer()
 	connectivity.RegisterConnectivityServer(srv, connectivitySrv)
 
@@ -42,7 +42,7 @@ func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GrpcManager, stub
 }
 
 func TestNewGrpcConnectivity(t *testing.T) {
-	c := NewGrpcManager("test").(*GrpcManager)
+	c := NewGRPCManager("test").(*GRPCManager)
 	assert.NotEmpty(t, c)
 	assert.NotEmpty(t, c.sessions)
 	assert.Empty(t, c.syncSrv)

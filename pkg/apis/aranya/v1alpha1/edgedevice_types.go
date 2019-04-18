@@ -154,6 +154,7 @@ type GRPCConfig struct {
 // ConnectViaGRPCConfig configuration used when devices directly connect to aranya server using gRPC
 type ConnectViaGRPCConfig struct {
 	ForDevice GRPCConfig `json:"forDevice,omitempty" protobuf:"bytes,1,opt,name=forDevice"`
+	ForServer GRPCConfig `json:"forServer,omitempty" protobuf:"bytes,2,opt,name=forServer"`
 }
 
 type Connectivity struct {

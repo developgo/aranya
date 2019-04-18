@@ -2,15 +2,20 @@ package edgedevice
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"net"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -23,6 +28,7 @@ import (
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
+	connectivityManager "arhat.dev/aranya/pkg/node/connectivity/manager"
 )
 
 const (
@@ -30,25 +36,25 @@ const (
 )
 
 var (
-	errNoFreePort = errors.NewInternalError(fmt.Errorf("could not allocate free port"))
-	once          = &sync.Once{}
+	once = &sync.Once{}
 )
 
 var log = logf.Log.WithName(controllerName)
 
-// Add creates a new EdgeDevice Controller and adds it to the Manager. The Manager will set fields on the Controller
+// AddToManager creates a new EdgeDevice Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
+func AddToManager(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileEdgeDevice{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		config: mgr.GetConfig(),
-		ctx:    context.TODO(),
+		client:     mgr.GetClient(),
+		scheme:     mgr.GetScheme(),
+		config:     mgr.GetConfig(),
+		ctx:        context.Background(),
+		kubeClient: kubeClient.NewForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
@@ -65,14 +71,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch virtual nodes created by EdgeDevice object
+	// Watch node objects created by EdgeDevice object
 	if err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForOwner{
 		IsController: true, OwnerType: &aranya.EdgeDevice{},
 	}); err != nil {
 		return err
 	}
 
-	// watch services created by EdgeDevice object
+	// watch service objects created by EdgeDevice object
 	svcMapper := &ServiceMapper{client: mgr.GetClient()}
 	if err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: svcMapper,
@@ -89,10 +95,11 @@ var _ reconcile.Reconciler = &ReconcileEdgeDevice{}
 type ReconcileEdgeDevice struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *rest.Config
-	ctx    context.Context
+	client     client.Client
+	kubeClient kubeClient.Interface
+	scheme     *runtime.Scheme
+	config     *rest.Config
+	ctx        context.Context
 }
 
 // Reconcile reads that state of the cluster for a EdgeDevice object and makes changes based on the state read
@@ -101,78 +108,64 @@ type ReconcileEdgeDevice struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result reconcile.Result, err error) {
-	reqLog := log.WithValues("ns", request.Namespace, "name", request.Name)
 	once.Do(func() {
-		reqLog.Info("initialize edge devices")
+		log.Info("initialize edge devices")
 		// get all edge devices in this namespace (only once)
 		deviceList := &aranya.EdgeDeviceList{}
 		err = r.client.List(r.ctx, &client.ListOptions{Namespace: constant.CurrentNamespace()}, deviceList)
 		if err != nil {
-			reqLog.Error(err, "failed to list edge devices")
+			log.Error(err, "failed to list edge devices")
 			return
 		}
 
 		for _, device := range deviceList.Items {
-			if err := r.doReconcileEdgeDevice(reqLog, &device); err != nil {
-				reqLog.Error(err, "reconcile edge device failed", "device.name", device.Name)
+			if err := r.doReconcileEdgeDevice(log, device.Namespace, device.Name); err != nil {
+				log.Error(err, "reconcile edge device failed", "device", device.Name)
 			}
 		}
 	})
 	if err != nil {
-		return
-	}
-
-	var (
-		nodeNsName   = types.NamespacedName{Namespace: corev1.NamespaceAll, Name: request.Name}
-		deviceNsName = types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: request.Name}
-	)
-
-	// reconcile related node object
-	if request.Namespace == corev1.NamespaceAll {
-		nodeObj := &corev1.Node{}
-		err = r.client.Get(r.ctx, nodeNsName, nodeObj)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				reqLog.Info("node object deleted, destroy virtual node")
-				// since the node object has been deleted, delete the virtual node only
-				node.Delete(request.Name)
-			} else {
-				reqLog.Error(err, "failed to get node object")
-				return reconcile.Result{}, err
-			}
-		}
-
-		return reconcile.Result{}, nil
-	}
-
-	// get the edge device instance
-	deviceObj := &aranya.EdgeDevice{}
-	err = r.client.Get(r.ctx, deviceNsName, deviceObj)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			reqLog.Info("edge device deleted, clean up related objects")
-			if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
-				reqLog.Error(err, "failed to cleanup related resources")
-				return reconcile.Result{}, err
-			}
-
-			return reconcile.Result{}, nil
-		}
-
-		reqLog.Error(err, "failed to get edge device")
+		log.Error(err, "failed to initialize edge devices")
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, deviceObj)
+	reqLog := log.WithValues("name", request.Name)
+	if request.Namespace == corev1.NamespaceAll {
+		// reconcile node only
+		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, request.Name, nil)
+	}
+
+	reqLog = reqLog.WithValues("ns", request.Namespace)
+	return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, request.Namespace, request.Name)
 }
 
-func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, deviceObj *aranya.EdgeDevice) (err error) {
-	deviceDeleted := !(deviceObj.DeletionTimestamp == nil || deviceObj.DeletionTimestamp.IsZero())
+func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespace, name string) (err error) {
+	var (
+		deviceObj     = &aranya.EdgeDevice{}
+		deviceDeleted = false
+	)
 
-	// edge device need to be deleted, no more check
+	// get the edge device instance
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, deviceObj)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			reqLog.Error(err, "failed to get edge device")
+			return err
+		}
+
+		// device not found, could be deleted by user
+		deviceDeleted = true
+	} else {
+		// check if device has been deleted
+		deviceDeleted = !(deviceObj.DeletionTimestamp == nil || deviceObj.DeletionTimestamp.IsZero())
+	}
+
+	// edge device need to be deleted, cleanup
 	if deviceDeleted {
-		if err = r.cleanupEdgeDeviceAndVirtualNode(reqLog, deviceObj); err != nil {
-			reqLog.Error(err, "failed to related resources")
+		reqLog.Info("edge device deleted, cleaning up virtual node")
+		err = r.cleanupVirtualNode(reqLog, deviceObj)
+		if err != nil {
+			reqLog.Error(err, "failed to cleanup virtual node")
 			return err
 		}
 
@@ -180,94 +173,242 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, deviceOb
 	}
 
 	//
-	// edge device exists, check its dependent objects
+	// edge device exists, check its related virtual node
 	//
-
-	var (
-		virtualNode     *node.Node
-		nodeObj         *corev1.Node
-		svcObj          *corev1.Service
-		grpcListener    net.Listener
-		kubeletListener net.Listener
-	)
-
-	// check service object if grpc is used
-	switch deviceObj.Spec.Connectivity.Method {
-	case aranya.DeviceConnectViaGRPC:
-		svcFound := &corev1.Service{}
-		err := r.client.Get(r.ctx, types.NamespacedName{Namespace: deviceObj.Namespace, Name: deviceObj.Name}, svcFound)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				reqLog.Error(err, "failed to get svc object")
-				return err
-			}
-
-			// svc object not found, create one
-
-			reqLog.Info("create grpc svc object")
-			svcObj, grpcListener, err = r.createSvcForGrpc(deviceObj)
-			if err != nil {
-				reqLog.Error(err, "failed to create grpc svc object")
-				return err
-			}
-
-			defer func() {
-				if err != nil {
-					_ = grpcListener.Close()
-
-					reqLog.Info("delete grpc svc object on error")
-					if e := r.client.Delete(r.ctx, svcObj); e != nil {
-						log.Error(e, "failed to delete svc object")
-					}
-				}
-			}()
-		}
+	err = r.doReconcileVirtualNode(reqLog, deviceObj.Name, deviceObj)
+	if err != nil {
+		return err
 	}
 
-	// check the node object exists
-	nodeFound := &corev1.Node{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: deviceObj.Name}, nodeFound)
+	return nil
+}
+
+func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeName string, deviceObj *aranya.EdgeDevice) (err error) {
+	var (
+		nodeObj      = &corev1.Node{}
+		svcObj       = &corev1.Service{}
+		creationOpts = &node.CreationOptions{}
+		virtualNode  *node.Node
+
+		needToCreateNodeObject  bool
+		needToCreateVirtualNode bool
+		ok                      bool
+	)
+
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: nodeName}, nodeObj)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			reqLog.Error(err, "failed to get node object")
 			return err
 		}
 
-		// node not found, create one
+		// since the node object not found (has been deleted),
+		// delete the related virtual node
+		reqLog.Info("node object deleted, destroy virtual node")
+		node.Delete(nodeName)
+		needToCreateNodeObject = true
+	} else {
+		nodeDeleted := !(nodeObj.DeletionTimestamp == nil || nodeObj.DeletionTimestamp.IsZero())
+		if nodeDeleted {
+			// node to be deleted, delete the related virtual node and return
+			node.Delete(nodeName)
+			return fmt.Errorf("unexpected node objected deleted")
+		} else {
+			// node presents and not deleted, virtual node MUST exist
+			virtualNode, ok = node.Get(nodeName)
+			if !ok {
+				return fmt.Errorf("unexpected virtual node not present")
+			} else {
+				// TODO: reuse previous network listener if any
+				oldOpts := virtualNode.CreationOptions()
 
-		reqLog.Info("create node object since not found")
-		nodeObj, kubeletListener, err = r.createNodeObject(deviceObj)
+				creationOpts.KubeletServerListener = oldOpts.KubeletServerListener
+				creationOpts.GRPCServerListener = oldOpts.GRPCServerListener
+				creationOpts.ConnectivityManager = oldOpts.ConnectivityManager
+			}
+		}
+	}
+
+	// device nil means this function was called for the node only or
+	// the device has been deleted, no more action required
+	if deviceObj == nil {
+		return nil
+	}
+
+	// here, device presents and not deleted
+	// everything related expected to exist
+
+	if needToCreateNodeObject {
+		// new node and new virtual node
+		reqLog.Info("create node object")
+		creationOpts.NodeObject, creationOpts.KubeletServerListener, err = r.createNodeObjectForDevice(deviceObj)
 		if err != nil {
 			reqLog.Error(err, "failed to create node object")
 			return err
 		}
 
 		defer func() {
-			// delete related objects with best effort if error happened
 			if err != nil {
-				_ = kubeletListener.Close()
-
-				reqLog.Info("delete node object on error")
-				if e := r.client.Delete(r.ctx, nodeObj); e != nil {
-					reqLog.Error(e, "failed to delete node object")
-				}
+				_ = creationOpts.KubeletServerListener.Close()
 			}
 		}()
 
-		// create and start a new virtual node instance
-		reqLog.Info("create virtual node for node object")
-		virtualNode, err = node.CreateVirtualNode(r.ctx, nodeObj.DeepCopy(), kubeletListener, grpcListener, *r.config)
+		needToCreateVirtualNode = true
+		// create a node.CreationOptions to mark a new virtual node should be created
+	}
+
+	// check device connectivity, check service object if grpc is used
+	switch deviceObj.Spec.Connectivity.Method {
+	case aranya.DeviceConnectViaGRPC:
+		svcNamespacedName := types.NamespacedName{Namespace: deviceObj.Namespace, Name: ServiceName(deviceObj.Name)}
+		err = r.client.Get(r.ctx, svcNamespacedName, svcObj)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				reqLog.Error(err, "failed to get svc object")
+				return err
+			}
+		} else {
+			// service object exists, but to be deleted,
+			// return error to run another reconcile
+			svcDeleted := !(svcObj.DeletionTimestamp == nil || svcObj.DeletionTimestamp.IsZero())
+			if svcDeleted {
+				return fmt.Errorf("unexpected service object deleted")
+			}
+
+			// service object ok, job done
+			break
+		}
+
+		// service object doesn't exists,
+		// whether not created with virtual node or has been deleted
+		if needToCreateVirtualNode {
+			// need to create service object and grpc server
+			grpcConfig := deviceObj.Spec.Connectivity.Config.GRPC.ForServer
+			svcObj, creationOpts.GRPCServerListener, err = r.createGRPCSvcObjectForDevice(deviceObj)
+			if err != nil {
+				return err
+			}
+
+			// close newly created grpc listener on error
+			defer func() {
+				if err != nil {
+					_ = creationOpts.GRPCServerListener.Close()
+				}
+			}()
+
+			var grpcSrvOptions []grpc.ServerOption
+			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil {
+				cert, err := r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
+				if err != nil {
+					return err
+				}
+				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(cert)))
+			}
+
+			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(nodeName, grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
+		} else {
+			// service object deleted (most likely deleted by user)
+			// create service object according to existing virtual node
+			if creationOpts.GRPCServerListener != nil {
+				// existing virtual node work as a grpc manager
+				// we just need to create a service object for it
+
+				// NOTICE: any grpc config update will not be applied
+				// TODO: should we support grpc config change?
+				reqLog.Info("creating svc object for existing grpc service, no update will be applied to existing grpc service")
+				port, err := GetListenPort(creationOpts.GRPCServerListener.Addr().String())
+				if err != nil {
+					return err
+				}
+
+				svcObj = newServiceForEdgeDevice(deviceObj, port)
+				err = r.client.Create(r.ctx, svcObj)
+				if err != nil {
+					reqLog.Error(err, "failed to create svc object for existing grpc service")
+					return err
+				}
+			} else {
+				// existing virtual node doesn't work as grpc manager
+				// changes happen in EdgeDevice's spec
+				// TODO: should we support connectivity method change?
+				reqLog.Info("EdgeDevice connectivity method change not supported")
+			}
+		}
+	case aranya.DeviceConnectViaMQTT:
+		if !needToCreateVirtualNode {
+			// nothing to do since mqtt doesn't require any service object
+			// TODO: should we support connectivity method change?
+			break
+		}
+
+		mqttConfig := deviceObj.Spec.Connectivity.Config.MQTT.ForServer
+		var cert *tls.Certificate
+		if tlsRef := mqttConfig.TLSSecretRef; tlsRef != nil {
+			cert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
+			if err != nil {
+				return err
+			}
+		}
+
+		creationOpts.ConnectivityManager = connectivityManager.NewMQTTManager(nodeName, mqttConfig, cert)
+	}
+
+	// create virtual node if required
+	if needToCreateVirtualNode {
+		creationOpts.KubeClient = r.kubeClient
+
+		virtualNode, err = node.CreateVirtualNode(r.ctx, creationOpts)
 		if err != nil {
 			reqLog.Error(err, "failed to create virtual node")
 			return err
 		}
 
-		reqLog.Info("start virtual node")
-		if err = virtualNode.Start(); err != nil {
+		err = virtualNode.Start()
+		if err != nil {
 			reqLog.Error(err, "failed to start virtual node")
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *ReconcileEdgeDevice) GetCertFromSecret(namespace, name string) (*tls.Certificate, error) {
+	if namespace == "" {
+		namespace = constant.CurrentNamespace()
+	}
+
+	tlsSecret := &corev1.Secret{}
+	err := r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, tlsSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	if tlsSecret.Type != corev1.SecretTypeTLS {
+		return nil, fmt.Errorf("non tls secret found by tlsSecretRef")
+	}
+
+	certPEM := tlsSecret.Data[corev1.TLSCertKey]
+	keyPEM := tlsSecret.Data[corev1.TLSPrivateKeyKey]
+
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cert, nil
+}
+
+func GetListenAllAddress(port int32) string {
+	portStr := strconv.FormatInt(int64(port), 10)
+	return fmt.Sprintf(":%s", portStr)
+}
+
+func GetListenPort(addr string) (int32, error) {
+	idx := strings.LastIndexByte(addr, ':')
+	port, err := strconv.ParseInt(addr[idx:], 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(port), nil
 }
