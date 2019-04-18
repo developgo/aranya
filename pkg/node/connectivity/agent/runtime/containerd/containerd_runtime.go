@@ -21,8 +21,8 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtimeutil"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtimeutil"
 )
 
 func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {

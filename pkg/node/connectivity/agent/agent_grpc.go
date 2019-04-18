@@ -1,4 +1,6 @@
-package client
+// +build conn_grpc
+
+package agent
 
 import (
 	"context"
@@ -7,17 +9,17 @@ import (
 	"google.golang.org/grpc"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
-type GrpcClient struct {
+type GRPCAgent struct {
 	baseClient
 	client     connectivity.ConnectivityClient
 	syncClient connectivity.Connectivity_SyncClient
 }
 
-func NewGrpcClient(conn *grpc.ClientConn, rt runtime.Interface) (*GrpcClient, error) {
-	client := &GrpcClient{
+func NewGRPCAgent(conn *grpc.ClientConn, rt runtime.Interface) (*GRPCAgent, error) {
+	client := &GRPCAgent{
 		baseClient: newBaseClient(rt),
 		client:     connectivity.NewConnectivityClient(conn),
 	}
@@ -26,7 +28,7 @@ func NewGrpcClient(conn *grpc.ClientConn, rt runtime.Interface) (*GrpcClient, er
 	return client, nil
 }
 
-func (c *GrpcClient) Run(ctx context.Context) error {
+func (c *GRPCAgent) Run(ctx context.Context) error {
 	if err := c.baseClient.onConnect(func() error {
 		if c.syncClient != nil {
 			return ErrClientAlreadyConnected
@@ -79,7 +81,7 @@ func (c *GrpcClient) Run(ctx context.Context) error {
 	}
 }
 
-func (c *GrpcClient) PostMsg(msg *connectivity.Msg) error {
+func (c *GRPCAgent) PostMsg(msg *connectivity.Msg) error {
 	return c.baseClient.onPostMsg(msg, func(msg *connectivity.Msg) error {
 		if c.syncClient == nil {
 			return ErrClientNotConnected

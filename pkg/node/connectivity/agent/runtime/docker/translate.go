@@ -1,3 +1,5 @@
+// +build rt_docker
+
 package docker
 
 import (

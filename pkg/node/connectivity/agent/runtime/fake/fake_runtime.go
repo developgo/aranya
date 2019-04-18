@@ -10,7 +10,7 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 func NewFakeRuntime(faulty bool) (runtime.Interface, error) {

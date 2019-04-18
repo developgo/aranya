@@ -16,7 +16,7 @@ import (
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 var (

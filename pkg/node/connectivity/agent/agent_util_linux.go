@@ -1,4 +1,6 @@
-package client
+// +build linux
+
+package agent
 
 import (
 	"io/ioutil"

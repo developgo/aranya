@@ -5,8 +5,8 @@ package runtime
 import (
 	"context"
 
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime/podman"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime/podman"
 )
 
 func GetRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {

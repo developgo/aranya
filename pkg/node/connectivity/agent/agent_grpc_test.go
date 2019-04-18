@@ -1,4 +1,4 @@
-package client
+package agent
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime/fake"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime/fake"
 	"arhat.dev/aranya/pkg/node/connectivity/manager"
 )
 
@@ -30,7 +30,7 @@ var (
 	}
 )
 
-func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager, srvStop func(), client *GrpcClient) {
+func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager, srvStop func(), client *GRPCAgent) {
 	mgr = manager.NewGRPCManager("client.test").(*manager.GRPCManager)
 	srv := grpc.NewServer()
 	connectivity.RegisterConnectivityServer(srv, mgr)
@@ -55,7 +55,7 @@ func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager,
 		panic(err)
 	}
 
-	client, err = NewGrpcClient(conn, rt)
+	client, err = NewGRPCAgent(conn, rt)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func TestNewGrpcClient(t *testing.T) {
 	var (
 		mgr     *manager.GRPCManager
 		srvStop func()
-		client  *GrpcClient
+		client  *GRPCAgent
 
 		podReq = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{

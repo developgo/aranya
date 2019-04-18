@@ -1,6 +1,6 @@
 // +build !linux
 
-package client
+package agent
 
 import (
 	corev1 "k8s.io/api/core/v1"

@@ -1,4 +1,4 @@
-package client
+package agent
 
 import (
 	"bufio"
@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 	"arhat.dev/aranya/pkg/node/util"
 )
 
@@ -221,12 +221,9 @@ func (c baseClient) doNodeInfo(sid uint64) {
 	nodeSystemInfo.Architecture = c.runtime.Arch()
 	nodeSystemInfo.KernelVersion = c.runtime.KernelVersion()
 	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
-	nodeSystemInfo.SystemUUID = ""
-	nodeSystemInfo.BootID = ""
-	nodeSystemInfo.OSImage = ""
 	// set KubeletVersion and KubeProxyVersion at server side
-	// nodeSystemInfo.KubeletVersion = ""
-	// nodeSystemInfo.KubeProxyVersion = ""
+	// nodeSystemInfo.KubeletVersion
+	// nodeSystemInfo.KubeProxyVersion
 
 	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
 		Status: corev1.NodeStatus{

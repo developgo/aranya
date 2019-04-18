@@ -16,7 +16,7 @@ import (
 	"arhat.dev/aranya/cmd/arhat/internal/conn"
 	cmdRuntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 const (

@@ -13,11 +13,11 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/client"
-	"arhat.dev/aranya/pkg/node/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/node/connectivity/agent"
+	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
-func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt runtime.Interface) (client.Interface, error) {
+func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt runtime.Interface) (agent.Interface, error) {
 	dialCtx, cancel := context.WithTimeout(ctx, config.Server.DialTimeout)
 	defer cancel()
 
@@ -83,5 +83,5 @@ func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt 
 		return nil, err
 	}
 
-	return client.NewGrpcClient(conn, rt)
+	return agent.NewGRPCAgent(conn, rt)
 }
