@@ -12,9 +12,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"arhat.dev/aranya/pkg/node/agent"
+	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/agent"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 func GetConnectivityClient(ctx context.Context, config *connectivity.Config, rt runtime.Interface) (agent.Interface, error) {

@@ -13,10 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
+	"arhat.dev/aranya/pkg/node/agent"
+	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime/fake"
-	"arhat.dev/aranya/pkg/node/connectivity/manager"
+	"arhat.dev/aranya/pkg/node/manager"
 )
 
 var (

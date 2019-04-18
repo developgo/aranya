@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/grpc"
 
+	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 type GRPCAgent struct {

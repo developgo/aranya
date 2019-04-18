@@ -20,7 +20,7 @@ import (
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	connectivitySrv "arhat.dev/aranya/pkg/node/connectivity/manager"
+	connectivitySrv "arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/resolver"
 )
 

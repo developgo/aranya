@@ -28,7 +28,7 @@ import (
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
-	connectivityManager "arhat.dev/aranya/pkg/node/connectivity/manager"
+	connectivityManager "arhat.dev/aranya/pkg/node/manager"
 )
 
 const (

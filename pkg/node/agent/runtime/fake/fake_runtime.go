@@ -3,14 +3,15 @@ package fake
 import (
 	"fmt"
 	"io"
+	goruntime "runtime"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
+	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 func NewFakeRuntime(faulty bool) (runtime.Interface, error) {
@@ -130,6 +131,18 @@ func (r *fakeRuntime) Name() string {
 
 func (r *fakeRuntime) Version() string {
 	return "0.0.0"
+}
+
+func (r *fakeRuntime) OS() string {
+	return goruntime.GOOS
+}
+
+func (r *fakeRuntime) Arch() string {
+	return goruntime.GOARCH
+}
+
+func (r *fakeRuntime) KernelVersion() string {
+	return "4.14.0-fake"
 }
 
 func closeAllIfNotNil(c ...io.Closer) {

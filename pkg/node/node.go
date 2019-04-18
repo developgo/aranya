@@ -13,7 +13,7 @@ import (
 	kubeClient "k8s.io/client-go/kubernetes"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	connectivityManager "arhat.dev/aranya/pkg/node/connectivity/manager"
+	connectivityManager "arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/util"
 )

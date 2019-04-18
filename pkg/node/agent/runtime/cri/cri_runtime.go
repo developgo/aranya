@@ -15,8 +15,8 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	kubeletContainer "k8s.io/kubernetes/pkg/kubelet/container"
 
+	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	"arhat.dev/aranya/pkg/node/connectivity/agent/runtime"
 )
 
 var (
