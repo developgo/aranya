@@ -12,23 +12,18 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GRPCManager, stub connectivity.ConnectivityClient) {
-	connectivitySrv = NewGRPCManager("test").(*GRPCManager)
-	srv := grpc.NewServer()
-	connectivity.RegisterConnectivityServer(srv, connectivitySrv)
-
+func newTestGrpcSrvAndStub() (connMgr *GRPCManager, stub connectivity.ConnectivityClient) {
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}
 
+	connMgr = NewGRPCManager(grpc.NewServer(), l)
 	go func() {
-		if err := srv.Serve(l); err != nil {
+		if err := connMgr.Start(); err != nil {
 			panic(err)
 		}
 	}()
-
-	srvStop = srv.Stop
 
 	conn, err := grpc.DialContext(context.TODO(), l.Addr().String(),
 		grpc.WithInsecure(),
@@ -42,7 +37,7 @@ func newTestGrpcSrvAndStub() (srvStop func(), connectivitySrv *GRPCManager, stub
 }
 
 func TestNewGrpcConnectivity(t *testing.T) {
-	c := NewGRPCManager("test").(*GRPCManager)
+	c := NewGRPCManager(grpc.NewServer(), nil)
 	assert.NotEmpty(t, c)
 	assert.NotEmpty(t, c.sessions)
 	assert.Empty(t, c.syncSrv)
@@ -52,12 +47,13 @@ func TestGrpcSrv(t *testing.T) {
 	const (
 		orphanedMsgCount = 10
 	)
-	srvStop, srv, stub := newTestGrpcSrvAndStub()
-	defer srvStop()
+
+	mgr, stub := newTestGrpcSrvAndStub()
+	defer mgr.Stop()
 
 	cmd := connectivity.NewPodListCmd("foo", "bar", true)
 
-	msgCh, err := srv.PostCmd(context.TODO(), cmd)
+	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.Error(t, err)
 	assert.Empty(t, msgCh)
 
@@ -70,7 +66,7 @@ func TestGrpcSrv(t *testing.T) {
 		defer wg.Done()
 
 		i := 0
-		for msg := range srv.GlobalMessages() {
+		for msg := range mgr.GlobalMessages() {
 			i++
 			assert.NotEmpty(t, msg)
 			assert.Equal(t, []byte("foo"), msg.GetNode().GetNodeV1())
@@ -83,9 +79,9 @@ func TestGrpcSrv(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		<-srv.DeviceConnected()
+		<-mgr.DeviceConnected()
 
-		msgCh, err := srv.PostCmd(context.TODO(), cmd)
+		msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 		assert.NoError(t, err)
 		assert.NotEqual(t, nil, msgCh)
 

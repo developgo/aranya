@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -16,6 +15,8 @@ const (
 	messageChannelSize = 10
 )
 
+var log = logf.Log.WithName("node.manager")
+
 var (
 	ErrDeviceAlreadyConnected = errors.New("device has already connected")
 	ErrDeviceNotConnected     = errors.New("device is not connected")
@@ -24,17 +25,20 @@ var (
 )
 
 type Interface interface {
+	// Start manager and block until stopped
 	Start() error
+	// Stop manager at once
+	Stop()
+	// DeviceConnected signal
 	DeviceConnected() <-chan struct{}
+	// GlobalMessages message with no session attached
 	GlobalMessages() <-chan *connectivity.Msg
 	// send a command to remote device with timeout
 	// return a channel of message for this session
 	PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error)
-	Close()
 }
 
 type baseServer struct {
-	log             logr.Logger
 	sessions        *sessionManager
 	deviceConnected chan struct{}
 	globalMsgChan   chan *connectivity.Msg
@@ -44,9 +48,8 @@ type baseServer struct {
 	mu sync.RWMutex
 }
 
-func newBaseServer(name string) baseServer {
+func newBaseServer() baseServer {
 	return baseServer{
-		log:             logf.Log.WithName("connectivity.server").WithValues("name", name),
 		sessions:        newSessionManager(),
 		deviceConnected: make(chan struct{}),
 		globalMsgChan:   make(chan *connectivity.Msg, messageChannelSize),
@@ -122,7 +125,7 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)
 }
 
-func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
+func (s *baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -168,7 +171,7 @@ func (s baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCm
 	return ch, nil
 }
 
-func (s baseServer) onClose(closeManager func()) {
+func (s *baseServer) onStop(closeManager func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

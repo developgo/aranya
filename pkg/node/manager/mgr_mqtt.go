@@ -8,13 +8,15 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
+var _ Interface = &MQTTManager{}
+
 type mqttClient struct {
 }
 
-func NewMQTTManager(name string, config aranya.MQTTConfig, cert *tls.Certificate) Interface {
+func NewMQTTManager(config aranya.MQTTConfig, clientCert *tls.Certificate) (*MQTTManager, error) {
 	return &MQTTManager{
-		baseServer: newBaseServer(name),
-	}
+		baseServer: newBaseServer(),
+	}, nil
 }
 
 type MQTTManager struct {
@@ -31,8 +33,8 @@ func (m *MQTTManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-ch
 	})
 }
 
-func (m *MQTTManager) Close() {
-	m.baseServer.onClose(func() {
+func (m *MQTTManager) Stop() {
+	m.baseServer.onStop(func() {
 
 	})
 }

@@ -16,5 +16,6 @@ check-log:
 check-log-all:
 	$(shell scripts/log.sh current-all)
 
+.PHONY: check-log-prev
 check-log-prev:
 	$(shell scripts/log.sh previous)

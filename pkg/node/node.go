@@ -158,7 +158,7 @@ func (n *Node) ForceClose() {
 	if n.status == statusRunning {
 		n.log.Info("force close virtual node")
 		_ = n.kubeletSrv.Close()
-		n.connectivityManager.Close()
+		n.connectivityManager.Stop()
 
 		n.exit()
 	}

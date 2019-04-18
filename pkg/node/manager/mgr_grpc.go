@@ -10,6 +10,8 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
+var _ Interface = &GRPCManager{}
+
 type GRPCManager struct {
 	baseServer
 
@@ -20,9 +22,9 @@ type GRPCManager struct {
 	listener net.Listener
 }
 
-func NewGRPCManager(name string, server *grpc.Server, listener net.Listener) Interface {
+func NewGRPCManager(server *grpc.Server, listener net.Listener) *GRPCManager {
 	mgr := &GRPCManager{
-		baseServer: newBaseServer(name),
+		baseServer: newBaseServer(),
 		listener:   listener,
 		server:     server,
 	}
@@ -37,7 +39,7 @@ func (m *GRPCManager) Start() error {
 
 func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(context.Background())
-	if err := m.baseServer.onDeviceConnected(func() (accept bool) {
+	if err := m.onDeviceConnected(func() (accept bool) {
 		if m.syncSrv == nil {
 			m.syncSrv = server
 			m.closeConn = closeConn
@@ -45,13 +47,13 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 		}
 		return false
 	}); err != nil {
-		m.log.Error(err, "")
+		log.Error(err, "")
 		return err
 	}
 
 	defer func() {
-		m.baseServer.onDeviceDisconnected(func() {
-			m.log.Error(nil, "device disconnected")
+		m.onDeviceDisconnected(func() {
+			log.Error(nil, "device disconnected")
 			m.syncSrv = nil
 		})
 	}()
@@ -64,7 +66,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 				close(msgCh)
 
 				if err != io.EOF {
-					m.log.Error(err, "stream recv failed")
+					log.Error(err, "stream recv failed")
 				}
 				return
 			}
@@ -82,14 +84,14 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 				return nil
 			}
 
-			m.baseServer.onDeviceMsg(msg)
+			m.onDeviceMsg(msg)
 		}
 	}
 }
 
 // PostCmd sends a command to remote device
 func (m *GRPCManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error) {
-	return m.baseServer.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
+	return m.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
 		// fail if device not connected,
 		// you should call DeviceConnected first
 		// to get notified when device connected
@@ -101,8 +103,8 @@ func (m *GRPCManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-ch
 	})
 }
 
-func (m *GRPCManager) Close() {
-	m.baseServer.onClose(func() {
+func (m *GRPCManager) Stop() {
+	m.onStop(func() {
 		if m.syncSrv != nil && m.closeConn != nil {
 			m.closeConn()
 		}

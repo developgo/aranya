@@ -305,7 +305,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(cert)))
 			}
 
-			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(nodeName, grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
+			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing virtual node
@@ -350,7 +350,10 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 			}
 		}
 
-		creationOpts.ConnectivityManager = connectivityManager.NewMQTTManager(nodeName, mqttConfig, cert)
+		creationOpts.ConnectivityManager, err = connectivityManager.NewMQTTManager(mqttConfig, cert)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create virtual node if required

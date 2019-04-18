@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
-	"arhat.dev/aranya/pkg/node/agent"
 	"arhat.dev/aranya/pkg/node/agent/runtime"
+	"arhat.dev/aranya/pkg/node/agent/runtime/fake"
 	"arhat.dev/aranya/pkg/node/connectivity"
 	"arhat.dev/aranya/pkg/node/manager"
 )
@@ -30,23 +30,19 @@ var (
 	}
 )
 
-func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager, srvStop func(), client *GRPCAgent) {
-	mgr = manager.NewGRPCManager("client.test").(*manager.GRPCManager)
-	srv := grpc.NewServer()
-	connectivity.RegisterConnectivityServer(srv, mgr)
-
+func newGRPCTestManagerAndAgent(rt runtime.Interface) (mgr *manager.GRPCManager, client *GRPCAgent) {
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}
 
+	mgr = manager.NewGRPCManager(grpc.NewServer(), l)
+
 	go func() {
-		if err := srv.Serve(l); err != nil {
+		if err := mgr.Start(); err != nil {
 			panic(err)
 		}
 	}()
-
-	srvStop = srv.Stop
 
 	conn, err := grpc.DialContext(context.TODO(), l.Addr().String(),
 		grpc.WithInsecure(),
@@ -63,11 +59,10 @@ func newGrpcTestServerAndClient(rt runtime.Interface) (mgr *manager.GRPCManager,
 	return
 }
 
-func TestNewGrpcClient(t *testing.T) {
+func TestGRPCAgent(t *testing.T) {
 	var (
-		mgr     *manager.GRPCManager
-		srvStop func()
-		client  *GRPCAgent
+		mgr    *manager.GRPCManager
+		client *GRPCAgent
 
 		podReq = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -87,8 +82,8 @@ func TestNewGrpcClient(t *testing.T) {
 	okRt, err := fake.NewFakeRuntime(false)
 	assert.NoError(t, err)
 
-	mgr, srvStop, client = newGrpcTestServerAndClient(okRt)
-	defer srvStop()
+	mgr, client = newGRPCTestManagerAndAgent(okRt)
+	defer mgr.Stop()
 
 	err = client.PostMsg(connectivity.NewNodeMsg(0, &corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
 	assert.Error(t, err)
@@ -157,7 +152,7 @@ func TestNewGrpcClient(t *testing.T) {
 		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerTtyResizeCmd(0, 10, 10))
 		testOnetimeCmdWithNoExpectedMsg(t, mgr, connectivity.NewContainerTtyResizeCmd(1, 10, 10))
 
-		srvStop()
+		mgr.Stop()
 	}()
 
 	wg.Add(1)
