@@ -11,9 +11,8 @@ spec:
     config:
       grpc:
         forServer:
-          tlsSecretRef:
-            name: my-grpc-server-secret
-            namespace: iot-edge
+          # here, setup an insecure grpc server
+          tlsSecretRef: null
         # configuration for device here is to annotate how to configure edge device to access
         forDevice:
           # public aranya address for edge device to access
@@ -62,18 +61,18 @@ spec:
         namespace: /aranya.arhat.dev
         # tell aranya how to connect mqtt broker
         forServer:
+          #  # set secret ref to use tls when connecting to broker
+          # tlsSecretRef:
+          #   # kubernetes secret name
+          #   name: my-mqtt-client-secret
+          #   # kubenetes namespace in which to find the secret
+          #   namespace: iot-edge
           # mqtt broker address
           server: mqtt-broker:1883
           # mqtt version, currently only 3.1.1 supported
           version: "3.1.1"
           # mqtt transport protocol, one of [tcp, websocket]
           transport: tcp
-          # set secret ref to use tls when connecting to broker
-          tlsSecretRef:
-            # kubernetes secret name
-            name: my-mqtt-client-secret
-            # kubenetes namespace in which to find the secret
-            namespace: iot-edge
           # MQTT CONNECT packet
           connectPacket:
             cleanSession: true

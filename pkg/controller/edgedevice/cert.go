@@ -22,8 +22,8 @@ import (
 
 func GetKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
 	var (
-		secretObjName = fmt.Sprintf("aranya.%s", nodeName)
-		csrObjName    = fmt.Sprintf("aranya.%s", nodeName)
+		secretObjName = fmt.Sprintf("kubelet.%s", nodeName)
+		csrObjName    = fmt.Sprintf("kubelet.%s", nodeName)
 
 		needToCreateCSR      = false
 		needToGetKubeCSR     = true
@@ -60,8 +60,10 @@ func GetKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 		}
 
 		csrBytes, err = csr.Generate(privateKey, &csr.CertificateRequest{
+			// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
 			CN: fmt.Sprintf("system:node:%s", nodeName),
 			Names: []csr.Name{{
+				// TODO: we may add other names
 				O: "system:nodes",
 			}},
 			Hosts: hosts,
