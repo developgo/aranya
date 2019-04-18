@@ -406,7 +406,7 @@ func GetListenAllAddress(port int32) string {
 
 func GetListenPort(addr string) (int32, error) {
 	idx := strings.LastIndexByte(addr, ':')
-	port, err := strconv.ParseInt(addr[idx:], 10, 32)
+	port, err := strconv.ParseInt(addr[idx+1:], 10, 32)
 	if err != nil {
 		return 0, err
 	}
