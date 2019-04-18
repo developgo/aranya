@@ -3,7 +3,6 @@ module arhat.dev/aranya
 go 1.12
 
 replace (
-	cloud.google.com/go => cloud.google.com/go v0.0.0-20160913182117-3b1ae45394a2
 	github.com/Nvveen/Gotty => github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
 	github.com/PuerkitoBio/purell => github.com/PuerkitoBio/purell v1.1.1
 	github.com/blang/semver => github.com/blang/semver v3.5.1+incompatible
