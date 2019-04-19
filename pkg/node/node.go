@@ -123,32 +123,29 @@ func (n *Node) Start() (err error) {
 		// start a kubelet http server
 		go func() {
 			n.log.Info("starting kubelet http server")
-			err := n.kubeletSrv.Serve(n.opt.KubeletServerListener)
-			if err != nil && err != http.ErrServerClosed {
+			if err := n.kubeletSrv.Serve(n.opt.KubeletServerListener); err != nil {
 				n.log.Error(err, "failed to start kubelet http server")
 			}
 		}()
 
 		go func() {
 			n.log.Info("starting connectivity manager")
-			err := n.connectivityManager.Start()
-			if err != nil {
+			if err := n.connectivityManager.Start(); err != nil {
 				n.log.Error(err, "failed to start connectivity manager")
 			}
 		}()
 
 		go func() {
-			err := n.podManager.Start()
-			if err != nil {
+			n.log.Info("starting pod manager")
+			if err := n.podManager.Start(); err != nil {
 				n.log.Error(err, "failed to start pod manager")
 			}
 		}()
 
 		go n.InitializeRemoteDevice()
-
-		return
 	})
-	return
+
+	return err
 }
 
 // ForceClose close this node immediately

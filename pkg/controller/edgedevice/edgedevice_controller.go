@@ -204,7 +204,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 		// since the node object not found (has been deleted),
 		// delete the related virtual node
-		reqLog.Info("node object deleted, destroy virtual node")
+		reqLog.Info("node object not found, destroying virtual node")
 		node.Delete(nodeName)
 		needToCreateNodeObject = true
 	} else {
@@ -258,7 +258,9 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			if err != nil {
 				_ = creationOpts.KubeletServerListener.Close()
 
+				log.Info("cleanup virtual node due to error")
 				if err := r.cleanupVirtualNode(reqLog, namespace, nodeName, deviceObj.Name); err != nil {
+					log.Error(err, "failed to cleanup virtual node")
 					return
 				}
 			}
@@ -290,7 +292,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		// service object doesn't exists,
 		// whether not created with virtual node or has been deleted
 		if needToCreateVirtualNode {
-			// need to create service object and grpc server
+			// need to create service object and grpc server, then we need a new grpc listener
 			grpcConfig := deviceObj.Spec.Connectivity.Config.GRPC.ForServer
 			svcObj, creationOpts.GRPCServerListener, err = r.createGRPCSvcObjectForDevice(deviceObj)
 			if err != nil {
@@ -306,17 +308,21 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 			var grpcSrvOptions []grpc.ServerOption
 			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil {
-				cert, err := r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
+				var grpcServerCert *tls.Certificate
+
+				log.Info("trying to get grpc server tls secret")
+				grpcServerCert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
 				if err != nil {
+					log.Error(err, "failed to get grpc server tls secret")
 					return err
 				}
-				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(cert)))
+				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
 			}
 
 			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
 			// service object deleted (most likely deleted by user)
-			// create service object according to existing virtual node
+			// create service object according to existing grpc listener
 			if creationOpts.GRPCServerListener != nil {
 				// existing virtual node work as a grpc manager
 				// we just need to create a service object for it
@@ -339,7 +345,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				// existing virtual node doesn't work as grpc manager
 				// changes happen in EdgeDevice's spec
 				// TODO: should we support connectivity method change?
-				reqLog.Info("EdgeDevice connectivity method change not supported")
+				reqLog.Info("connectivity method change not supported")
 			}
 		}
 	case aranya.DeviceConnectViaMQTT:
@@ -362,6 +368,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("unsupported connectivity method")
 	}
 
 	// create virtual node if required
