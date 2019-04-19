@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
 	kubeClient "k8s.io/client-go/kubernetes"
+	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	connectivityManager "arhat.dev/aranya/pkg/node/manager"
@@ -79,7 +80,7 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, 
 		exit: exit,
 		name: opt.NodeObject.Name,
 
-		kubeClient:          opt.KubeClient,
+		kubeNodeClient:      opt.KubeClient.CoreV1().Nodes(),
 		connectivityManager: opt.ConnectivityManager,
 
 		kubeletSrv:      &http.Server{Handler: m},
@@ -99,7 +100,7 @@ type Node struct {
 	exit context.CancelFunc
 	name string
 
-	kubeClient          kubeClient.Interface
+	kubeNodeClient      kubeNodeClient.NodeInterface
 	connectivityManager connectivityManager.Interface
 
 	kubeletSrv      *http.Server

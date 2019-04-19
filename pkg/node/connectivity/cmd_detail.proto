@@ -10,40 +10,55 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
 message NodeCmd {
+    enum NodeAction {
+        GetSystemInfo = 0;
+        GetResources = 1;
+        GetConditions = 2;
+    }
+
+    NodeAction action = 1;
 }
 
-enum PodAction {
-    // We do not have Pod Update action, and we will always
-    // recreate the pod when a update required,
-    // also, any pod update action will be resolved in aranya to generate
-    // Create and Delete action for remote device.
-    //
-    // This behavior can keep this project simple and easy to extend.
+message ImageCmd {
+    enum ImageAction {
+        ListImages = 0;
+    }
 
-    // Create a new pod in device
-    Create = 0;
-    // Delete a existing pod in device
-    Delete = 1;
-    // List all managed pod in device
-    List = 3;
-
-    // Execute commands in existing container
-    Exec = 11;
-    // Attach to existing container
-    Attach = 12;
-    // Get container/node log
-    Log = 13;
-    // Port forward in pod
-    PortForward = 14;
-    // user input or application data to
-    // usually this action happens in Exec, Attach, PortForward session
-    Input = 15;
-    // user tty resize
-    // usually this action happens in Exec, Attach session when tty is enabled
-    ResizeTty = 16;
+    ImageAction action = 1;
 }
 
 message PodCmd {
+    enum PodAction {
+        // We do not have Pod Update action, and we will always
+        // recreate the pod when a update required,
+        // also, any pod update action will be resolved in aranya to generate
+        // Create and Delete action for remote device.
+        //
+        // This behavior can keep this project simple and easy to extend.
+    
+        // Create a new pod in device
+        CreatePod = 0;
+        // Delete a existing pod in device
+        DeletePod = 1;
+        // List all managed pod in device
+        ListPods = 3;
+    
+        // Execute commands in existing container
+        Exec = 11;
+        // Attach to existing container
+        Attach = 12;
+        // Get container/node log
+        Log = 13;
+        // Port forward in pod
+        PortForward = 14;
+        // user input or application data to
+        // usually this action happens in Exec, Attach, PortForward session
+        Input = 15;
+        // user tty resize
+        // usually this action happens in Exec, Attach session when tty is enabled
+        ResizeTty = 16;
+    }
+
     // action type
     PodAction action = 1;
 

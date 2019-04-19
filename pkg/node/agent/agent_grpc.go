@@ -13,23 +13,23 @@ import (
 )
 
 type GRPCAgent struct {
-	baseClient
+	baseAgent
 	client     connectivity.ConnectivityClient
 	syncClient connectivity.Connectivity_SyncClient
 }
 
 func NewGRPCAgent(conn *grpc.ClientConn, rt runtime.Interface) (*GRPCAgent, error) {
 	client := &GRPCAgent{
-		baseClient: newBaseClient(rt),
-		client:     connectivity.NewConnectivityClient(conn),
+		baseAgent: newBaseClient(rt),
+		client:    connectivity.NewConnectivityClient(conn),
 	}
 
-	(&client.baseClient).doPostMsg = client.PostMsg
+	(&client.baseAgent).doPostMsg = client.PostMsg
 	return client, nil
 }
 
 func (c *GRPCAgent) Run(ctx context.Context) error {
-	if err := c.baseClient.onConnect(func() error {
+	if err := c.baseAgent.onConnect(func() error {
 		if c.syncClient != nil {
 			return ErrClientAlreadyConnected
 		}
@@ -60,7 +60,7 @@ func (c *GRPCAgent) Run(ctx context.Context) error {
 		}
 	}()
 
-	defer c.baseClient.onDisconnected(func() {
+	defer c.baseAgent.onDisconnected(func() {
 		c.syncClient = nil
 	})
 
@@ -76,13 +76,13 @@ func (c *GRPCAgent) Run(ctx context.Context) error {
 			if !more {
 				return nil
 			}
-			c.baseClient.onSrvCmd(cmd)
+			c.baseAgent.onRecvCmd(cmd)
 		}
 	}
 }
 
 func (c *GRPCAgent) PostMsg(msg *connectivity.Msg) error {
-	return c.baseClient.onPostMsg(msg, func(msg *connectivity.Msg) error {
+	return c.baseAgent.onPostMsg(msg, func(msg *connectivity.Msg) error {
 		if c.syncClient == nil {
 			return ErrClientNotConnected
 		}

@@ -10,10 +10,26 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
 message Node {
-    oneof node {
-        // protobuf bytes of corev1.Node
-        bytes node_v1 = 1;
+    message Resource {
+        // protobuf bytes of corev1.ResourceList
+        map<string, bytes> capacity = 1;
+        map<string, bytes> allocatable = 2;
     }
+
+    message Condition {
+        // protobuf bytes of corev1.NodeCondition
+        repeated bytes conditions = 1;
+    }
+
+    // protobuf bytes of corev1.NodeSystemInfo
+    bytes system_info = 1;
+    Resource resources = 2;
+    Condition conditions = 3;
+}
+
+message Image {
+    repeated string names = 1;
+    uint64 size_bytes = 2;
 }
 
 message Pod {

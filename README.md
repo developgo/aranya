@@ -8,13 +8,25 @@ Deploy and manage edge devices with ease, integrate them into your `Kubernetes` 
 
 ## State
 
-EXPRIMENT, USE AT YOUR OWN RISK
+EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Prerequisites
 
 - `Kubernetes` Mode
   - `Kubernetes` Cluster with RBAC enabled
 - Standalone Mode (WIP, see [ROADMAP.md](./ROADMAP.md))
+
+## Features
+
+- `Kubernetes` Mode
+  - Full featured `Kubernetes` workload executor (except Network)
+    - Support `Pod` creation with `Env`, `Volume`
+      - Support source from plain text, `Secret` and `ConfigMap`
+    - Support `kubectl`'s `log`, `exec`, `attach`, `portforward`
+
+## Restrictions
+
+- `Kube`
 
 ## Workflow
 
@@ -67,3 +79,7 @@ EXPRIMENT, USE AT YOUR OWN RISK
       | ---------------- | -------------------- |
       | `arhat.dev/role` | `EdgeDevice`         |
       | `arhat.dev/name` | The edge device name |
+
+## Thanks to
+
+This project is inspired by [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)'s idea, which introduced an cloud agent to run containers.

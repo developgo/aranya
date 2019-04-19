@@ -23,7 +23,7 @@ import (
 	dockerNetwork "github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
 	dockerMessage "github.com/docker/docker/pkg/jsonmessage"
-	dockerStdCopy "github.com/docker/docker/pkg/stdcopy"
+	dockerCopy "github.com/docker/docker/pkg/stdcopy"
 	dockerNat "github.com/docker/go-connections/nat"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
@@ -95,6 +95,39 @@ type dockerRuntime struct {
 
 	runtimeClient dockerClient.ContainerAPIClient
 	imageClient   dockerClient.ImageAPIClient
+}
+
+func (r *dockerRuntime) ListImages() ([]*connectivity.Image, error) {
+	listLog := r.Log().WithValues("action", "list_image")
+
+	listCtx, cancelList := r.ImageActionContext()
+	defer cancelList()
+
+	listLog.Info("trying to list images")
+	dockerImages, err := r.imageClient.ImageList(listCtx, dockerType.ImageListOptions{All: true})
+	if err != nil {
+		listLog.Error(err, "failed to list images")
+		return nil, err
+	}
+
+	images := make([]*connectivity.Image, len(dockerImages))
+	for i, img := range dockerImages {
+		if len(img.RepoDigests) == 0 {
+			// image built locally, should not publish to Kubernetes
+			continue
+		}
+		var names []string
+		for _, imageName := range append(img.RepoTags, img.RepoDigests...) {
+			names = append(names,
+				runtimeutil.GenerateImageName(runtimeutil.DefaultDockerImageDomain, runtimeutil.DefaultDockerImageNamespace, imageName))
+		}
+		images[i] = &connectivity.Image{
+			Names:     names,
+			SizeBytes: uint64(img.Size),
+		}
+	}
+
+	return images, nil
 }
 
 func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.Pod, err error) {
@@ -235,6 +268,8 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 }
 
 func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
+	listLog := r.Log().WithValues("action", "list", "options", options)
+
 	listCtx, cancelList := r.RuntimeActionContext()
 	defer cancelList()
 
@@ -249,12 +284,14 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 		}
 	}
 
+	listLog.Info("listing containers")
 	containers, err := r.runtimeClient.ContainerList(listCtx, dockerType.ContainerListOptions{
 		All:     options.GetAll(),
 		Quiet:   true,
 		Filters: filter,
 	})
 	if err != nil {
+		listLog.Error(err, "failed to list containers")
 		return nil, err
 	}
 
@@ -269,11 +306,12 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 	for _, ctr := range containers {
 		podUID, hasUID := ctr.Labels[constant.ContainerLabelPodUID]
 		if !hasUID {
+			// not the container created by us
 			continue
 		}
 
-		_, isInfra := ctr.Labels[constant.ContainerRoleInfra]
-		if isInfra {
+		role, hasRole := ctr.Labels[constant.ContainerLabelPodContainerRole]
+		if hasRole && role == constant.ContainerRoleInfra {
 			pauseContainers[podUID] = ctr
 			continue
 		}
@@ -281,16 +319,21 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 		podContainers[podUID] = append(podContainers[podUID], ctr)
 	}
 
+	// one pause container represents on Pod
 	for podUID, pauseContainer := range pauseContainers {
+		listLog.Info("inspecting pause container")
 		pauseCtrSpec, err := r.runtimeClient.ContainerInspect(listCtx, pauseContainer.ID)
 		if err != nil {
+			listLog.Error(err, "failed to inspect pause container")
 			return nil, err
 		}
 
 		var containerStatus []*criRuntime.ContainerStatus
 		for _, ctr := range podContainers[podUID] {
+			listLog.Info("inspecting work container")
 			ctrInfo, err := r.runtimeClient.ContainerInspect(listCtx, ctr.ID)
 			if err != nil {
+				listLog.Error(err, "failed to inspect work container")
 				return nil, err
 			}
 			containerStatus = append(containerStatus, r.translateDockerContainerStatusToCRIContainerStatus(&ctrInfo))
@@ -304,6 +347,7 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
 	execLog := r.Log().WithValues("uid", podUID, "container", container, "action", "exec")
 
+	execLog.Info("trying to find container")
 	ctr, err := r.findContainer(podUID, container)
 	if err != nil {
 		execLog.Error(err, "failed to find container")
@@ -313,7 +357,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	execCtx, cancelExec := r.ActionContext()
 	defer cancelExec()
 
-	execLog.Info("start exec create")
+	execLog.Info("trying to exec create")
 	resp, err := r.runtimeClient.ContainerExecCreate(execCtx, ctr.ID, dockerType.ExecConfig{
 		Tty:          tty,
 		AttachStdin:  stdin != nil,
@@ -322,39 +366,29 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		Cmd:          command,
 	})
 	if err != nil {
-		execLog.Error(err, "failed to create exec")
+		execLog.Error(err, "failed to exec create")
 		return err
 	}
 
-	execLog.Info("start exec attach")
+	execLog.Info("trying to exec attach")
 	attachResp, err := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
 	if err != nil {
-		execLog.Error(err, "failed to attach exec")
+		execLog.Error(err, "failed to exec attach")
 		return err
 	}
 	defer func() { _ = attachResp.Conn.Close() }()
 
+	// Here, we will only wait for the output
+	// since input (stdin) and resize (tty) are optional
+	// and kubectl doesn't have a detach option, so the stdout will always be there
+	// once this function call returned, base_runtime will close everything related
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		execLog.Info("start copy stdin")
+		execLog.Info("starting read routine")
 		defer func() {
 			wg.Done()
-			execLog.Info("finished copy stdin")
-		}()
-
-		_, err := io.Copy(attachResp.Conn, stdin)
-		if err != nil {
-			execLog.Error(err, "exception when copy to attach stream")
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		execLog.Info("start copy stdout and stderr")
-		defer func() {
-			wg.Done()
-			execLog.Info("finished copy stdout and stderr")
+			execLog.Info("finished read routine")
 		}()
 
 		var (
@@ -372,36 +406,57 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		if tty {
 			_, err = io.Copy(stdOut, attachResp.Reader)
 		} else {
-			_, err = dockerStdCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
+			_, err = dockerCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
 		}
 		if err != nil {
-			execLog.Error(err, "exception when copy from attach stream")
+			execLog.Error(err, "exception happened in read routine")
 		}
 	}()
 
 	go func() {
-		defer execLog.Info("finished resize tty")
+		execLog.Info("starting write routine")
+		defer func() {
+			execLog.Info("finished write routine")
+		}()
 
-		for size := range resizeCh {
-			execLog.Info("resize tty", "height", size.Height, "width", size.Width)
-			err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
-				Height: uint(size.Height),
-				Width:  uint(size.Width),
-			})
-			if err != nil {
-				execLog.Error(err, "failed to resize container tty")
+		_, err := io.Copy(attachResp.Conn, stdin)
+		if err != nil {
+			execLog.Error(err, "exception happened in write routine")
+		}
+	}()
+
+	go func() {
+		defer execLog.Info("finished tty resize routine")
+
+		for {
+			select {
+			case size, more := <-resizeCh:
+				if !more {
+					return
+				}
+				execLog.Info("resize tty", "height", size.Height, "width", size.Width)
+				err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
+					Height: uint(size.Height),
+					Width:  uint(size.Width),
+				})
+				if err != nil {
+					// DO NOT break here
+					execLog.Error(err, "exception happened in tty resize routine")
+				}
+			case <-execCtx.Done():
+				return
 			}
 		}
 	}()
 
 	wg.Wait()
-
 	return nil
 }
 
 func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
-	attachLog := r.Log().WithValues("uid", podUID, "container", container, "action", "attach")
+	attachLog := r.Log().WithValues("action", "attach", "uid", podUID, "container", container)
 
+	attachLog.Info("trying to find container")
 	ctr, err := r.findContainer(podUID, container)
 	if err != nil {
 		attachLog.Error(err, "failed to find container")
@@ -410,7 +465,8 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 
 	attachCtx, cancelAttach := r.ActionContext()
 	defer cancelAttach()
-	attachLog.Info("start attach")
+
+	attachLog.Info("trying to attach")
 	resp, err := r.runtimeClient.ContainerAttach(attachCtx, ctr.ID, dockerType.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  stdin != nil,
@@ -418,7 +474,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		Stderr: stderr != nil,
 	})
 	if err != nil {
-		attachLog.Error(err, "failed to attach to container")
+		attachLog.Error(err, "failed to attach")
 		return err
 	}
 	defer func() { _ = resp.Conn.Close() }()
@@ -426,41 +482,54 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		attachLog.Info("starting read routine")
+		defer func() {
+			wg.Done()
+			attachLog.Info("finished read routine")
+		}()
 
+		var err error
+		if stderr != nil {
+			_, err = dockerCopy.StdCopy(stdout, stderr, resp.Reader)
+		} else {
+			_, err = io.Copy(stdout, resp.Reader)
+		}
+		if err != nil {
+			attachLog.Error(err, "exception happened in read routine")
+		}
+	}()
+
+	go func() {
 		if stdin != nil {
+			attachLog.Info("starting write routine")
+			defer attachLog.Info("finished write routine")
+
 			_, err := io.Copy(resp.Conn, stdin)
 			if err != nil {
-				attachLog.Error(err, "exception when copy to attach stream")
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		if stderr != nil {
-			_, err := dockerStdCopy.StdCopy(stdout, stderr, resp.Reader)
-			if err != nil {
-				attachLog.Error(err, "exception when stdCopy from attach stream")
-			}
-		} else {
-			_, err := io.Copy(stdout, resp.Reader)
-			if err != nil {
-				attachLog.Error(err, "exception when copy from attach stream")
+				attachLog.Error(err, "exception happened in write routine")
 			}
 		}
 	}()
 
 	go func() {
-		for size := range resizeCh {
-			err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockerType.ResizeOptions{
-				Height: uint(size.Height),
-				Width:  uint(size.Width),
-			})
-			if err != nil {
-				attachLog.Error(err, "exception when resize tty")
+		attachLog.Info("starting tty resize routine")
+		defer attachLog.Info("finished tty resize routine")
+
+		for {
+			select {
+			case size, more := <-resizeCh:
+				if !more {
+					return
+				}
+				err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockerType.ResizeOptions{
+					Height: uint(size.Height),
+					Width:  uint(size.Width),
+				})
+				if err != nil {
+					attachLog.Error(err, "exception happened in tty resize routine")
+				}
+			case <-attachCtx.Done():
+				return
 			}
 		}
 	}()
@@ -471,8 +540,9 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 }
 
 func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
-	logLog := r.Log().WithValues("uid", podUID, "container", options.Container, "action", "log")
+	logLog := r.Log().WithValues("action", "log", "uid", podUID, "container", options.Container)
 
+	logLog.Info("trying to find container")
 	ctr, err := r.findContainer(podUID, options.Container)
 	if err != nil {
 		logLog.Error(err, "failed to find container")
@@ -482,9 +552,10 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOp
 	logCtx, cancelLog := r.ActionContext()
 	defer cancelLog()
 
+	logLog.Info("trying to read container logs")
 	err = runtimeutil.ReadLogs(logCtx, ctr.LogPath, options, stdout, stderr)
 	if err != nil {
-		logLog.Error(err, "failed to read logs")
+		logLog.Error(err, "failed to read container logs")
 		return err
 	}
 

@@ -34,6 +34,7 @@ type Msg struct {
 	//	*Msg_Pod
 	//	*Msg_Data
 	//	*Msg_Ack
+	//	*Msg_Image
 	Msg isMsg_Msg `protobuf_oneof:"msg"`
 }
 
@@ -88,11 +89,15 @@ type Msg_Data struct {
 type Msg_Ack struct {
 	Ack *Ack `protobuf:"bytes,14,opt,name=ack,proto3,oneof"`
 }
+type Msg_Image struct {
+	Image *Image `protobuf:"bytes,15,opt,name=image,proto3,oneof"`
+}
 
-func (*Msg_Node) isMsg_Msg() {}
-func (*Msg_Pod) isMsg_Msg()  {}
-func (*Msg_Data) isMsg_Msg() {}
-func (*Msg_Ack) isMsg_Msg()  {}
+func (*Msg_Node) isMsg_Msg()  {}
+func (*Msg_Pod) isMsg_Msg()   {}
+func (*Msg_Data) isMsg_Msg()  {}
+func (*Msg_Ack) isMsg_Msg()   {}
+func (*Msg_Image) isMsg_Msg() {}
 
 func (m *Msg) GetMsg() isMsg_Msg {
 	if m != nil {
@@ -143,6 +148,13 @@ func (m *Msg) GetAck() *Ack {
 	return nil
 }
 
+func (m *Msg) GetImage() *Image {
+	if x, ok := m.GetMsg().(*Msg_Image); ok {
+		return x.Image
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Msg) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Msg_OneofMarshaler, _Msg_OneofUnmarshaler, _Msg_OneofSizer, []interface{}{
@@ -150,6 +162,7 @@ func (*Msg) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, fu
 		(*Msg_Pod)(nil),
 		(*Msg_Data)(nil),
 		(*Msg_Ack)(nil),
+		(*Msg_Image)(nil),
 	}
 }
 
@@ -175,6 +188,11 @@ func _Msg_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Msg_Ack:
 		_ = b.EncodeVarint(14<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Ack); err != nil {
+			return err
+		}
+	case *Msg_Image:
+		_ = b.EncodeVarint(15<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Image); err != nil {
 			return err
 		}
 	case nil:
@@ -219,6 +237,14 @@ func _Msg_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (b
 		err := b.DecodeMessage(msg)
 		m.Msg = &Msg_Ack{msg}
 		return true, err
+	case 15: // msg.image
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Image)
+		err := b.DecodeMessage(msg)
+		m.Msg = &Msg_Image{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -248,6 +274,11 @@ func _Msg_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
+	case *Msg_Image:
+		s := proto.Size(x.Image)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -264,6 +295,7 @@ type Cmd struct {
 	// Types that are valid to be assigned to Cmd:
 	//	*Cmd_NodeCmd
 	//	*Cmd_PodCmd
+	//	*Cmd_ImageCmd
 	Cmd isCmd_Cmd `protobuf_oneof:"cmd"`
 }
 
@@ -312,9 +344,13 @@ type Cmd_NodeCmd struct {
 type Cmd_PodCmd struct {
 	PodCmd *PodCmd `protobuf:"bytes,12,opt,name=pod_cmd,json=podCmd,proto3,oneof"`
 }
+type Cmd_ImageCmd struct {
+	ImageCmd *ImageCmd `protobuf:"bytes,13,opt,name=image_cmd,json=imageCmd,proto3,oneof"`
+}
 
-func (*Cmd_NodeCmd) isCmd_Cmd() {}
-func (*Cmd_PodCmd) isCmd_Cmd()  {}
+func (*Cmd_NodeCmd) isCmd_Cmd()  {}
+func (*Cmd_PodCmd) isCmd_Cmd()   {}
+func (*Cmd_ImageCmd) isCmd_Cmd() {}
 
 func (m *Cmd) GetCmd() isCmd_Cmd {
 	if m != nil {
@@ -344,11 +380,19 @@ func (m *Cmd) GetPodCmd() *PodCmd {
 	return nil
 }
 
+func (m *Cmd) GetImageCmd() *ImageCmd {
+	if x, ok := m.GetCmd().(*Cmd_ImageCmd); ok {
+		return x.ImageCmd
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Cmd) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Cmd_OneofMarshaler, _Cmd_OneofUnmarshaler, _Cmd_OneofSizer, []interface{}{
 		(*Cmd_NodeCmd)(nil),
 		(*Cmd_PodCmd)(nil),
+		(*Cmd_ImageCmd)(nil),
 	}
 }
 
@@ -364,6 +408,11 @@ func _Cmd_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Cmd_PodCmd:
 		_ = b.EncodeVarint(12<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.PodCmd); err != nil {
+			return err
+		}
+	case *Cmd_ImageCmd:
+		_ = b.EncodeVarint(13<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.ImageCmd); err != nil {
 			return err
 		}
 	case nil:
@@ -392,6 +441,14 @@ func _Cmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (b
 		err := b.DecodeMessage(msg)
 		m.Cmd = &Cmd_PodCmd{msg}
 		return true, err
+	case 13: // cmd.image_cmd
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(ImageCmd)
+		err := b.DecodeMessage(msg)
+		m.Cmd = &Cmd_ImageCmd{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -408,6 +465,11 @@ func _Cmd_OneofSizer(msg proto.Message) (n int) {
 		n += s
 	case *Cmd_PodCmd:
 		s := proto.Size(x.PodCmd)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *Cmd_ImageCmd:
+		s := proto.Size(x.ImageCmd)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -429,32 +491,34 @@ func init() {
 func init() { proto.RegisterFile("connectivity.proto", fileDescriptor_2872c2021a21e8fe) }
 
 var fileDescriptor_2872c2021a21e8fe = []byte{
-	// 391 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xcd, 0x8a, 0x1a, 0x41,
-	0x14, 0x85, 0xeb, 0xa6, 0x8d, 0x3f, 0xa5, 0x09, 0x49, 0x91, 0x40, 0x23, 0x49, 0x21, 0x42, 0xa0,
-	0x37, 0x51, 0x31, 0x9b, 0x2c, 0x13, 0x3b, 0x0b, 0xb3, 0x30, 0x84, 0xce, 0x03, 0x48, 0x5b, 0xd5,
-	0xe9, 0x34, 0x5a, 0x5d, 0x4d, 0xba, 0x1c, 0x70, 0x37, 0x8f, 0xe0, 0x63, 0xcc, 0xa3, 0xb8, 0x74,
-	0xe9, 0x72, 0xec, 0xde, 0x0c, 0xcc, 0xc6, 0x47, 0x18, 0xaa, 0xda, 0x61, 0xfc, 0x83, 0xd9, 0xdd,
-	0x7b, 0xea, 0xdc, 0xc3, 0xf9, 0xa0, 0x30, 0x61, 0x32, 0x8e, 0x03, 0xa6, 0xa2, 0xab, 0x48, 0x2d,
-	0x3a, 0xc9, 0x7f, 0xa9, 0x24, 0x69, 0x1c, 0x6a, 0xcd, 0xcf, 0x61, 0xa4, 0xfe, 0xcd, 0x27, 0x1d,
-	0x26, 0x45, 0x37, 0x94, 0xa1, 0xec, 0x1a, 0xd3, 0x64, 0xfe, 0xd7, 0x6c, 0x66, 0x31, 0x53, 0x71,
-	0xdc, 0x7c, 0xc3, 0x04, 0x1f, 0xf3, 0x40, 0xf9, 0xd1, 0xec, 0x51, 0x11, 0x69, 0x78, 0xa4, 0xb4,
-	0xef, 0x01, 0x5b, 0xa3, 0x34, 0x24, 0x1f, 0x31, 0x4e, 0x83, 0x34, 0x8d, 0x64, 0x3c, 0x8e, 0xb8,
-	0x0d, 0x2d, 0x70, 0x4a, 0x5e, 0x6d, 0xaf, 0xfc, 0xe4, 0xe4, 0x03, 0xae, 0x31, 0x29, 0x92, 0x59,
-	0xa0, 0x02, 0x6e, 0xbf, 0x68, 0x81, 0x53, 0xf5, 0x9e, 0x04, 0xe2, 0xe0, 0x52, 0x2c, 0x79, 0x60,
-	0xd7, 0x5b, 0xe0, 0xd4, 0xfb, 0xa4, 0x73, 0x04, 0xf2, 0x4b, 0xf2, 0x60, 0x88, 0x3c, 0xe3, 0x20,
-	0x9f, 0xb0, 0x95, 0x48, 0x6e, 0x37, 0x8c, 0xf1, 0xed, 0xb1, 0xf1, 0xb7, 0xe4, 0x43, 0xe4, 0xe9,
-	0x77, 0x1d, 0xc8, 0x7d, 0xe5, 0xdb, 0xaf, 0x2e, 0x05, 0xfe, 0xf0, 0x95, 0xaf, 0x03, 0xb5, 0x43,
-	0x07, 0xfa, 0x6c, 0x6a, 0xbf, 0xbe, 0x14, 0xf8, 0x9d, 0x4d, 0x75, 0xa0, 0xcf, 0xa6, 0x83, 0x97,
-	0xd8, 0x12, 0x69, 0xd8, 0x5e, 0x02, 0xb6, 0x5c, 0xc1, 0x9f, 0xa3, 0xed, 0xe3, 0xaa, 0x6e, 0x3b,
-	0x66, 0x82, 0xef, 0x99, 0xde, 0x9f, 0x33, 0xb9, 0x42, 0xd7, 0xad, 0xc4, 0xc5, 0x48, 0xba, 0xb8,
-	0x92, 0x48, 0x6e, 0x4e, 0x0a, 0xba, 0x77, 0x67, 0x74, 0xc5, 0x45, 0x39, 0x31, 0x93, 0xae, 0xc4,
-	0x04, 0xef, 0x7f, 0xc3, 0x0d, 0xf7, 0xc0, 0x47, 0x7a, 0xb8, 0xf4, 0x67, 0x11, 0x33, 0x72, 0xc2,
-	0x32, 0x4a, 0xc3, 0xe6, 0x89, 0xe4, 0x0a, 0xee, 0x40, 0x0f, 0x06, 0x5f, 0xd7, 0x5b, 0x8a, 0x36,
-	0x5b, 0x8a, 0x76, 0x5b, 0x0a, 0xd7, 0x19, 0x85, 0x9b, 0x8c, 0xc2, 0x2a, 0xa3, 0xb0, 0xce, 0x28,
-	0xdc, 0x66, 0x14, 0xee, 0x32, 0x8a, 0x76, 0x19, 0x85, 0x65, 0x4e, 0xd1, 0x2a, 0xa7, 0xb0, 0xce,
-	0x29, 0xda, 0xe4, 0x14, 0x4d, 0xca, 0xe6, 0x0f, 0x7c, 0x79, 0x08, 0x00, 0x00, 0xff, 0xff, 0xeb,
-	0xbd, 0xa1, 0xc6, 0x7a, 0x02, 0x00, 0x00,
+	// 432 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0x4f, 0x8b, 0x13, 0x31,
+	0x18, 0xc6, 0x93, 0x9d, 0xee, 0x6e, 0x9b, 0xad, 0xff, 0xe2, 0x1f, 0x86, 0xa2, 0xa1, 0x2c, 0x08,
+	0x03, 0x62, 0xbb, 0x54, 0x04, 0x8f, 0xba, 0xe3, 0xa1, 0x7b, 0x58, 0x91, 0xf1, 0x03, 0x94, 0x34,
+	0x89, 0x31, 0x74, 0x33, 0x19, 0x9c, 0x54, 0xe8, 0xcd, 0x8f, 0xe0, 0xd1, 0x8f, 0xe0, 0x37, 0xb1,
+	0xc7, 0x1e, 0x7b, 0xb4, 0x33, 0x17, 0x8f, 0xfd, 0x08, 0x92, 0x4c, 0xc5, 0x4e, 0x5b, 0xf0, 0xf6,
+	0xe6, 0x79, 0x7f, 0xef, 0xc3, 0x3c, 0x0f, 0x83, 0x30, 0x33, 0x69, 0x2a, 0x98, 0x55, 0x5f, 0x94,
+	0x9d, 0xf5, 0xb2, 0xcf, 0xc6, 0x1a, 0xdc, 0xde, 0xd6, 0x3a, 0xcf, 0xa5, 0xb2, 0x9f, 0xa6, 0xe3,
+	0x1e, 0x33, 0xba, 0x2f, 0x8d, 0x34, 0x7d, 0x0f, 0x8d, 0xa7, 0x1f, 0xfd, 0xcb, 0x3f, 0xfc, 0x54,
+	0x1d, 0x77, 0xee, 0x32, 0xcd, 0x47, 0x5c, 0x58, 0xaa, 0x6e, 0xfe, 0x2a, 0x3a, 0x97, 0x35, 0xe5,
+	0xfc, 0xfb, 0x11, 0x0a, 0xae, 0x73, 0x89, 0x9f, 0x20, 0x94, 0x8b, 0x3c, 0x57, 0x26, 0x1d, 0x29,
+	0x1e, 0xc2, 0x2e, 0x8c, 0x1a, 0x49, 0x6b, 0xa3, 0x5c, 0x71, 0xfc, 0x18, 0xb5, 0x98, 0xd1, 0xd9,
+	0x8d, 0xb0, 0x82, 0x87, 0x47, 0x5d, 0x18, 0x35, 0x93, 0x7f, 0x02, 0x8e, 0x50, 0x23, 0x35, 0x5c,
+	0x84, 0x67, 0x5d, 0x18, 0x9d, 0x0d, 0x70, 0xaf, 0x16, 0xe4, 0x9d, 0xe1, 0x62, 0x08, 0x12, 0x4f,
+	0xe0, 0xa7, 0x28, 0xc8, 0x0c, 0x0f, 0xdb, 0x1e, 0xbc, 0x57, 0x07, 0xdf, 0x1b, 0x3e, 0x04, 0x89,
+	0xdb, 0x3b, 0x43, 0x4e, 0x2d, 0x0d, 0x6f, 0x1d, 0x32, 0x7c, 0x4b, 0x2d, 0x75, 0x86, 0x8e, 0x70,
+	0x86, 0x94, 0x4d, 0xc2, 0xdb, 0x87, 0x0c, 0xdf, 0xb0, 0x89, 0x33, 0xa4, 0x6c, 0x82, 0x9f, 0xa1,
+	0x63, 0xa5, 0xa9, 0x14, 0xe1, 0x1d, 0x0f, 0xde, 0xaf, 0x83, 0x57, 0x6e, 0x35, 0x04, 0x49, 0xc5,
+	0x5c, 0x1e, 0xa3, 0x40, 0xe7, 0xf2, 0xfc, 0x27, 0x44, 0x41, 0xac, 0xf9, 0xff, 0xaa, 0x19, 0xa0,
+	0xa6, 0x8b, 0x36, 0x62, 0x9a, 0x6f, 0x0a, 0x78, 0xb8, 0x5f, 0x40, 0xac, 0x5d, 0xb6, 0xd3, 0xb4,
+	0x1a, 0x71, 0x1f, 0x9d, 0x66, 0x86, 0xfb, 0x93, 0xaa, 0x8a, 0x07, 0x7b, 0x55, 0x54, 0x17, 0x27,
+	0x99, 0x9f, 0xf0, 0x4b, 0xd4, 0xf2, 0xdf, 0xe6, 0x4f, 0xaa, 0x56, 0x1e, 0x1d, 0xc8, 0x50, 0x1d,
+	0x35, 0xd5, 0x66, 0x76, 0x49, 0x98, 0xe6, 0x83, 0xd7, 0xa8, 0x1d, 0x6f, 0xb1, 0xf8, 0x02, 0x35,
+	0x3e, 0xcc, 0x52, 0x86, 0x77, 0xfa, 0xba, 0xce, 0x65, 0x67, 0x47, 0x8a, 0x35, 0x8f, 0xe0, 0x05,
+	0xbc, 0x7c, 0xb5, 0x58, 0x11, 0xb0, 0x5c, 0x11, 0xb0, 0x5e, 0x11, 0xf8, 0xb5, 0x20, 0xf0, 0x47,
+	0x41, 0xe0, 0xbc, 0x20, 0x70, 0x51, 0x10, 0xf8, 0xab, 0x20, 0xf0, 0x77, 0x41, 0xc0, 0xba, 0x20,
+	0xf0, 0x5b, 0x49, 0xc0, 0xbc, 0x24, 0x70, 0x51, 0x12, 0xb0, 0x2c, 0x09, 0x18, 0x9f, 0xf8, 0xff,
+	0xec, 0xc5, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf9, 0xcc, 0x2a, 0x63, 0xde, 0x02, 0x00, 0x00,
 }
 
 func (this *Msg) Equal(that interface{}) bool {
@@ -589,6 +653,30 @@ func (this *Msg_Ack) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Msg_Image) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Msg_Image)
+	if !ok {
+		that2, ok := that.(Msg_Image)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.Image.Equal(that1.Image) {
+		return false
+	}
+	return true
+}
 func (this *Cmd) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -670,11 +758,35 @@ func (this *Cmd_PodCmd) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Cmd_ImageCmd) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Cmd_ImageCmd)
+	if !ok {
+		that2, ok := that.(Cmd_ImageCmd)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.ImageCmd.Equal(that1.ImageCmd) {
+		return false
+	}
+	return true
+}
 func (this *Msg) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 10)
+	s := make([]string, 0, 11)
 	s = append(s, "&connectivity.Msg{")
 	s = append(s, "SessionId: "+fmt.Sprintf("%#v", this.SessionId)+",\n")
 	s = append(s, "Completed: "+fmt.Sprintf("%#v", this.Completed)+",\n")
@@ -716,11 +828,19 @@ func (this *Msg_Ack) GoString() string {
 		`Ack:` + fmt.Sprintf("%#v", this.Ack) + `}`}, ", ")
 	return s
 }
+func (this *Msg_Image) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&connectivity.Msg_Image{` +
+		`Image:` + fmt.Sprintf("%#v", this.Image) + `}`}, ", ")
+	return s
+}
 func (this *Cmd) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 8)
 	s = append(s, "&connectivity.Cmd{")
 	s = append(s, "SessionId: "+fmt.Sprintf("%#v", this.SessionId)+",\n")
 	if this.Cmd != nil {
@@ -743,6 +863,14 @@ func (this *Cmd_PodCmd) GoString() string {
 	}
 	s := strings.Join([]string{`&connectivity.Cmd_PodCmd{` +
 		`PodCmd:` + fmt.Sprintf("%#v", this.PodCmd) + `}`}, ", ")
+	return s
+}
+func (this *Cmd_ImageCmd) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&connectivity.Cmd_ImageCmd{` +
+		`ImageCmd:` + fmt.Sprintf("%#v", this.ImageCmd) + `}`}, ", ")
 	return s
 }
 func valueToGoStringConnectivity(v interface{}, typ string) string {
@@ -954,6 +1082,20 @@ func (m *Msg_Ack) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
+func (m *Msg_Image) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Image != nil {
+		dAtA[i] = 0x7a
+		i++
+		i = encodeVarintConnectivity(dAtA, i, uint64(m.Image.Size()))
+		n6, err := m.Image.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n6
+	}
+	return i, nil
+}
 func (m *Cmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -975,11 +1117,11 @@ func (m *Cmd) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintConnectivity(dAtA, i, uint64(m.SessionId))
 	}
 	if m.Cmd != nil {
-		nn6, err := m.Cmd.MarshalTo(dAtA[i:])
+		nn7, err := m.Cmd.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn6
+		i += nn7
 	}
 	return i, nil
 }
@@ -990,11 +1132,11 @@ func (m *Cmd_NodeCmd) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x5a
 		i++
 		i = encodeVarintConnectivity(dAtA, i, uint64(m.NodeCmd.Size()))
-		n7, err := m.NodeCmd.MarshalTo(dAtA[i:])
+		n8, err := m.NodeCmd.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n7
+		i += n8
 	}
 	return i, nil
 }
@@ -1004,11 +1146,25 @@ func (m *Cmd_PodCmd) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x62
 		i++
 		i = encodeVarintConnectivity(dAtA, i, uint64(m.PodCmd.Size()))
-		n8, err := m.PodCmd.MarshalTo(dAtA[i:])
+		n9, err := m.PodCmd.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n8
+		i += n9
+	}
+	return i, nil
+}
+func (m *Cmd_ImageCmd) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.ImageCmd != nil {
+		dAtA[i] = 0x6a
+		i++
+		i = encodeVarintConnectivity(dAtA, i, uint64(m.ImageCmd.Size()))
+		n10, err := m.ImageCmd.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n10
 	}
 	return i, nil
 }
@@ -1087,6 +1243,18 @@ func (m *Msg_Ack) Size() (n int) {
 	}
 	return n
 }
+func (m *Msg_Image) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Image != nil {
+		l = m.Image.Size()
+		n += 1 + l + sovConnectivity(uint64(l))
+	}
+	return n
+}
 func (m *Cmd) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1122,6 +1290,18 @@ func (m *Cmd_PodCmd) Size() (n int) {
 	_ = l
 	if m.PodCmd != nil {
 		l = m.PodCmd.Size()
+		n += 1 + l + sovConnectivity(uint64(l))
+	}
+	return n
+}
+func (m *Cmd_ImageCmd) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ImageCmd != nil {
+		l = m.ImageCmd.Size()
 		n += 1 + l + sovConnectivity(uint64(l))
 	}
 	return n
@@ -1192,6 +1372,16 @@ func (this *Msg_Ack) String() string {
 	}, "")
 	return s
 }
+func (this *Msg_Image) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Msg_Image{`,
+		`Image:` + strings.Replace(fmt.Sprintf("%v", this.Image), "Image", "Image", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *Cmd) String() string {
 	if this == nil {
 		return "nil"
@@ -1219,6 +1409,16 @@ func (this *Cmd_PodCmd) String() string {
 	}
 	s := strings.Join([]string{`&Cmd_PodCmd{`,
 		`PodCmd:` + strings.Replace(fmt.Sprintf("%v", this.PodCmd), "PodCmd", "PodCmd", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Cmd_ImageCmd) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Cmd_ImageCmd{`,
+		`ImageCmd:` + strings.Replace(fmt.Sprintf("%v", this.ImageCmd), "ImageCmd", "ImageCmd", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1439,6 +1639,41 @@ func (m *Msg) Unmarshal(dAtA []byte) error {
 			}
 			m.Msg = &Msg_Ack{v}
 			iNdEx = postIndex
+		case 15:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConnectivity
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConnectivity
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConnectivity
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &Image{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Msg = &Msg_Image{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipConnectivity(dAtA[iNdEx:])
@@ -1580,6 +1815,41 @@ func (m *Cmd) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Cmd = &Cmd_PodCmd{v}
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ImageCmd", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConnectivity
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConnectivity
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConnectivity
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ImageCmd{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Cmd = &Cmd_ImageCmd{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

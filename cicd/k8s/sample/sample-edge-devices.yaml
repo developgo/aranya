@@ -20,8 +20,8 @@ spec:
           # make this accessible to edge devices
           server: aranya.example.com:10000
           tlsSecretRef:
-            name: my-grpc-client-secret
-            namespace: iot-edge
+            name: my-grpc-server-secret
+            namespace: edge
 ---
 # Ingress configuration to tell your ingress plugin 
 # how to redirect requests to related grpc service

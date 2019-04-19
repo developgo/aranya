@@ -88,8 +88,8 @@ func (s *streamSession) del(sid uint64) {
 	}
 }
 
-func newBaseClient(rt runtime.Interface) baseClient {
-	return baseClient{
+func newBaseClient(rt runtime.Interface) baseAgent {
+	return baseAgent{
 		runtime: rt,
 		openedStreams: streamSession{
 			inputCh:  make(map[uint64]chan []byte),
@@ -98,7 +98,7 @@ func newBaseClient(rt runtime.Interface) baseClient {
 	}
 }
 
-type baseClient struct {
+type baseAgent struct {
 	doPostMsg func(msg *connectivity.Msg) error
 
 	openedStreams streamSession
@@ -108,44 +108,61 @@ type baseClient struct {
 
 // Called by actual connectivity client
 
-func (c *baseClient) onConnect(connect func() error) error {
+func (c *baseAgent) onConnect(connect func() error) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	return connect()
 }
 
-func (c *baseClient) onDisconnected(setDisconnected func()) {
+func (c *baseAgent) onDisconnected(setDisconnected func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	setDisconnected()
 }
 
-func (c *baseClient) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {
+func (c *baseAgent) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	return send(msg)
 }
 
-func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
+func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
+	// TODO: should we add work queue to get failed work rescheduled locally or controlled by aranya completely?
 	sid := cmd.GetSessionId()
 
 	switch cm := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
-		log.Printf("recv node cmd session: %v", sid)
-		c.doNodeInfo(sid)
+		switch cm.NodeCmd.GetAction() {
+		case connectivity.GetSystemInfo:
+			log.Printf("recv node cmd get system info session: %v", sid)
+			c.doGetNodeSystemInfo(sid)
+		case connectivity.GetResources:
+			log.Printf("recv node cmd get resources, sid: %v", sid)
+
+		default:
+			log.Printf("unknown node cmd: %v", cm.NodeCmd)
+		}
+	case *connectivity.Cmd_ImageCmd:
+		switch cm.ImageCmd.GetAction() {
+		case connectivity.ListImages:
+			log.Printf("recv image cmd list, session: %v", sid)
+			go c.doImageList(sid)
+		default:
+			log.Printf("unknown image cmd: %v", cm.ImageCmd)
+		}
 	case *connectivity.Cmd_PodCmd:
 		switch cm.PodCmd.GetAction() {
 		// pod scope commands
-		case connectivity.Create:
+		case connectivity.CreatePod:
 			log.Printf("recv pod create cmd session: %v", sid)
 			go c.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
-		case connectivity.Delete:
+		case connectivity.DeletePod:
 			log.Printf("recv pod delete cmd session: %v", sid)
 			go c.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
-		case connectivity.List:
+		case connectivity.ListPods:
 			log.Printf("recv pod list cmd session: %v", sid)
 			go c.doPodList(sid, cm.PodCmd.GetListOptions())
 		case connectivity.PortForward:
@@ -192,29 +209,29 @@ func (c *baseClient) onSrvCmd(cmd *connectivity.Cmd) {
 			}
 
 			go func() {
-				log.Printf("send resize cmd for session: %v", sid)
 				resizeCh <- remotecommand.TerminalSize{
 					Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
 					Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
 				}
-				log.Printf("send resize cmd for session: %v", sid)
 			}()
+		default:
+			log.Printf("unknown pod cmd: %v", cm.PodCmd)
 		}
+	default:
+		log.Printf("unknown cmd: %v", cm)
 	}
 }
 
 // Internal processing
 
-func (c *baseClient) handleError(sid uint64, e error) {
+func (c *baseAgent) handleError(sid uint64, e error) {
 	log.Printf("exception happened in session %v: %v", sid, e)
 	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		log.Printf("handle error: %v", err)
 	}
 }
 
-func (c baseClient) doNodeInfo(sid uint64) {
-	now := metav1.Time{Time: time.Now()}
-
+func (c *baseAgent) doGetNodeSystemInfo(sid uint64) {
 	nodeSystemInfo := systemInfo()
 	nodeSystemInfo.MachineID, _ = machineid.ID()
 	nodeSystemInfo.OperatingSystem = c.runtime.OS()
@@ -225,43 +242,71 @@ func (c baseClient) doNodeInfo(sid uint64) {
 	// nodeSystemInfo.KubeletVersion
 	// nodeSystemInfo.KubeProxyVersion
 
-	nodeMsg := connectivity.NewNodeMsg(sid, &corev1.Node{
-		Status: corev1.NodeStatus{
-			Capacity: corev1.ResourceList{
-				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-			},
-			Allocatable: corev1.ResourceList{
-				corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-				corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-				corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-				corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-			},
-			Phase: corev1.NodeRunning,
-			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: now, LastTransitionTime: now},
-				{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-				{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-				{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-				{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-				{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-			},
-			NodeInfo:        *nodeSystemInfo,
-			Images:          []corev1.ContainerImage{},
-			VolumesInUse:    []corev1.UniqueVolumeName{},
-			VolumesAttached: []corev1.AttachedVolume{},
-		},
-	})
-
+	nodeMsg := connectivity.NewNodeMsg(sid, nodeSystemInfo, nil, nil, nil)
 	if err := c.doPostMsg(nodeMsg); err != nil {
 		c.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseClient) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
+func (c *baseAgent) doGetNodeResources(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, corev1.ResourceList{
+		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+	}, corev1.ResourceList{
+		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+	}, nil)
+	if err := c.doPostMsg(nodeMsg); err != nil {
+		c.handleError(sid, err)
+		return
+	}
+}
+
+func (c *baseAgent) doGetNodeConditions(sid uint64) {
+	now := metav1.NewTime(time.Now())
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, []corev1.NodeCondition{
+		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+	})
+	if err := c.doPostMsg(nodeMsg); err != nil {
+		c.handleError(sid, err)
+		return
+	}
+}
+
+func (c *baseAgent) doImageList(sid uint64) {
+	images, err := c.runtime.ListImages()
+	if err != nil {
+		c.handleError(sid, err)
+		return
+	}
+
+	if len(images) == 0 {
+		if err := c.doPostMsg(connectivity.NewImageMsg(sid, true, nil)); err != nil {
+			c.handleError(sid, err)
+		}
+		return
+	}
+
+	lastIndex := len(images) - 1
+	for i, p := range images {
+		if err := c.doPostMsg(connectivity.NewImageMsg(sid, i == lastIndex, p)); err != nil {
+			c.handleError(sid, err)
+			return
+		}
+	}
+}
+
+func (c *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
 	podResp, err := c.runtime.CreatePod(options)
 
 	if err != nil {
@@ -275,7 +320,7 @@ func (c *baseClient) doPodCreate(sid uint64, options *connectivity.CreateOptions
 	}
 }
 
-func (c *baseClient) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
+func (c *baseAgent) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
 	podDeleted, err := c.runtime.DeletePod(options)
 	if err != nil {
 		c.handleError(sid, err)
@@ -288,7 +333,7 @@ func (c *baseClient) doPodDelete(sid uint64, options *connectivity.DeleteOptions
 	}
 }
 
-func (c *baseClient) doPodList(sid uint64, options *connectivity.ListOptions) {
+func (c *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
 	pods, err := c.runtime.ListPod(options)
 	if err != nil {
 		c.handleError(sid, err)
@@ -311,7 +356,7 @@ func (c *baseClient) doPodList(sid uint64, options *connectivity.ListOptions) {
 	}
 }
 
-func (c *baseClient) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (c *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer c.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedExecOptions()
@@ -387,7 +432,7 @@ func (c *baseClient) doContainerAttach(sid uint64, options *connectivity.ExecOpt
 	}
 }
 
-func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer func() {
 		c.openedStreams.del(sid)
 		log.Printf("finished contaienr exec")
@@ -468,7 +513,7 @@ func (c *baseClient) doContainerExec(sid uint64, options *connectivity.ExecOptio
 	}
 }
 
-func (c *baseClient) doContainerLog(sid uint64, options *connectivity.LogOptions) {
+func (c *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions) {
 	opt, err := options.GetResolvedLogOptions()
 	if err != nil {
 		c.handleError(sid, err)
@@ -514,7 +559,7 @@ func (c *baseClient) doContainerLog(sid uint64, options *connectivity.LogOptions
 	}
 }
 
-func (c *baseClient) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
+func (c *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
 	defer c.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedOptions()

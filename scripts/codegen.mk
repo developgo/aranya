@@ -1,11 +1,11 @@
 SDK := operator-sdk
 
-.PHONY: codegen
-codegen:
+.PHONY: gen-code
+gen-code:
 	$(SDK) generate k8s
 	$(SDK) generate openapi
 
-.PHONY: proto_gen
-proto_gen:
+.PHONY: gen-proto
+gen-proto:
 	$(shell scripts/pb.sh)
 	@echo "proto files generated"

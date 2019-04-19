@@ -73,6 +73,10 @@ type Runtime struct {
 	containerRefManager *kubeletContainer.RefManager
 }
 
+func (r *Runtime) ListImages() ([]*connectivity.Image, error) {
+	return nil, errors.New("method not implemented")
+}
+
 func (r *Runtime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
 	return nil, errors.New("method not implemented")
 }

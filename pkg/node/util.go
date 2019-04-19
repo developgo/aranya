@@ -22,7 +22,7 @@ func (c *NodeCache) Update(nodeStatus corev1.NodeStatus) {
 	defer c.mu.Unlock()
 
 	if c.nodeStatus != nil {
-		// preserve address info
+		// preserve node addresses and kubelet listen port
 		nodeStatus.DaemonEndpoints = c.nodeStatus.DaemonEndpoints
 		nodeStatus.Addresses = c.nodeStatus.Addresses
 	}

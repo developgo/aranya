@@ -61,6 +61,30 @@ type containerdRuntime struct {
 	imageClient, runtimeClient *containerd.Client
 }
 
+func (r *containerdRuntime) ListImages() ([]*connectivity.Image, error) {
+	listCtx, cancelList := r.ImageActionContext()
+	defer cancelList()
+
+	localImages, err := r.imageClient.ListImages(listCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	var images []*connectivity.Image
+	for _, img := range localImages {
+		imageConfig, err := img.Config(listCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		images = append(images, &connectivity.Image{
+			Names:     imageConfig.URLs,
+			SizeBytes: uint64(imageConfig.Size),
+		})
+	}
+	return images, nil
+}
+
 func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.Pod, err error) {
 	imagePullCtx, cancelPull := r.ImageActionContext()
 	defer cancelPull()

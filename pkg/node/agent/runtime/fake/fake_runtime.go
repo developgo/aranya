@@ -22,6 +22,14 @@ type fakeRuntime struct {
 	faulty bool
 }
 
+// ListImages lists all images on current node
+func (r *fakeRuntime) ListImages() ([]*connectivity.Image, error) {
+	return []*connectivity.Image{{
+		Names:     []string{"docker.io/foo/bar:fake"},
+		SizeBytes: 1024,
+	}}, nil
+}
+
 func (r *fakeRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
 
 	if r.faulty {

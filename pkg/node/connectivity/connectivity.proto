@@ -28,10 +28,12 @@ message Msg {
         Node node = 11;
         // used by list and device active pod update
         Pod pod = 12;
-        // messages
+        // io data
         Data data = 13;
         // ack info
         Ack ack = 14;
+        // images
+        Image image = 15;
     }
 }
 
@@ -41,5 +43,6 @@ message Cmd {
     oneof cmd {
         NodeCmd node_cmd = 11;
         PodCmd pod_cmd = 12;
+        ImageCmd image_cmd = 13;
     }
 }

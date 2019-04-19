@@ -2,8 +2,10 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -50,7 +52,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNodeInDevice() error {
-	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeCmd())
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeGetSystemInfoCmd())
 	if err != nil {
 		return err
 	}
@@ -60,11 +62,13 @@ func (n *Node) generateCacheForNodeInDevice() error {
 			return err
 		}
 
-		switch nodeMsg := msg.GetMsg().(type) {
-		case *connectivity.Msg_Node:
-			if err := n.updateNodeCache(nodeMsg); err != nil {
-				return err
-			}
+		_, ok := msg.GetMsg().(*connectivity.Msg_Node)
+		if !ok {
+			return fmt.Errorf("unexpected message type: %T", msg)
+		}
+
+		if err := n.updateNodeCache(msg.GetNode()); err != nil {
+			return err
 		}
 	}
 
@@ -79,7 +83,7 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 			n.log.Error(msg.Error(), "received error from remote device")
 		}
 	case *connectivity.Msg_Node:
-		if err := n.updateNodeCache(m); err != nil {
+		if err := n.updateNodeCache(m.Node); err != nil {
 			n.log.Error(err, "failed to update node cache")
 		}
 	case *connectivity.Msg_Pod:
@@ -93,23 +97,48 @@ func (n *Node) handleGlobalMsg(msg *connectivity.Msg) {
 	}
 }
 
-func (n *Node) updateNodeCache(node *connectivity.Msg_Node) error {
-	apiNode, err := node.Node.GetResolvedCoreV1Node()
-	if err != nil {
-		n.log.Error(err, "failed to resolve node")
-		return err
-	}
-
-	me, err := n.kubeClient.CoreV1().Nodes().Get(n.name, metav1.GetOptions{})
+func (n *Node) updateNodeCache(node *connectivity.Node) error {
+	apiNode, err := n.kubeNodeClient.Get(n.name, metav1.GetOptions{})
 	if err != nil {
 		n.log.Error(err, "failed to get node info")
 		return err
 	}
-	if me == nil {
-		n.log.Error(nil, "empty node object")
-		return err
+
+	nodeStatus := &apiNode.Status
+	nodeStatus.Phase = corev1.NodeRunning
+
+	if node.HasSystemInfo() {
+		systemInfo, err := node.GetResolvedSystemInfo()
+		if err != nil {
+			return err
+		}
+		nodeStatus.NodeInfo = *systemInfo
 	}
 
-	n.nodeStatusCache.Update(apiNode.Status)
+	if node.HasConditions() {
+		conditions, err := node.GetResolvedConditions()
+		if err != nil {
+			return err
+		}
+		nodeStatus.Conditions = conditions
+	}
+
+	if node.HasCapacity() {
+		capacity, err := node.GetResolvedCapacity()
+		if err != nil {
+			return err
+		}
+		nodeStatus.Capacity = capacity
+	}
+
+	if node.HasAllocatable() {
+		allocatable, err := node.GetResolvedAllocatable()
+		if err != nil {
+			return err
+		}
+		nodeStatus.Allocatable = allocatable
+	}
+
+	n.nodeStatusCache.Update(*nodeStatus)
 	return nil
 }

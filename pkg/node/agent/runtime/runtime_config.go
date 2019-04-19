@@ -22,10 +22,16 @@ type EndPoint struct {
 type Config struct {
 	once sync.Once
 
-	PauseImage          string `json:"pause_image" yaml:"pause_image"`
-	PauseCommand        string `json:"pause_command" yaml:"pause_command"`
-	RootDir             string `json:"root_dir" yaml:"root_dir"`
+	PauseImage   string `json:"pause_image" yaml:"pause_image"`
+	PauseCommand string `json:"pause_command" yaml:"pause_command"`
+	RootDir      string `json:"root_dir" yaml:"root_dir"`
+	// ManagementNamespace the name used to separate container's view
 	ManagementNamespace string `json:"management_namespace" yaml:"management_namespace"`
+
+	Defaults struct {
+		ImageDomain string `json:"image_domain" yaml:"image_domain"`
+		ImageRepo   string `json:"image_repo" yaml:"image_repo"`
+	}
 
 	// Optional
 	EndPoints struct {

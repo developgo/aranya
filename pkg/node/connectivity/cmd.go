@@ -7,10 +7,50 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func NewNodeCmd() *Cmd {
+func newNodeCmd(action NodeCmd_NodeAction) *Cmd {
 	return &Cmd{
 		Cmd: &Cmd_NodeCmd{
-			NodeCmd: &NodeCmd{},
+			NodeCmd: &NodeCmd{
+				Action: action,
+			},
+		},
+	}
+}
+
+func NewNodeGetSystemInfoCmd() *Cmd {
+	return newNodeCmd(GetSystemInfo)
+}
+
+func NewNodeGetConditionsCmd() *Cmd {
+	return newNodeCmd(GetConditions)
+}
+
+func NewNodeGetResourcesCmd() *Cmd {
+	return newNodeCmd(GetResources)
+}
+
+func newImageCmd(action ImageCmd_ImageAction) *Cmd {
+	return &Cmd{
+		Cmd: &Cmd_ImageCmd{
+			ImageCmd: &ImageCmd{
+				Action: action,
+			},
+		},
+	}
+}
+
+func NewImageListCmd() *Cmd {
+	return newImageCmd(ListImages)
+}
+
+func newPodCmd(sid uint64, action PodCmd_PodAction, options isPodCmd_Options) *Cmd {
+	return &Cmd{
+		SessionId: sid,
+		Cmd: &Cmd_PodCmd{
+			PodCmd: &PodCmd{
+				Action:  action,
+				Options: options,
+			},
 		},
 	}
 }
@@ -59,173 +99,108 @@ func NewPodCreateCmd(
 		}
 	}
 
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Create,
-				Options: &PodCmd_CreateOptions{
-					CreateOptions: &CreateOptions{
-						PodUid:              string(pod.UID),
-						Namespace:           pod.Namespace,
-						Name:                pod.Name,
-						Containers:          containers,
-						ImagePullAuthConfig: authConfigBytes,
-						VolumeData:          actualVolumeData,
-						HostVolumes:         hostVolume,
+	return newPodCmd(0, CreatePod, &PodCmd_CreateOptions{
+		CreateOptions: &CreateOptions{
+			PodUid:              string(pod.UID),
+			Namespace:           pod.Namespace,
+			Name:                pod.Name,
+			Containers:          containers,
+			ImagePullAuthConfig: authConfigBytes,
+			VolumeData:          actualVolumeData,
+			HostVolumes:         hostVolume,
 
-						HostNetwork: pod.Spec.HostNetwork,
-						HostIpc:     pod.Spec.HostIPC,
-						HostPid:     pod.Spec.HostPID,
-						Hostname:    pod.Spec.Hostname,
-					},
-				},
-			},
+			HostNetwork: pod.Spec.HostNetwork,
+			HostIpc:     pod.Spec.HostIPC,
+			HostPid:     pod.Spec.HostPID,
+			Hostname:    pod.Spec.Hostname,
 		},
-	}
+	})
 }
 
 func NewPodDeleteCmd(podUID string, graceTime time.Duration) *Cmd {
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Delete,
-				Options: &PodCmd_DeleteOptions{
-					DeleteOptions: &DeleteOptions{
-						PodUid:    podUID,
-						GraceTime: int64(graceTime),
-					},
-				},
-			},
+	return newPodCmd(0, DeletePod, &PodCmd_DeleteOptions{
+		DeleteOptions: &DeleteOptions{
+			PodUid:    podUID,
+			GraceTime: int64(graceTime),
 		},
-	}
+	})
 }
 
 func NewPodListCmd(namespace, name string, all bool) *Cmd {
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: List,
-				Options: &PodCmd_ListOptions{
-					ListOptions: &ListOptions{
-						Namespace: namespace,
-						Name:      name,
-						All:       all,
-					},
-				},
-			},
+	return newPodCmd(0, ListPods, &PodCmd_ListOptions{
+		ListOptions: &ListOptions{
+			Namespace: namespace,
+			Name:      name,
+			All:       all,
 		},
-	}
+	})
 }
 
 func NewContainerExecCmd(podUID string, options corev1.PodExecOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Exec,
-				Options: &PodCmd_ExecOptions{
-					ExecOptions: &ExecOptions{
-						PodUid: podUID,
-						Options: &ExecOptions_OptionsV1{
-							OptionsV1: optionBytes,
-						},
-					},
-				},
+	return newPodCmd(0, Exec, &PodCmd_ExecOptions{
+		ExecOptions: &ExecOptions{
+			PodUid: podUID,
+			Options: &ExecOptions_OptionsV1{
+				OptionsV1: optionBytes,
 			},
 		},
-	}
+	})
 }
 
 func NewContainerAttachCmd(podUID string, options corev1.PodExecOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Attach,
-				Options: &PodCmd_ExecOptions{
-					ExecOptions: &ExecOptions{
-						PodUid: podUID,
-						Options: &ExecOptions_OptionsV1{
-							OptionsV1: optionBytes,
-						},
-					},
-				},
+	return newPodCmd(0, Attach, &PodCmd_ExecOptions{
+		ExecOptions: &ExecOptions{
+			PodUid: podUID,
+			Options: &ExecOptions_OptionsV1{
+				OptionsV1: optionBytes,
 			},
 		},
-	}
+	})
 }
 
 func NewContainerLogCmd(podUID string, options corev1.PodLogOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Log,
-				Options: &PodCmd_LogOptions{
-					LogOptions: &LogOptions{
-						PodUid: podUID,
-						Options: &LogOptions_OptionsV1{
-							OptionsV1: optionBytes,
-						},
-					},
-				},
+	return newPodCmd(0, Log, &PodCmd_LogOptions{
+		LogOptions: &LogOptions{
+			PodUid: podUID,
+			Options: &LogOptions_OptionsV1{
+				OptionsV1: optionBytes,
 			},
 		},
-	}
+	})
 }
 
 func NewPortForwardCmd(podUID string, options corev1.PodPortForwardOptions) *Cmd {
 	optionBytes, _ := options.Marshal()
 
-	return &Cmd{
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: PortForward,
-				Options: &PodCmd_PortForwardOptions{
-					PortForwardOptions: &PortForwardOptions{
-						PodUid: podUID,
-						Options: &PortForwardOptions_OptionsV1{
-							OptionsV1: optionBytes,
-						},
-					},
-				},
+	return newPodCmd(0, PortForward, &PodCmd_PortForwardOptions{
+		PortForwardOptions: &PortForwardOptions{
+			PodUid: podUID,
+			Options: &PortForwardOptions_OptionsV1{
+				OptionsV1: optionBytes,
 			},
 		},
-	}
+	})
 }
 
 func NewContainerInputCmd(sid uint64, data []byte) *Cmd {
-	return &Cmd{
-		SessionId: sid,
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: Input,
-				Options: &PodCmd_InputOptions{
-					InputOptions: &InputOptions{
-						Data: data,
-					},
-				},
-			},
+	return newPodCmd(sid, Input, &PodCmd_InputOptions{
+		InputOptions: &InputOptions{
+			Data: data,
 		},
-	}
+	})
 }
 
 func NewContainerTtyResizeCmd(sid uint64, cols uint16, rows uint16) *Cmd {
-	return &Cmd{
-		SessionId: sid,
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
-				Action: ResizeTty,
-				Options: &PodCmd_ResizeOptions{
-					ResizeOptions: &TtyResizeOptions{
-						Cols: uint32(cols),
-						Rows: uint32(rows),
-					},
-				},
-			},
+	return newPodCmd(sid, ResizeTty, &PodCmd_ResizeOptions{
+		ResizeOptions: &TtyResizeOptions{
+			Cols: uint32(cols),
+			Rows: uint32(rows),
 		},
-	}
+	})
 }

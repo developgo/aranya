@@ -17,8 +17,18 @@ spec:
     # use edge device name label selector
     arhat.dev/name: example-edge-device-grpc
   containers:
+  - name: curl
+    imagePullPolicy: IfNotPresent
+    image: governmentpaas/curl-ssl:latest
+    command:
+    - /bin/sleep
+    - "3600"
+  - name: nginx
+    imagePullPolicy: IfNotPresent
+    image: nginx:stable-alpine
   - name: sleep
-    image: alpine:latest
+    imagePullPolicy: IfNotPresent
+    image: alpine:3.9
     command:
     - /bin/sleep
     - "3600"

@@ -4,15 +4,15 @@ import (
 	"crypto/tls"
 	"net"
 
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	kubeletApis "k8s.io/kubernetes/pkg/kubelet/apis"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
 )
 
 func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevice) (nodeObj *corev1.Node, listener net.Listener, err error) {
@@ -80,10 +80,10 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, addresses []corev1.NodeAddr
 		ObjectMeta: metav1.ObjectMeta{
 			Name: NodeName(device.Name),
 			Labels: map[string]string{
-				constant.LabelRole:       constant.LabelRoleValueEdgeDevice,
-				constant.LabelName:       device.Name,
-				"kubernetes.io/role":     "EdgeDevice",
-				"kubernetes.io/hostname": hostname,
+				constant.LabelRole:        constant.LabelRoleValueEdgeDevice,
+				constant.LabelName:        device.Name,
+				"kubernetes.io/role":      "EdgeDevice",
+				kubeletApis.LabelHostname: hostname,
 			},
 			ClusterName: device.ClusterName,
 		},

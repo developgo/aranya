@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/kubelet/util"
-	utilnode "k8s.io/kubernetes/pkg/util/node"
 )
 
 const (
@@ -38,7 +36,7 @@ func (n *Node) tryUpdateNodeStatus(tryNumber int) error {
 		util.FromApiserverCache(&opts)
 	}
 
-	oldNode, err := n.kubeClient.CoreV1().Nodes().Get(n.name, opts)
+	oldNode, err := n.kubeNodeClient.Get(n.name, opts)
 	if err != nil {
 		return fmt.Errorf("error getting node %q: %v", n.name, err)
 	}
@@ -47,7 +45,7 @@ func (n *Node) tryUpdateNodeStatus(tryNumber int) error {
 	newNode := oldNode.DeepCopy()
 	newNode.Status = n.nodeStatusCache.Get()
 
-	updatedNode, _, err := utilnode.PatchNodeStatus(n.kubeClient.CoreV1(), types.NodeName(n.name), oldNode, newNode)
+	updatedNode, err := n.kubeNodeClient.UpdateStatus(newNode)
 	if err != nil {
 		return err
 	}

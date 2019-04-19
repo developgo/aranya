@@ -63,6 +63,38 @@ func (r *podmanRuntime) newRuntime() (*libpodRuntime.Runtime, error) {
 	)
 }
 
+func (r *podmanRuntime) ListImages() ([]*connectivity.Image, error) {
+	rt, err := r.newRuntime()
+	if err != nil {
+		return nil, err
+	}
+
+	listCtx, cancelList := r.ImageActionContext()
+	defer cancelList()
+
+	imageRt := rt.ImageRuntime()
+	localImages, err := imageRt.GetImages()
+	var images []*connectivity.Image
+	for _, img := range localImages {
+		sizePtr, err := img.Size(listCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		var names []string
+		for _, imageName := range append(img.ImageResult.RepoTags, img.ImageResult.RepoDigests...) {
+			runtimeutil.GenerateImageName(r.Defaults.ImageDomain, img.Repository, imageName)
+		}
+
+		images = append(images, &connectivity.Image{
+			Names:     names,
+			SizeBytes: *sizePtr,
+		})
+	}
+
+	return images, nil
+}
+
 func (r *podmanRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
 	ctx, cancelCtx := r.RuntimeActionContext()
 	defer cancelCtx()
