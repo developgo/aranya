@@ -60,6 +60,7 @@ func GetParamsForContainerLog(req *http.Request) (namespace, podName string, log
 			delete(query, "tailLines")
 		}
 	}
+	query.Get("tailLines")
 
 	// container logs on the kubelet are locked to the v1 API version of PodLogOptions
 	logOptions = &corev1.PodLogOptions{}
