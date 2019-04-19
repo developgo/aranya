@@ -26,13 +26,15 @@ func (m *Manager) getPodUIDInCache(namespace, name string, podUID types.UID) typ
 func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) {
 	log.Info("HandlePodContainerLog")
 
-	namespace, podName, podUID, container, opt, err := util.GetParamsForContainerLog(r)
+	namespace, podName, opt, err := util.GetParamsForContainerLog(r)
 	if err != nil {
 		log.Error(err, "parse container log options failed")
+
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	logReader, err := m.GetContainerLogs(m.getPodUIDInCache(namespace, podName, podUID), container, opt)
+	logReader, err := m.GetContainerLogs(m.getPodUIDInCache(namespace, podName, ""), opt)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Error(err, "failed to get container logs")

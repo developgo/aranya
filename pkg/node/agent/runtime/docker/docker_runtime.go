@@ -414,14 +414,16 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	}()
 
 	go func() {
-		execLog.Info("starting write routine")
-		defer func() {
-			execLog.Info("finished write routine")
-		}()
+		if stdin != nil {
+			execLog.Info("starting write routine")
+			defer func() {
+				execLog.Info("finished write routine")
+			}()
 
-		_, err := io.Copy(attachResp.Conn, stdin)
-		if err != nil {
-			execLog.Error(err, "exception happened in write routine")
+			_, err := io.Copy(attachResp.Conn, stdin)
+			if err != nil {
+				execLog.Error(err, "exception happened in write routine")
+			}
 		}
 	}()
 
@@ -540,7 +542,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 }
 
 func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
-	logLog := r.Log().WithValues("action", "log", "uid", podUID, "container", options.Container)
+	logLog := r.Log().WithValues("action", "log", "uid", podUID, "stdout", stdout != nil, "stderr", stderr != nil, "options", options)
 
 	logLog.Info("trying to find container")
 	ctr, err := r.findContainer(podUID, options.Container)
@@ -552,13 +554,39 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOp
 	logCtx, cancelLog := r.ActionContext()
 	defer cancelLog()
 
-	logLog.Info("trying to read container logs")
-	err = runtimeutil.ReadLogs(logCtx, ctr.LogPath, options, stdout, stderr)
+	var (
+		since, tail string
+	)
+	if options.SinceTime != nil {
+		since = options.SinceTime.Format(time.RFC3339)
+	}
+	if options.SinceSeconds != nil {
+		since = time.Now().Add(-(time.Duration(*options.SinceSeconds) * time.Second)).Format(time.RFC3339)
+	}
+
+	if options.TailLines != nil {
+		tail = strconv.FormatInt(*options.TailLines, 10)
+	}
+
+	logReader, err := r.runtimeClient.ContainerLogs(logCtx, ctr.ID, dockerType.ContainerLogsOptions{
+		ShowStdout: stdout != nil,
+		ShowStderr: stderr != nil,
+		Since:      since,
+		Timestamps: options.Timestamps,
+		Follow:     options.Follow,
+		Tail:       tail,
+		Details:    false,
+	})
 	if err != nil {
 		logLog.Error(err, "failed to read container logs")
 		return err
 	}
 
+	_, err = dockerCopy.StdCopy(stdout, stderr, logReader)
+	if err != nil {
+		logLog.Error(err, "exception happened in logs")
+		return err
+	}
 	return nil
 }
 

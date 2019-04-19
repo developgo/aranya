@@ -13,10 +13,10 @@ import (
 
 // GetContainerLogs
 // custom implementation
-func (m *Manager) GetContainerLogs(uid types.UID, container string, options corev1.PodLogOptions) (io.ReadCloser, error) {
+func (m *Manager) GetContainerLogs(uid types.UID, options *corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
-	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), options))
+	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), *options))
 	if err != nil {
 		return nil, err
 	}

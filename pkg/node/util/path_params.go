@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -15,7 +16,7 @@ const (
 	PathParamNamespace = "namespace"
 	PathParamPodName   = "name"
 	PathParamPodUID    = "uid"
-	PathParamContainer = "containerName"
+	PathParamContainer = "container"
 )
 
 func GetParamsForExec(req *http.Request) (namespace, podName string, uid types.UID, containerName string, command []string) {
@@ -29,31 +30,49 @@ func GetParamsForPortForward(req *http.Request) (namespace, podName string, uid 
 	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID])
 }
 
-func GetParamsForContainerLog(req *http.Request) (namespace, podName string, podUID types.UID, containerName string, opt corev1.PodLogOptions, err error) {
+func GetParamsForContainerLog(req *http.Request) (namespace, podName string, logOptions *corev1.PodLogOptions, err error) {
 	pathVars := mux.Vars(req)
 
+	namespace = pathVars[PathParamNamespace]
+	if namespace == "" {
+		err = errors.New("missing namespace")
+		return
+	}
+
+	podName = pathVars[PathParamPodName]
+	if podName == "" {
+		err = errors.New("missing pod name")
+		return
+	}
+
+	containerName := pathVars[PathParamContainer]
+	if containerName == "" {
+		err = errors.New("missing container name")
+		return
+	}
+
 	query := req.URL.Query()
-	// legacy
-	if t := req.FormValue("tail"); t != "" {
-		query["tailLines"] = []string{t}
+	// backwards compatibility for the "tail" query parameter
+	if tail := req.FormValue("tail"); len(tail) > 0 {
+		query["tailLines"] = []string{tail}
 		// "all" is the same as omitting tail
-		if t == "all" {
+		if tail == "all" {
 			delete(query, "tailLines")
 		}
 	}
 
-	containerName = pathVars[PathParamContainer]
-	logOptions := &corev1.PodLogOptions{}
+	// container logs on the kubelet are locked to the v1 API version of PodLogOptions
+	logOptions = &corev1.PodLogOptions{}
 	if err = legacyscheme.ParameterCodec.DecodeParameters(query, corev1.SchemeGroupVersion, logOptions); err != nil {
 		return
 	}
-	logOptions.Container = containerName
 
 	logOptions.TypeMeta = metav1.TypeMeta{}
 	if errs := validation.ValidatePodLogOptions(logOptions); len(errs) > 0 {
-		err = errs[0]
+		err = errors.New("invalid request")
 		return
 	}
 
-	return pathVars[PathParamNamespace], pathVars[PathParamPodName], types.UID(pathVars[PathParamPodUID]), containerName, *logOptions, nil
+	logOptions.Container = containerName
+	return
 }

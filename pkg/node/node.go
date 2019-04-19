@@ -19,9 +19,7 @@ import (
 	"arhat.dev/aranya/pkg/node/util"
 )
 
-var (
-	log = logf.Log.WithName("aranya.node")
-)
+var log = logf.Log.WithName("aranya.node")
 
 type CreationOptions struct {
 	// required fields
@@ -40,7 +38,7 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, 
 
 	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.ConnectivityManager)
 
-	logger := log.WithValues("node", opt.NodeObject.Name)
+	logger := log.WithValues("name", opt.NodeObject.Name)
 
 	m := &mux.Router{NotFoundHandler: util.NotFoundHandler(logger)}
 	// register http routes
@@ -50,27 +48,25 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, 
 	// routes for pod
 	//
 	// containerLogs (kubectl logs)
-	m.HandleFunc("/containerLogs/{namespace}/{name}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
-	m.HandleFunc("/containerLogs/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
+	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
 	// logs
 	m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
 	// exec (kubectl exec)
-	m.HandleFunc("/exec/{namespace}/{name}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/exec/{namespace}/{name}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	// attach (kubectl attach)
-	m.HandleFunc("/attach/{namespace}/{name}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
-	m.HandleFunc("/attach/{namespace}/{name}/{uid}/{containerName}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/attach/{namespace}/{name}/{container}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
+	m.HandleFunc("/attach/{namespace}/{name}/{uid}/{container}", podManager.HandlePodAttach).Methods(http.MethodPost, http.MethodGet)
 	// portForward (kubectl proxy)
 	m.HandleFunc("/portForward/{namespace}/{name}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/portForward/{namespace}/{name}/{uid}", podManager.HandlePodPortForward).Methods(http.MethodPost, http.MethodGet)
 
-	//
-	// routes for stats
-	//
-	// stats summary
-	// m.HandleFunc("/stats/summary", statsManager.HandleStatsSummary).Methods(http.MethodGet)
-
 	// TODO: handle metrics
+	// m.HandleFunc("/metrics", ).Methods(http.MethodGet)
+	// m.HandleFunc("/metrics/cadvisor", ).Methods(http.MethodGet)
+
+	// TODO: handle stats
+	// m.HandleFunc("/stats/summary", ).Methods(http.MethodGet)
 
 	srv := &Node{
 		opt: opt,
