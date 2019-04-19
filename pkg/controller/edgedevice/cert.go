@@ -20,7 +20,7 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func GetKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
+func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
 	var (
 		secretObjName = fmt.Sprintf("kubelet.%s", nodeName)
 		csrObjName    = fmt.Sprintf("kubelet.%s", nodeName)

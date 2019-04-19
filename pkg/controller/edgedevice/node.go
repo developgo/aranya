@@ -26,7 +26,7 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 		return nil, nil, err
 	}
 
-	listener, err = NewKubeletListener(r.kubeClient, NodeName(device.Name), int32(kubeletListenPort), addresses)
+	listener, err = newKubeletListener(r.kubeClient, NodeName(device.Name), int32(kubeletListenPort), addresses)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,8 +52,8 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 	return nodeObj, listener, nil
 }
 
-func NewKubeletListener(kubeClient kubernetes.Interface, nodeName string, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
-	tlsCert, err := GetKubeletServerCert(kubeClient, nodeName, nodeAddresses)
+func newKubeletListener(kubeClient kubernetes.Interface, nodeName string, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
+	tlsCert, err := getKubeletServerCert(kubeClient, nodeName, nodeAddresses)
 	if err != nil {
 		return nil, err
 	}

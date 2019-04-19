@@ -20,7 +20,7 @@ import (
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	connectivitySrv "arhat.dev/aranya/pkg/node/manager"
+	connectivityManager "arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/resolver"
 )
 
@@ -32,7 +32,7 @@ func NewManager(
 	ctx context.Context,
 	nodeName string,
 	client kubeClient.Interface,
-	remoteManager connectivitySrv.Interface,
+	remoteManager connectivityManager.Interface,
 ) *Manager {
 	podInformerFactory := kubeInformers.NewSharedInformerFactoryWithOptions(client, constant.DefaultPodReSyncInterval,
 		kubeInformers.WithNamespace(corev1.NamespaceAll),
@@ -55,7 +55,7 @@ type Manager struct {
 	lister             kubeListerCoreV1.PodLister
 	podInformerFactory kubeInformers.SharedInformerFactory
 	kubeClient         kubeClient.Interface
-	remoteManager      connectivitySrv.Interface
+	remoteManager      connectivityManager.Interface
 	podCache           *Cache
 }
 
@@ -74,9 +74,18 @@ func (m *Manager) Start() error {
 			oldPod := oldObj.(*corev1.Pod)
 			newPod := newObj.(*corev1.Pod)
 
+			podDeleted := !(newPod.DeletionTimestamp == nil || newPod.DeletionTimestamp.IsZero())
+			if podDeleted {
+				if err := m.DeleteDevicePod(newPod.UID); err != nil {
+					log.Error(err, "failed to delete device pod")
+					return
+				}
+			}
+
 			// TODO: more delicate equal judgement
 			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
 				// do nothing if no changes
+				log.Info("skip pod update")
 				return
 			}
 
