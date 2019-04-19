@@ -67,7 +67,7 @@ func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() (hostNodeName string, ad
 		result[i] = *addr
 	}
 
-	return "", result, nil
+	return globalHostNodeName, result, nil
 }
 
 func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, nodeName, svcName string) (err error) {
