@@ -215,8 +215,13 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 			return fmt.Errorf("unexpected node objected deleted")
 		} else {
 			// node presents and not deleted, virtual node MUST exist
+			// (or we need to delete the all related objects)
 			virtualNode, ok = node.Get(nodeName)
 			if !ok {
+				err = r.cleanupVirtualNode(reqLog, deviceObj)
+				if err != nil {
+					return err
+				}
 				return fmt.Errorf("unexpected virtual node not present")
 			} else {
 				// TODO: reuse previous network listener if any
