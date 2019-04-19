@@ -105,8 +105,6 @@ func (m *GRPCManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-ch
 
 func (m *GRPCManager) Stop() {
 	m.onStop(func() {
-		if m.syncSrv != nil && m.closeConn != nil {
-			m.closeConn()
-		}
+		m.server.Stop()
 	})
 }

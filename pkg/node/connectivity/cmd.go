@@ -17,6 +17,10 @@ func newNodeCmd(action NodeCmd_NodeAction) *Cmd {
 	}
 }
 
+func NewNodeGetInfoAllCmd() *Cmd {
+	return newNodeCmd(GetInfoAll)
+}
+
 func NewNodeGetSystemInfoCmd() *Cmd {
 	return newNodeCmd(GetSystemInfo)
 }

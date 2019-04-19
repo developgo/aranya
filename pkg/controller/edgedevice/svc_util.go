@@ -48,7 +48,7 @@ func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha
 func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort int32) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        ServiceName(device.Name),
+			Name:        device.Name,
 			Namespace:   device.Namespace,
 			Labels:      map[string]string{constant.LabelRole: constant.LabelRoleValueService},
 			ClusterName: device.ClusterName,

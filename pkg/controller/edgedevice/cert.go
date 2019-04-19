@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/cloudflare/cfssl/csr"
+	cfsslHelpers "github.com/cloudflare/cfssl/helpers"
 	certv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,10 +21,30 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
+func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
 	var (
-		secretObjName = fmt.Sprintf("kubelet.%s", nodeName)
-		csrObjName    = fmt.Sprintf("kubelet.%s", nodeName)
+		hosts                  []string
+		requiredValidAddresses = make(map[string]struct{})
+	)
+	for _, nodeAddr := range nodeAddresses {
+		hosts = append(hosts, nodeAddr.Address)
+		requiredValidAddresses[nodeAddr.Address] = struct{}{}
+	}
+
+	var (
+		// kubernetes secret name
+		secretObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, virtualNodeName)
+		// kubernetes csr name
+		csrObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, virtualNodeName)
+		certReq    = &csr.CertificateRequest{
+			// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
+			CN: fmt.Sprintf("system:node:%s", virtualNodeName),
+			Names: []csr.Name{{
+				// TODO: add other names?
+				O: "system:nodes",
+			}},
+			Hosts: hosts,
+		}
 
 		needToCreateCSR      = false
 		needToGetKubeCSR     = true
@@ -54,20 +75,8 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 			return nil, err
 		}
 
-		var hosts []string
-		for _, nodeAddr := range nodeAddresses {
-			hosts = append(hosts, nodeAddr.Address)
-		}
-
-		csrBytes, err = csr.Generate(privateKey, &csr.CertificateRequest{
-			// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
-			CN: fmt.Sprintf("system:node:%s", nodeName),
-			Names: []csr.Name{{
-				// TODO: we may add other names
-				O: "system:nodes",
-			}},
-			Hosts: hosts,
-		})
+		// generate a PEM encoded csr
+		csrBytes, err = csr.Generate(privateKey, certReq)
 		if err != nil {
 			log.Error(err, "failed to generate csr")
 			return nil, err
@@ -108,20 +117,72 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 		certBytes, ok = pkSecret.Data[corev1.TLSCertKey]
 		if ok && len(certBytes) > 0 {
 			needToGetKubeCSR = false
+			// TODO: check if certificate is valid for this node
 		}
 
 		csrBytes, ok = pkSecret.Data["tls.csr"]
 		if !ok && needToGetKubeCSR {
+			// csr not found, but still need to get kubernetes csr, conflict
+			// this could happen when user has created the tls secret with
+			// same name in advance, but the
 			return nil, errors.New("invalid secret, missing csr")
+		} else if ok {
+			// check whether old csr is valid
+			// the csr could be invalid if aranya's host node has changed
+			// its address, which is possible for nodes with dynamic addresses
+			log.Info("validating old csr")
+
+			var oldCSR *x509.CertificateRequest
+			oldCSR, _, err = cfsslHelpers.ParseCSR(csrBytes)
+			if err != nil {
+				log.Error(err, "failed to parse old csr")
+				return nil, err
+			}
+
+			oldValidAddress := make(map[string]struct{})
+			for _, ip := range oldCSR.IPAddresses {
+				oldValidAddress[ip.String()] = struct{}{}
+			}
+			for _, dnsName := range oldCSR.DNSNames {
+				oldValidAddress[dnsName] = struct{}{}
+			}
+
+			for requiredAddress := range requiredValidAddresses {
+				if _, ok := oldValidAddress[requiredAddress]; !ok {
+					needToGetKubeCSR = true
+					needToCreateKubeCSR = true
+					break
+				}
+			}
+
+			if needToCreateKubeCSR {
+				log.Info("old csr invalid, possible host node address change, recreating")
+
+				key, err := cfsslHelpers.ParsePrivateKeyPEM(privateKeyBytes)
+				if err != nil {
+					log.Error(err, "failed to parse private key")
+					return nil, err
+				}
+
+				csrBytes, err = csr.Generate(key, certReq)
+				if err != nil {
+					log.Error(err, "failed to generate csr")
+					return nil, err
+				}
+			} else {
+				log.Info("old csr valid")
+			}
 		}
 	}
 
 	if needToGetKubeCSR {
 		certClient := client.CertificatesV1beta1().CertificateSigningRequests()
 
+		kubeCSRNotFound := false
 		csrReq, err := certClient.Get(csrObjName, metav1.GetOptions{})
 		if err != nil {
 			if kubeErrors.IsNotFound(err) {
+				kubeCSRNotFound = true
 				needToCreateKubeCSR = true
 			} else {
 				log.Error(err, "failed to get certificate")
@@ -132,7 +193,7 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 		if needToCreateKubeCSR {
 			csrObj := &certv1beta1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
-					// non namespaced
+					// not namespaced
 					Name: csrObjName,
 				},
 				Spec: certv1beta1.CertificateSigningRequestSpec{
@@ -149,9 +210,18 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 				},
 			}
 
+			if !kubeCSRNotFound {
+				err = certClient.Delete(csrObjName, metav1.NewDeleteOptions(0))
+				if err != nil {
+					log.Error(err, "failed to delete outdated kube csr")
+					return nil, err
+				}
+			}
+
+			log.Info("trying to create new kube csr")
 			csrReq, err = certClient.Create(csrObj)
 			if err != nil {
-				log.Error(err, "failed  to create csr")
+				log.Error(err, "failed to crate new kube csr")
 				return nil, err
 			}
 		}
@@ -180,6 +250,9 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 
 		certBytes = csrReq.Status.Certificate
 		if len(certBytes) == 0 {
+			// this could happen since certificate won't be issued immediately
+			// good luck next time :)
+			// TODO: should we watch?
 			return nil, errors.New("certificate not issued")
 		}
 
@@ -196,6 +269,5 @@ func getKubeletServerCert(client kubeClient.Interface, nodeName string, nodeAddr
 		log.Error(err, "failed to load certificate")
 		return nil, err
 	}
-
 	return &cert, nil
 }

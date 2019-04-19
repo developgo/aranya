@@ -11,9 +11,10 @@ option (gogoproto.messagename_all) = true;
 
 message NodeCmd {
     enum NodeAction {
-        GetSystemInfo = 0;
-        GetResources = 1;
-        GetConditions = 2;
+        GetInfoAll = 0;
+        GetSystemInfo = 1;
+        GetResources = 2;
+        GetConditions = 3;
     }
 
     NodeAction action = 1;

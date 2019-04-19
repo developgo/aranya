@@ -9,56 +9,57 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
-	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
 )
 
 var (
 	globalNodeAddresses []*corev1.NodeAddress
+	globalHostNodeName  string
 	globalMutex         sync.RWMutex
 )
 
-func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() ([]corev1.NodeAddress, error) {
-	addresses := func() []corev1.NodeAddress {
+func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() (hostNodeName string, addresses []corev1.NodeAddress, err error) {
+	hostNodeName, addresses = func() (string, []corev1.NodeAddress) {
 		globalMutex.RLock()
 		defer globalMutex.RUnlock()
 
 		if len(globalNodeAddresses) == 0 {
-			return nil
+			return "", nil
 		}
 
 		result := make([]corev1.NodeAddress, len(globalNodeAddresses))
 		for i, addr := range globalNodeAddresses {
 			result[i] = *addr
 		}
-		return result
+		return globalHostNodeName, result
 	}()
 	if addresses != nil {
-		return addresses, nil
+		return hostNodeName, addresses, nil
 	}
 
 	globalMutex.Lock()
 	defer globalMutex.Unlock()
 
 	thisPod := &corev1.Pod{}
-	err := r.client.Get(r.ctx, types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, thisPod)
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, thisPod)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	thisNode := &corev1.Node{}
 	err = r.client.Get(r.ctx, types.NamespacedName{Name: thisPod.Spec.NodeName}, thisNode)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
+	globalHostNodeName = thisNode.Name
 	for _, addr := range thisNode.Status.Addresses {
 		globalNodeAddresses = append(globalNodeAddresses, addr.DeepCopy())
 	}
 
 	if len(globalNodeAddresses) == 0 {
-		return nil, fmt.Errorf("failed to get node addresses")
+		return "", nil, fmt.Errorf("failed to get node addresses")
 	}
 
 	result := make([]corev1.NodeAddress, len(globalNodeAddresses))
@@ -66,16 +67,10 @@ func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() ([]corev1.NodeAddress, e
 		result[i] = *addr
 	}
 
-	return result, nil
+	return "", result, nil
 }
 
-func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, deviceObj *aranya.EdgeDevice) (err error) {
-	var (
-		nodeName = NodeName(deviceObj.Name)
-		svcName  = NodeName(deviceObj.Name)
-		ns       = deviceObj.Namespace
-	)
-
+func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, nodeName, svcName string) (err error) {
 	node.Delete(nodeName)
 
 	needToDeleteNodeObj := true
@@ -100,7 +95,7 @@ func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, deviceObj *
 
 	needToDeleteSvcObj := true
 	svcObj := &corev1.Service{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: ns, Name: svcName}, svcObj)
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: svcName}, svcObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			needToDeleteSvcObj = false

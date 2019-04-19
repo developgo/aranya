@@ -52,7 +52,7 @@ func (n *Node) InitializeRemoteDevice() {
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNodeInDevice() error {
-	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeGetSystemInfoCmd())
+	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeGetInfoAllCmd())
 	if err != nil {
 		return err
 	}

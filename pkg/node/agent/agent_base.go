@@ -136,17 +136,17 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 	switch cm := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_NodeCmd:
 		switch cm.NodeCmd.GetAction() {
+		case connectivity.GetInfoAll:
+			c.doGetNodeInfoAll(sid)
 		case connectivity.GetSystemInfo:
 			log.Printf("recv node cmd get system info session: %v", sid)
 			c.doGetNodeSystemInfo(sid)
-			c.doGetNodeResources(0)
-			c.doGetNodeConditions(0)
 		case connectivity.GetResources:
 			log.Printf("recv node cmd get resources, sid: %v", sid)
-			c.doGetNodeResources(0)
+			c.doGetNodeResources(sid)
 		case connectivity.GetConditions:
 			log.Printf("recv node cmd get resources, sid: %v", sid)
-			c.doGetNodeConditions(0)
+			c.doGetNodeConditions(sid)
 		default:
 			log.Printf("unknown node cmd: %v", cm.NodeCmd)
 		}
@@ -236,18 +236,16 @@ func (c *baseAgent) handleError(sid uint64, e error) {
 	}
 }
 
-func (c *baseAgent) doGetNodeSystemInfo(sid uint64) {
-	nodeSystemInfo := systemInfo()
-	nodeSystemInfo.MachineID, _ = machineid.ID()
-	nodeSystemInfo.OperatingSystem = c.runtime.OS()
-	nodeSystemInfo.Architecture = c.runtime.Arch()
-	nodeSystemInfo.KernelVersion = c.runtime.KernelVersion()
-	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
-	// set KubeletVersion and KubeProxyVersion at server side
-	// nodeSystemInfo.KubeletVersion
-	// nodeSystemInfo.KubeProxyVersion
+func (c *baseAgent) doGetNodeInfoAll(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, c.getSystemInfo(), c.getResourceCapacity(), c.getResourceAllocatable(), c.getConditions())
+	if err := c.doPostMsg(nodeMsg); err != nil {
+		c.handleError(sid, err)
+		return
+	}
+}
 
-	nodeMsg := connectivity.NewNodeMsg(sid, nodeSystemInfo, nil, nil, nil)
+func (c *baseAgent) doGetNodeSystemInfo(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, c.getSystemInfo(), nil, nil, nil)
 	if err := c.doPostMsg(nodeMsg); err != nil {
 		c.handleError(sid, err)
 		return
@@ -255,17 +253,7 @@ func (c *baseAgent) doGetNodeSystemInfo(sid uint64) {
 }
 
 func (c *baseAgent) doGetNodeResources(sid uint64) {
-	nodeMsg := connectivity.NewNodeMsg(sid, nil, corev1.ResourceList{
-		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-	}, corev1.ResourceList{
-		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
-		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
-		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
-		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
-	}, nil)
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, c.getResourceCapacity(), c.getResourceAllocatable(), nil)
 	if err := c.doPostMsg(nodeMsg); err != nil {
 		c.handleError(sid, err)
 		return
@@ -273,15 +261,7 @@ func (c *baseAgent) doGetNodeResources(sid uint64) {
 }
 
 func (c *baseAgent) doGetNodeConditions(sid uint64) {
-	now := metav1.NewTime(time.Now())
-	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, []corev1.NodeCondition{
-		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: now, LastTransitionTime: now},
-		{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-		{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-		{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
-	})
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, c.getConditions())
 	if err := c.doPostMsg(nodeMsg); err != nil {
 		c.handleError(sid, err)
 		return
@@ -607,5 +587,49 @@ func (c *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	if err := c.runtime.PortForward(options.GetPodUid(), opt, input, output); err != nil {
 		c.handleError(sid, err)
 		return
+	}
+}
+
+func (c *baseAgent) getSystemInfo() *corev1.NodeSystemInfo {
+	nodeSystemInfo := systemInfo()
+	nodeSystemInfo.MachineID, _ = machineid.ID()
+	nodeSystemInfo.OperatingSystem = c.runtime.OS()
+	nodeSystemInfo.Architecture = c.runtime.Arch()
+	nodeSystemInfo.KernelVersion = c.runtime.KernelVersion()
+	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
+	// TODO: set KubeletVersion and KubeProxyVersion at server side
+	// nodeSystemInfo.KubeletVersion
+	// nodeSystemInfo.KubeProxyVersion
+	return nodeSystemInfo
+}
+
+func (c *baseAgent) getResourceCapacity() corev1.ResourceList {
+	return corev1.ResourceList{
+		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+	}
+}
+
+func (c *baseAgent) getResourceAllocatable() corev1.ResourceList {
+	return corev1.ResourceList{
+		corev1.ResourceCPU:              *resourcev1.NewQuantity(1, resourcev1.DecimalSI),
+		corev1.ResourceMemory:           *resourcev1.NewQuantity(512*(2<<20), resourcev1.BinarySI),
+		corev1.ResourcePods:             *resourcev1.NewQuantity(20, resourcev1.DecimalSI),
+		corev1.ResourceEphemeralStorage: *resourcev1.NewQuantity(1*(2<<30), resourcev1.BinarySI),
+	}
+}
+
+func (c *baseAgent) getConditions() []corev1.NodeCondition {
+	now := metav1.NewTime(time.Now())
+
+	return []corev1.NodeCondition{
+		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeOutOfDisk, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
+		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionFalse, LastHeartbeatTime: now, LastTransitionTime: now},
 	}
 }

@@ -132,7 +132,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	reqLog := log.WithValues("name", request.Name)
 	if request.Namespace == corev1.NamespaceAll {
 		// reconcile node only
-		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, request.Name, nil)
+		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, corev1.NamespaceAll, request.Name, nil)
 	}
 
 	reqLog = reqLog.WithValues("ns", request.Namespace)
@@ -163,7 +163,7 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespac
 	// edge device need to be deleted, cleanup
 	if deviceDeleted {
 		reqLog.Info("edge device deleted, cleaning up virtual node")
-		err = r.cleanupVirtualNode(reqLog, deviceObj)
+		err = r.cleanupVirtualNode(reqLog, deviceObj.Namespace, deviceObj.Name, deviceObj.Name)
 		if err != nil {
 			reqLog.Error(err, "failed to cleanup virtual node")
 			return err
@@ -175,7 +175,7 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespac
 	//
 	// edge device exists, check its related virtual node
 	//
-	err = r.doReconcileVirtualNode(reqLog, deviceObj.Name, deviceObj)
+	err = r.doReconcileVirtualNode(reqLog, deviceObj.Namespace, deviceObj.Name, deviceObj)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespac
 	return nil
 }
 
-func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeName string, deviceObj *aranya.EdgeDevice) (err error) {
+func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespace, nodeName string, deviceObj *aranya.EdgeDevice) (err error) {
 	var (
 		nodeObj      = &corev1.Node{}
 		svcObj       = &corev1.Service{}
@@ -218,7 +218,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 			// (or we need to delete the all related objects)
 			virtualNode, ok = node.Get(nodeName)
 			if !ok {
-				err = r.cleanupVirtualNode(reqLog, deviceObj)
+				err = r.cleanupVirtualNode(reqLog, namespace, nodeName, "")
 				if err != nil {
 					return err
 				}
@@ -258,7 +258,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 			if err != nil {
 				_ = creationOpts.KubeletServerListener.Close()
 
-				if err := r.cleanupVirtualNode(reqLog, deviceObj); err != nil {
+				if err := r.cleanupVirtualNode(reqLog, namespace, nodeName, deviceObj.Name); err != nil {
 					return
 				}
 			}
@@ -268,7 +268,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 	// check device connectivity, check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranya.DeviceConnectViaGRPC:
-		svcNamespacedName := types.NamespacedName{Namespace: deviceObj.Namespace, Name: ServiceName(deviceObj.Name)}
+		svcNamespacedName := types.NamespacedName{Namespace: deviceObj.Namespace, Name: deviceObj.Name}
 		err = r.client.Get(r.ctx, svcNamespacedName, svcObj)
 		if err != nil {
 			if !errors.IsNotFound(err) {

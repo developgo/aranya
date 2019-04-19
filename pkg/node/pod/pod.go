@@ -92,8 +92,7 @@ func (m *Manager) Start() error {
 				}
 
 				log.Info("trying to delete pod object")
-				graceSeconds := int64(0)
-				err := m.kubeClient.CoreV1().Pods(newPod.Namespace).Delete(newPod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &graceSeconds})
+				err := m.kubeClient.CoreV1().Pods(newPod.Namespace).Delete(newPod.Name, metav1.NewDeleteOptions(0))
 				if err != nil {
 					log.Error(err, "failed to delete pod")
 					return

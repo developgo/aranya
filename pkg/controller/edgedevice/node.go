@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"net"
 
-	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
-	"arhat.dev/aranya/pkg/constant"
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,10 +11,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	kubeletApis "k8s.io/kubernetes/pkg/kubelet/apis"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/constant"
 )
 
 func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevice) (nodeObj *corev1.Node, listener net.Listener, err error) {
-	addresses, err := r.getCurrentNodeAddresses()
+	hostNodeName, addresses, err := r.getCurrentNodeAddresses()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -26,7 +27,7 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 		return nil, nil, err
 	}
 
-	listener, err = newKubeletListener(r.kubeClient, NodeName(device.Name), int32(kubeletListenPort), addresses)
+	listener, err = newKubeletListener(r.kubeClient, hostNodeName, device.Name, int32(kubeletListenPort), addresses)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,8 +53,8 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 	return nodeObj, listener, nil
 }
 
-func newKubeletListener(kubeClient kubernetes.Interface, nodeName string, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
-	tlsCert, err := getKubeletServerCert(kubeClient, nodeName, nodeAddresses)
+func newKubeletListener(kubeClient kubernetes.Interface, hostNodeName, virtualNodeName string, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
+	tlsCert, err := getKubeletServerCert(kubeClient, hostNodeName, virtualNodeName, nodeAddresses)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, addresses []corev1.NodeAddr
 
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: NodeName(device.Name),
+			Name: device.Name,
 			Labels: map[string]string{
 				constant.LabelRole:        constant.LabelRoleValueEdgeDevice,
 				constant.LabelName:        device.Name,
