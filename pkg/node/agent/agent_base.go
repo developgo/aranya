@@ -139,9 +139,14 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 		case connectivity.GetSystemInfo:
 			log.Printf("recv node cmd get system info session: %v", sid)
 			c.doGetNodeSystemInfo(sid)
+			c.doGetNodeResources(0)
+			c.doGetNodeConditions(0)
 		case connectivity.GetResources:
 			log.Printf("recv node cmd get resources, sid: %v", sid)
-
+			c.doGetNodeResources(0)
+		case connectivity.GetConditions:
+			log.Printf("recv node cmd get resources, sid: %v", sid)
+			c.doGetNodeConditions(0)
 		default:
 			log.Printf("unknown node cmd: %v", cm.NodeCmd)
 		}

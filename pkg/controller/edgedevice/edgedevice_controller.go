@@ -247,14 +247,17 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, nodeNam
 			return err
 		}
 
+		needToCreateVirtualNode = true
+
 		defer func() {
 			if err != nil {
 				_ = creationOpts.KubeletServerListener.Close()
+
+				if err := r.cleanupVirtualNode(reqLog, deviceObj); err != nil {
+					return
+				}
 			}
 		}()
-
-		needToCreateVirtualNode = true
-		// create a node.CreationOptions to mark a new virtual node should be created
 	}
 
 	// check device connectivity, check service object if grpc is used

@@ -64,11 +64,20 @@ func (m *Manager) Start() error {
 		AddFunc: func(newObj interface{}) {
 			newPod := newObj.(*corev1.Pod)
 
-			log.Info("create pod in device")
+			log.Info("trying to create pod in device")
 			if err := m.CreateDevicePod(newPod); err != nil {
 				log.Error(err, "failed to create pod in device", "action", "add")
 				return
 			}
+
+			newPod.Status.Phase = corev1.PodRunning
+			log.Info("trying to update pod to running")
+			updatedPod, err := m.kubeClient.CoreV1().Pods(newPod.Namespace).UpdateStatus(newPod)
+			if err != nil {
+				log.Error(err, "failed to delete pod")
+				return
+			}
+			_ = updatedPod
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldPod := oldObj.(*corev1.Pod)
@@ -76,10 +85,20 @@ func (m *Manager) Start() error {
 
 			podDeleted := !(newPod.DeletionTimestamp == nil || newPod.DeletionTimestamp.IsZero())
 			if podDeleted {
+				log.Info("trying to delete pod in device")
 				if err := m.DeleteDevicePod(newPod.UID); err != nil {
 					log.Error(err, "failed to delete device pod")
 					return
 				}
+
+				log.Info("trying to delete pod object")
+				graceSeconds := int64(0)
+				err := m.kubeClient.CoreV1().Pods(newPod.Namespace).Delete(newPod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &graceSeconds})
+				if err != nil {
+					log.Error(err, "failed to delete pod")
+					return
+				}
+				m.podCache.Delete(newPod.UID)
 			}
 
 			// TODO: more delicate equal judgement
