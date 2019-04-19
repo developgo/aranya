@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -258,9 +259,9 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			if err != nil {
 				_ = creationOpts.KubeletServerListener.Close()
 
-				log.Info("cleanup virtual node due to error")
+				reqLog.Info("cleanup virtual node due to error")
 				if err := r.cleanupVirtualNode(reqLog, namespace, nodeName, deviceObj.Name); err != nil {
-					log.Error(err, "failed to cleanup virtual node")
+					reqLog.Error(err, "failed to cleanup virtual node")
 					return
 				}
 			}
@@ -270,7 +271,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// check device connectivity, check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranya.DeviceConnectViaGRPC:
-		var svcDeleted bool
+		svcDeleted := false
 		svcNamespacedName := types.NamespacedName{Namespace: deviceObj.Namespace, Name: deviceObj.Name}
 		err = r.client.Get(r.ctx, svcNamespacedName, svcObj)
 		if err != nil {
@@ -309,10 +310,10 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil {
 				var grpcServerCert *tls.Certificate
 
-				log.Info("trying to get grpc server tls secret")
+				reqLog.Info("trying to get grpc server tls secret")
 				grpcServerCert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
 				if err != nil {
-					log.Error(err, "failed to get grpc server tls secret")
+					reqLog.Error(err, "failed to get grpc server tls secret")
 					return err
 				}
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
@@ -341,6 +342,12 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				}
 
 				svcObj = newServiceForEdgeDevice(deviceObj, port)
+				err = controllerutil.SetControllerReference(deviceObj, svcObj, r.scheme)
+				if err != nil {
+					reqLog.Error(err, "failed to set controller reference to svc object")
+					return err
+				}
+
 				err = r.client.Create(r.ctx, svcObj)
 				if err != nil {
 					reqLog.Error(err, "failed to create svc object for existing grpc service")

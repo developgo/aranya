@@ -22,19 +22,16 @@ func (m *ServiceMapper) Map(i handler.MapObject) []reconcile.Request {
 
 	svcLog := log.WithValues("svc.name", i.Meta.GetName(), "svc.namespace", i.Meta.GetNamespace())
 	svcLog.Info("attempt to map service to edge device")
-
 	ownerRef := metav1.GetControllerOf(i.Meta)
 	if ownerRef == nil || ownerRef.Kind != "EdgeDevice" {
 		return nil
 	}
 
 	svcLog.Info("found edge device for service")
-	return []reconcile.Request{
-		{
-			NamespacedName: types.NamespacedName{
-				Namespace: i.Meta.GetNamespace(),
-				Name:      ownerRef.Name,
-			},
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Namespace: i.Meta.GetNamespace(),
+			Name:      ownerRef.Name,
 		},
-	}
+	}}
 }
