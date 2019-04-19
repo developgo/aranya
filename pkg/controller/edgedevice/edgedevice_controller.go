@@ -270,6 +270,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// check device connectivity, check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranya.DeviceConnectViaGRPC:
+		var svcDeleted bool
 		svcNamespacedName := types.NamespacedName{Namespace: deviceObj.Namespace, Name: deviceObj.Name}
 		err = r.client.Get(r.ctx, svcNamespacedName, svcObj)
 		if err != nil {
@@ -277,16 +278,14 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				reqLog.Error(err, "failed to get svc object")
 				return err
 			}
+			svcDeleted = true
 		} else {
 			// service object exists, but to be deleted,
 			// return error to run another reconcile
-			svcDeleted := !(svcObj.DeletionTimestamp == nil || svcObj.DeletionTimestamp.IsZero())
+			svcDeleted = !(svcObj.DeletionTimestamp == nil || svcObj.DeletionTimestamp.IsZero())
 			if svcDeleted {
 				return fmt.Errorf("unexpected service object deleted")
 			}
-
-			// service object ok, job done
-			break
 		}
 
 		// service object doesn't exists,
@@ -321,6 +320,11 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
+			if !svcDeleted {
+				// service exists and we don't care about whether it has been changed
+				return
+			}
+
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
 			if creationOpts.GRPCServerListener != nil {
@@ -330,7 +334,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				// NOTICE: any grpc config update will not be applied
 				// TODO: should we support grpc config change?
 				reqLog.Info("creating svc object for existing grpc service, no update will be applied to existing grpc service")
-				port, err := GetListenPort(creationOpts.GRPCServerListener.Addr().String())
+				var port int32
+				port, err = GetListenPort(creationOpts.GRPCServerListener.Addr().String())
 				if err != nil {
 					return err
 				}
