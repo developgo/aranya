@@ -376,14 +376,15 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	if needToCreateVirtualNode {
 		creationOpts.KubeClient = r.kubeClient
 
+		reqLog.Info("creating virtual node", "options", creationOpts)
 		virtualNode, err = node.CreateVirtualNode(r.ctx, creationOpts)
 		if err != nil {
 			reqLog.Error(err, "failed to create virtual node")
 			return err
 		}
 
-		err = virtualNode.Start()
-		if err != nil {
+		reqLog.Info("trying to start virtual node")
+		if err = virtualNode.Start(); err != nil {
 			reqLog.Error(err, "failed to start virtual node")
 			return err
 		}
