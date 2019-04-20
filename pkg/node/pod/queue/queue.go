@@ -16,9 +16,20 @@ const (
 	ActionDelete
 )
 
+var actionNames = map[workType]string{
+	actionInvalid: "Invalid",
+	ActionCreate:  "Create",
+	ActionUpdate:  "Update",
+	ActionDelete:  "Delete",
+}
+
 type Work struct {
 	Action workType
 	UID    types.UID
+}
+
+func (w Work) String() string {
+	return actionNames[w.Action] + "/" + string(w.UID)
 }
 
 // NewWorkQueue will create a stopped new work queue,
@@ -74,6 +85,17 @@ func (q *WorkQueue) delete(action workType, uid types.UID) {
 			q.index[w] = i
 		}
 	}
+}
+
+func (q *WorkQueue) Remains() []Work {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	works := make([]Work, len(q.queue))
+	for i, w := range q.queue {
+		works[i] = Work{Action: w.Action, UID: w.UID}
+	}
+	return works
 }
 
 // Acquire a work item from the work queue

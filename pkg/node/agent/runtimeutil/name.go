@@ -1,12 +1,9 @@
 package runtimeutil
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"fmt"
 )
 
-func GetContainerName(podUID, container string) string {
-	raw := podUID + "/" + container
-	sum := sha256.Sum256([]byte(raw))
-	return hex.EncodeToString(sum[:])
+func GetContainerName(namespace, name, container string) string {
+	return fmt.Sprintf("%s.%s.%s", namespace, name, container)
 }

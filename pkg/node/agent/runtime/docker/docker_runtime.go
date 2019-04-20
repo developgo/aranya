@@ -742,7 +742,7 @@ func (r *dockerRuntime) createPauseContainer(
 	podNamespace, podName, podUID string,
 	hostNetwork, hostPID, hostIPC bool, hostname string,
 ) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, netSettings map[string]*dockerNetwork.EndpointSettings, err error) {
-	pauseContainerName := runtimeutil.GetContainerName(podUID, constant.ContainerNamePause)
+	pauseContainerName := runtimeutil.GetContainerName(podNamespace, podName, constant.ContainerNamePause)
 
 	pauseContainer, err := r.runtimeClient.ContainerCreate(ctx,
 		&dockerContainer.Config{
@@ -812,7 +812,6 @@ func (r *dockerRuntime) createContainer(
 	hostVolumes map[string]string,
 	endpointSettings map[string]*dockerNetwork.EndpointSettings,
 ) (ctrID string, err error) {
-	containerName := runtimeutil.GetContainerName(podUID, container)
 	var (
 		exposedPorts     = make(dockerNat.PortSet)
 		portBindings     = make(dockerNat.PortMap)
@@ -820,6 +819,7 @@ func (r *dockerRuntime) createContainer(
 		containerBinds   []string
 		containerMounts  []dockerMount.Mount
 		envs             []string
+		containerName    = runtimeutil.GetContainerName(podNamespace, podName, container)
 	)
 
 	for _, port := range spec.GetPorts() {

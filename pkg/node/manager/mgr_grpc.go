@@ -2,10 +2,11 @@ package manager
 
 import (
 	"context"
-	"io"
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
@@ -53,7 +54,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 
 	defer func() {
 		m.onDisconnected(func() {
-			log.Error(nil, "device disconnected")
+			log.Info("device disconnected")
 			m.syncSrv = nil
 		})
 	}()
@@ -62,11 +63,15 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 	go func() {
 		for {
 			msg, err := server.Recv()
+
 			if err != nil {
 				close(msgCh)
 
-				if err != io.EOF {
-					log.Error(err, "stream recv failed")
+				s, _ := status.FromError(err)
+				switch s.Code() {
+				case codes.Canceled, codes.OK:
+				default:
+					log.Error(s.Err(), "stream recv failed")
 				}
 				return
 			}

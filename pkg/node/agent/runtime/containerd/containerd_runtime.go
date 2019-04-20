@@ -20,8 +20,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/agent/runtimeutil"
-
 	"arhat.dev/aranya/pkg/node/agent/runtime"
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
@@ -136,7 +136,7 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 		infraSpecOpts = append(infraSpecOpts, oci.WithHostname(options.GetHostname()))
 	}
 
-	pauseContainerID := runtimeutil.GetContainerName(options.GetPodUid(), "_pause")
+	pauseContainerID := runtimeutil.GetContainerName(options.GetNamespace(), options.GetName(), constant.ContainerNamePause)
 	pauseContainer, err := r.runtimeClient.NewContainer(
 		createCtx,
 		pauseContainerID,
@@ -189,7 +189,7 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 	for ctrName, container := range options.GetContainers() {
 		image := images[container.GetImage()]
 
-		containerID := runtimeutil.GetContainerName(options.GetPodUid(), ctrName)
+		containerID := runtimeutil.GetContainerName(options.GetNamespace(), options.GetName(), ctrName)
 		var specOpts []oci.SpecOpts
 
 		if container.GetTty() {

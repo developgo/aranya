@@ -157,6 +157,7 @@ func (m *Manager) Start() (err error) {
 						return
 					}
 
+					log.Info("acquired work, trying to deliver", "remains", m.podWorkQueue.Remains())
 					switch podWork.Action {
 					case queue.ActionCreate:
 						// need to create pod in edge device
