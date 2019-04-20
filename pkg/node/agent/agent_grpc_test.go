@@ -103,7 +103,7 @@ func TestGRPCAgent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-mgr.DeviceConnected()
+		<-mgr.Connected()
 
 		for msg := range mgr.GlobalMessages() {
 			msg.GetNode()
@@ -113,7 +113,7 @@ func TestGRPCAgent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-mgr.DeviceConnected()
+		<-mgr.Connected()
 
 		createCmd := connectivity.NewPodCreateCmd(podReq, nil, nil, nil, nil)
 		testOnetimeCmdWithExpectedMsg(t, mgr,

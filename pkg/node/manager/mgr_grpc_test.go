@@ -12,15 +12,15 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-func newTestGrpcSrvAndStub() (connMgr *GRPCManager, stub connectivity.ConnectivityClient) {
+func newTestGrpcSrvAndStub() (mgr *GRPCManager, stub connectivity.ConnectivityClient) {
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}
 
-	connMgr = NewGRPCManager(grpc.NewServer(), l)
+	mgr = NewGRPCManager(grpc.NewServer(), l)
 	go func() {
-		if err := connMgr.Start(); err != nil {
+		if err := mgr.Start(); err != nil {
 			panic(err)
 		}
 	}()
@@ -45,7 +45,7 @@ func TestNewGrpcConnectivity(t *testing.T) {
 
 func TestGrpcSrv(t *testing.T) {
 	const (
-		orphanedMsgCount = 10
+		GlobalMsgCount = 10
 	)
 
 	mgr, stub := newTestGrpcSrvAndStub()
@@ -71,14 +71,23 @@ func TestGrpcSrv(t *testing.T) {
 			assert.NotEmpty(t, msg)
 		}
 
-		assert.Equal(t, orphanedMsgCount, i)
+		assert.Equal(t, GlobalMsgCount, i)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		<-mgr.DeviceConnected()
+		<-mgr.Connected()
+
+		signalCorrect := true
+		select {
+		case <-mgr.Disconnected():
+			signalCorrect = false
+		default:
+			signalCorrect = true
+		}
+		assert.True(t, signalCorrect)
 
 		msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 		assert.NoError(t, err)
@@ -110,7 +119,7 @@ func TestGrpcSrv(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		for i := 0; i < orphanedMsgCount; i++ {
+		for i := 0; i < GlobalMsgCount; i++ {
 			err = syncClient.Send(&connectivity.Msg{
 				Msg: &connectivity.Msg_Node{
 					Node: &connectivity.Node{},

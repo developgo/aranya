@@ -20,7 +20,7 @@ import (
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
-	connectivityManager "arhat.dev/aranya/pkg/node/manager"
+	"arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/pod/cache"
 	"arhat.dev/aranya/pkg/node/pod/queue"
 	"arhat.dev/aranya/pkg/node/resolver"
@@ -28,7 +28,7 @@ import (
 
 var log = logf.Log.WithName("pod")
 
-func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, connectivityManager connectivityManager.Interface) *Manager {
+func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager manager.Interface) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, constant.DefaultPodReSyncInterval,
 		kubeinformers.WithNamespace(corev1.NamespaceAll),
@@ -40,11 +40,11 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformer := podInformerFactory.Core().V1().Pods().Informer()
 	ctx, exit := context.WithCancel(parentCtx)
 	mgr := &Manager{
-		ctx:                 ctx,
-		exit:                exit,
-		connectivityManager: connectivityManager,
-		kubeClient:          client,
-		podCache:            cache.NewPodCache(),
+		ctx:        ctx,
+		exit:       exit,
+		manager:    manager,
+		kubeClient: client,
+		podCache:   cache.NewPodCache(),
 
 		podInformerFactory: podInformerFactory,
 		podLister:          podInformerFactory.Core().V1().Pods().Lister(),
@@ -63,11 +63,11 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 }
 
 type Manager struct {
-	ctx                 context.Context
-	exit                context.CancelFunc
-	connectivityManager connectivityManager.Interface
-	kubeClient          kubeclient.Interface
-	podCache            *cache.PodCache
+	ctx        context.Context
+	exit       context.CancelFunc
+	manager    manager.Interface
+	kubeClient kubeclient.Interface
+	podCache   *cache.PodCache
 
 	podInformerFactory kubeinformers.SharedInformerFactory
 	podLister          kubelister.PodLister
@@ -106,7 +106,7 @@ func (m *Manager) Start() (err error) {
 			m.podWorkQueue.Stop()
 
 			select {
-			case <-m.connectivityManager.DeviceConnected():
+			case <-m.manager.Connected():
 				// we are good to go
 			case <-m.ctx.Done():
 				return
@@ -196,7 +196,7 @@ func (m *Manager) Start() (err error) {
 
 			// wait until device disconnected
 			select {
-			case <-m.connectivityManager.DeviceDisconnected():
+			case <-m.manager.Disconnected():
 				// stop work queue acquire, the work queue will keep collecting work items
 				m.podWorkQueue.Stop()
 				continue
@@ -318,7 +318,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	}
 
 	podCreateCmd := connectivity.NewPodCreateCmd(pod, imagePullSecrets, containerEnvs, volumeData, hostVolume)
-	msgCh, err := m.connectivityManager.PostCmd(m.ctx, podCreateCmd)
+	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod create command")
 		return err
@@ -350,7 +350,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 	}
 
 	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Minute)
-	msgCh, err := m.connectivityManager.PostCmd(m.ctx, podDeleteCmd)
+	msgCh, err := m.manager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod delete command")
 	}
@@ -374,7 +374,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 }
 
 func (m *Manager) SyncDevicePods() error {
-	msgCh, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
+	msgCh, err := m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
 		return err
 	}

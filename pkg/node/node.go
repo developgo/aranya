@@ -16,7 +16,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/constant"
-	connectivityManager "arhat.dev/aranya/pkg/node/manager"
+	"arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/util"
 )
@@ -29,7 +29,7 @@ type CreationOptions struct {
 	KubeClient            kubeClient.Interface
 	KubeletServerListener net.Listener
 
-	ConnectivityManager connectivityManager.Interface
+	Manager manager.Interface
 
 	// optional
 	GRPCServerListener net.Listener
@@ -37,22 +37,23 @@ type CreationOptions struct {
 
 func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, error) {
 	ctx, exit := context.WithCancel(parentCtx)
+	nodeLogger := log.WithValues("name", opt.NodeObject.Name)
 
-	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.ConnectivityManager)
-
-	logger := log.WithValues("name", opt.NodeObject.Name)
-
-	m := &mux.Router{NotFoundHandler: util.NotFoundHandler(logger)}
+	m := &mux.Router{NotFoundHandler: util.NotFoundHandler(nodeLogger)}
 	// register http routes
-	m.Use(util.LogMiddleware(logger), util.PanicRecoverMiddleware(logger))
+
+	m.Use(util.LogMiddleware(nodeLogger), util.PanicRecoverMiddleware(nodeLogger))
 	m.StrictSlash(true)
 	//
 	// routes for pod
 	//
+	// logs (kubectl cluster-info dump)
+	// m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
+
+	// handle pod related
+	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.Manager)
 	// containerLogs (kubectl logs)
 	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
-	// logs
-	m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
 	// exec (kubectl exec)
 	m.HandleFunc("/exec/{namespace}/{name}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
 	m.HandleFunc("/exec/{namespace}/{name}/{uid}/{container}", podManager.HandlePodExec).Methods(http.MethodPost, http.MethodGet)
@@ -73,13 +74,12 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Node, 
 	srv := &Node{
 		opt: opt,
 
-		log:  logger,
+		log:  nodeLogger,
 		ctx:  ctx,
 		exit: exit,
 		name: opt.NodeObject.Name,
 
-		kubeNodeClient:      opt.KubeClient.CoreV1().Nodes(),
-		connectivityManager: opt.ConnectivityManager,
+		kubeNodeClient: opt.KubeClient.CoreV1().Nodes(),
 
 		kubeletSrv:      &http.Server{Handler: m},
 		podManager:      podManager,
@@ -98,8 +98,7 @@ type Node struct {
 	exit context.CancelFunc
 	name string
 
-	kubeNodeClient      kubeNodeClient.NodeInterface
-	connectivityManager connectivityManager.Interface
+	kubeNodeClient kubeNodeClient.NodeInterface
 
 	kubeletSrv      *http.Server
 	podManager      *pod.Manager
@@ -120,56 +119,71 @@ func (n *Node) Start() (err error) {
 
 		// start a kubelet http server
 		go func() {
-			n.log.Info("starting kubelet http server")
+			n.log.Info("trying to start kubelet http server")
+			defer n.log.Info("kubelet http server exited")
+
 			if err := n.kubeletSrv.Serve(n.opt.KubeletServerListener); err != nil {
 				n.log.Error(err, "failed to start kubelet http server")
+				return
 			}
 		}()
 
 		go func() {
-			n.log.Info("starting connectivity manager")
-			if err := n.connectivityManager.Start(); err != nil {
+			n.log.Info("trying to start connectivity manager")
+			defer n.log.Info("connectivity manager exited")
+
+			if err := n.opt.Manager.Start(); err != nil {
 				n.log.Error(err, "failed to start connectivity manager")
+				return
 			}
 		}()
 
 		go func() {
-			n.log.Info("starting pod manager")
+			n.log.Info("trying to start pod manager")
+			defer n.log.Info("pod manager exited")
+
 			if err := n.podManager.Start(); err != nil {
 				n.log.Error(err, "failed to start pod manager")
+				return
 			}
 		}()
 
 		// initialize remote device
 		go func() {
+			n.log.Info("starting to handle device connect")
+			defer n.log.Info("stopped waiting for device connect")
+
 			for !n.closing() {
 				select {
-				case <-n.connectivityManager.DeviceConnected():
+				case <-n.opt.Manager.Connected():
 					// we are good to go
+					n.log.Info("device connected, starting to handle")
 				case <-n.ctx.Done():
 					return
 				}
 
-				n.log.Info("device connected, starting to handle")
-
-				stopCh := make(chan struct{})
 				go func() {
+					n.log.Info("starting to handle global messages")
+					defer n.log.Info("stopped handling global messages")
+
 					for {
 						select {
-						case <-stopCh:
-							return
 						case <-n.ctx.Done():
 							return
-						case msg, more := <-n.connectivityManager.GlobalMessages():
+						case msg, more := <-n.opt.Manager.GlobalMessages():
 							if !more {
 								return
 							}
+							n.log.Info("handling global message")
 							n.handleGlobalMsg(msg)
 						}
 					}
 				}()
 
-				go wait.Until(n.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, stopCh)
+				n.log.Info("starting to handle node status update")
+				go wait.Until(n.syncNodeStatus,
+					constant.DefaultNodeStatusSyncInterval,
+					n.opt.Manager.Disconnected())
 
 				n.log.Info("trying to sync device pods")
 				if err := n.podManager.SyncDevicePods(); err != nil {
@@ -182,12 +196,10 @@ func (n *Node) Start() (err error) {
 					n.log.Error(err, "failed to sync device node info")
 					goto waitForDeviceDisconnect
 				}
-
 			waitForDeviceDisconnect:
-				close(stopCh)
-
 				select {
-				case <-n.connectivityManager.DeviceDisconnected():
+				case <-n.opt.Manager.Disconnected():
+					n.log.Info("device disconnected, wait for next connection")
 					continue
 				case <-n.ctx.Done():
 					return
@@ -204,13 +216,12 @@ func (n *Node) ForceClose() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	if n.status == statusRunning {
-		n.log.Info("force close virtual node")
-		_ = n.kubeletSrv.Close()
-		n.connectivityManager.Stop()
+	n.log.Info("force close virtual node")
 
-		n.exit()
-	}
+	_ = n.kubeletSrv.Close()
+	n.opt.Manager.Stop()
+	n.podManager.Stop()
+	n.exit()
 }
 
 func (n *Node) CreationOptions() CreationOptions {

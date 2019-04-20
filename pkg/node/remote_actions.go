@@ -11,7 +11,7 @@ import (
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNodeInDevice() error {
-	msgCh, err := n.connectivityManager.PostCmd(n.ctx, connectivity.NewNodeGetInfoAllCmd())
+	msgCh, err := n.opt.Manager.PostCmd(n.ctx, connectivity.NewNodeGetInfoAllCmd())
 	if err != nil {
 		return err
 	}

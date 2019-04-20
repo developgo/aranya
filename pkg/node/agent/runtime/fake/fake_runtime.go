@@ -3,7 +3,6 @@ package fake
 import (
 	"fmt"
 	"io"
-	goruntime "runtime"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +72,7 @@ func (r *fakeRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivit
 }
 
 func (r *fakeRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
-	defer closeAllIfNotNil(stdout, stderr)
+	defer closeIfNotNil(stdout, stderr)
 
 	if r.faulty {
 		return fmt.Errorf("faulty: exec in container")
@@ -89,7 +88,7 @@ func (r *fakeRuntime) ExecInContainer(podUID, container string, stdin io.Reader,
 }
 
 func (r *fakeRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
-	defer closeAllIfNotNil(stdout, stderr)
+	defer closeIfNotNil(stdout, stderr)
 
 	if r.faulty {
 		return fmt.Errorf("faulty: attach container")
@@ -104,7 +103,7 @@ func (r *fakeRuntime) AttachContainer(podUID, container string, stdin io.Reader,
 }
 
 func (r *fakeRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
-	defer closeAllIfNotNil(stdout, stderr)
+	defer closeIfNotNil(stdout, stderr)
 
 	if r.faulty {
 		return fmt.Errorf("faulty: get container logs")
@@ -119,7 +118,7 @@ func (r *fakeRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOpti
 }
 
 func (r *fakeRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
-	defer closeAllIfNotNil(out)
+	defer closeIfNotNil(out)
 
 	if r.faulty {
 		return fmt.Errorf("faulty: port forward")
@@ -142,18 +141,18 @@ func (r *fakeRuntime) Version() string {
 }
 
 func (r *fakeRuntime) OS() string {
-	return goruntime.GOOS
+	return "fake"
 }
 
 func (r *fakeRuntime) Arch() string {
-	return goruntime.GOARCH
+	return "fake"
 }
 
 func (r *fakeRuntime) KernelVersion() string {
-	return "4.14.0-fake"
+	return "0.0.0-fake"
 }
 
-func closeAllIfNotNil(c ...io.Closer) {
+func closeIfNotNil(c ...io.Closer) {
 	for _, v := range c {
 		if v != nil {
 			_ = v.Close()

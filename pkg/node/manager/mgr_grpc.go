@@ -13,7 +13,7 @@ import (
 var _ Interface = &GRPCManager{}
 
 type GRPCManager struct {
-	baseServer
+	baseManager
 
 	syncSrv   connectivity.Connectivity_SyncServer
 	closeConn context.CancelFunc
@@ -24,9 +24,9 @@ type GRPCManager struct {
 
 func NewGRPCManager(server *grpc.Server, listener net.Listener) *GRPCManager {
 	mgr := &GRPCManager{
-		baseServer: newBaseServer(),
-		listener:   listener,
-		server:     server,
+		baseManager: newBaseServer(),
+		listener:    listener,
+		server:      server,
 	}
 	connectivity.RegisterConnectivityServer(server, mgr)
 
@@ -39,7 +39,7 @@ func (m *GRPCManager) Start() error {
 
 func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 	connCtx, closeConn := context.WithCancel(context.Background())
-	if err := m.onDeviceConnected(func() (accept bool) {
+	if err := m.onConnected(func() (accept bool) {
 		if m.syncSrv == nil {
 			m.syncSrv = server
 			m.closeConn = closeConn
@@ -52,7 +52,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 	}
 
 	defer func() {
-		m.onDeviceDisconnected(func() {
+		m.onDisconnected(func() {
 			log.Error(nil, "device disconnected")
 			m.syncSrv = nil
 		})
@@ -84,7 +84,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 				return nil
 			}
 
-			m.onDeviceMsg(msg)
+			m.onRecvMsg(msg)
 		}
 	}
 }
@@ -93,7 +93,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 func (m *GRPCManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error) {
 	return m.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
 		// fail if device not connected,
-		// you should call DeviceConnected first
+		// you should call Connected first
 		// to get notified when device connected
 		if m.syncSrv == nil {
 			return ErrDeviceNotConnected

@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllermanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -29,7 +29,7 @@ import (
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node"
-	connectivityManager "arhat.dev/aranya/pkg/node/manager"
+	"arhat.dev/aranya/pkg/node/manager"
 )
 
 const (
@@ -42,14 +42,14 @@ var (
 
 var log = logf.Log.WithName(controllerName)
 
-// AddToManager creates a new EdgeDevice Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func AddToManager(mgr manager.Manager) error {
+// AddToManager creates a new EdgeDevice Controller and adds it to the manager. The manager will set fields on the Controller
+// and Start it when the manager is Started.
+func AddToManager(mgr controllermanager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr controllermanager.Manager) reconcile.Reconciler {
 	return &ReconcileEdgeDevice{
 		client:     mgr.GetClient(),
 		scheme:     mgr.GetScheme(),
@@ -60,7 +60,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr controllermanager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -230,7 +230,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 				creationOpts.KubeletServerListener = oldOpts.KubeletServerListener
 				creationOpts.GRPCServerListener = oldOpts.GRPCServerListener
-				creationOpts.ConnectivityManager = oldOpts.ConnectivityManager
+				creationOpts.Manager = oldOpts.Manager
 			}
 		}
 	}
@@ -319,7 +319,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
 			}
 
-			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
+			creationOpts.Manager = manager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
@@ -386,7 +386,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			}
 		}
 
-		creationOpts.ConnectivityManager, err = connectivityManager.NewMQTTManager(mqttConfig, cert)
+		creationOpts.Manager, err = manager.NewMQTTManager(mqttConfig, cert)
 		if err != nil {
 			return err
 		}

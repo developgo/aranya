@@ -29,10 +29,10 @@ type Interface interface {
 	Start() error
 	// Stop manager at once
 	Stop()
-	// DeviceConnected signal
-	DeviceConnected() <-chan struct{}
-	// DeviceDisconnected signal
-	DeviceDisconnected() <-chan struct{}
+	// Connected signal
+	Connected() <-chan struct{}
+	// Disconnected signal
+	Disconnected() <-chan struct{}
 	// GlobalMessages message with no session attached
 	GlobalMessages() <-chan *connectivity.Msg
 	// send a command to remote device with timeout
@@ -40,54 +40,55 @@ type Interface interface {
 	PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error)
 }
 
-type baseServer struct {
+type baseManager struct {
 	sessions       *sessionManager
 	globalMsgChan  chan *connectivity.Msg
 	sessionTimeout time.Duration
 	closed         bool
 
-	deviceConnected    chan struct{}
-	deviceDisconnected chan struct{}
+	// signals
+	connected    chan struct{}
+	disconnected chan struct{}
 
 	mu sync.RWMutex
 }
 
-func newBaseServer() baseServer {
+func newBaseServer() baseManager {
 	deviceDisconnected := make(chan struct{})
 	close(deviceDisconnected)
 
-	return baseServer{
-		sessions:           newSessionManager(),
-		deviceConnected:    make(chan struct{}),
-		deviceDisconnected: deviceDisconnected,
-		globalMsgChan:      make(chan *connectivity.Msg, messageChannelSize),
+	return baseManager{
+		sessions:      newSessionManager(),
+		connected:     make(chan struct{}),
+		disconnected:  deviceDisconnected,
+		globalMsgChan: make(chan *connectivity.Msg, messageChannelSize),
 	}
 }
 
-func (s *baseServer) GlobalMessages() <-chan *connectivity.Msg {
+func (s *baseManager) GlobalMessages() <-chan *connectivity.Msg {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return s.globalMsgChan
 }
 
-// DeviceConnected
-func (s *baseServer) DeviceConnected() <-chan struct{} {
+// Connected
+func (s *baseManager) Connected() <-chan struct{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.deviceConnected
+	return s.connected
 }
 
-// DeviceDisconnected
-func (s *baseServer) DeviceDisconnected() <-chan struct{} {
+// Disconnected
+func (s *baseManager) Disconnected() <-chan struct{} {
 	s.mu.RLock()
-	defer s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return s.deviceDisconnected
+	return s.disconnected
 }
 
-func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
+func (s *baseManager) onConnected(setConnected func() bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -97,9 +98,9 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 
 	if setConnected() {
 		// signal device connected
-		close(s.deviceConnected)
+		close(s.connected)
 		// refresh device disconnected signal
-		s.deviceDisconnected = make(chan struct{})
+		s.disconnected = make(chan struct{})
 
 		return nil
 	}
@@ -107,7 +108,7 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 	return ErrDeviceAlreadyConnected
 }
 
-func (s *baseServer) onDeviceMsg(msg *connectivity.Msg) {
+func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -127,8 +128,8 @@ func (s *baseServer) onDeviceMsg(msg *connectivity.Msg) {
 	}
 }
 
-// onDeviceDisconnected delete device connection related jobs
-func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
+// onDisconnected delete device connection related jobs
+func (s *baseManager) onDisconnected(setDisconnected func()) {
 	// release device connection, refresh device connection semaphore
 	// and orphaned message channel
 	s.mu.Lock()
@@ -136,17 +137,18 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 
 	setDisconnected()
 
-	s.deviceConnected = make(chan struct{})
 	s.sessions.cleanup()
 
+	// refresh connected signal
+	s.connected = make(chan struct{})
 	// signal device disconnected
-	close(s.deviceDisconnected)
-
+	close(s.disconnected)
+	// refresh global msg chan
 	close(s.globalMsgChan)
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)
 }
 
-func (s *baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
+func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -192,7 +194,7 @@ func (s *baseServer) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendC
 	return ch, nil
 }
 
-func (s *baseServer) onStop(closeManager func()) {
+func (s *baseManager) onStop(closeManager func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
