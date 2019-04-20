@@ -133,7 +133,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 	reqLog := log.WithValues("name", request.Name)
 	if request.Namespace == corev1.NamespaceAll {
 		// reconcile node only
-		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, corev1.NamespaceAll, request.Name, nil)
+		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, constant.CurrentNamespace(), request.Name, nil)
 	}
 
 	reqLog = reqLog.WithValues("ns", request.Namespace)
@@ -164,7 +164,7 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespac
 	// edge device need to be deleted, cleanup
 	if deviceDeleted {
 		reqLog.Info("edge device deleted, cleaning up virtual node")
-		err = r.cleanupVirtualNode(reqLog, deviceObj.Namespace, deviceObj.Name)
+		err = r.cleanupVirtualNode(reqLog, namespace, name)
 		if err != nil {
 			reqLog.Error(err, "failed to cleanup virtual node")
 			return err
@@ -176,7 +176,7 @@ func (r *ReconcileEdgeDevice) doReconcileEdgeDevice(reqLog logr.Logger, namespac
 	//
 	// edge device exists, check its related virtual node
 	//
-	err = r.doReconcileVirtualNode(reqLog, deviceObj.Namespace, deviceObj.Name, deviceObj)
+	err = r.doReconcileVirtualNode(reqLog, namespace, name, deviceObj)
 	if err != nil {
 		return err
 	}
@@ -211,9 +211,18 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	} else {
 		nodeDeleted := !(nodeObj.DeletionTimestamp == nil || nodeObj.DeletionTimestamp.IsZero())
 		if nodeDeleted {
-			// node to be deleted, delete the related virtual node and return
+			// node to be deleted, delete the related virtual node and create new one
+			reqLog.Info("node object deleted, destroying virtual node")
 			node.Delete(name)
-			return fmt.Errorf("unexpected node objected deleted")
+
+			needToCreateNodeObject = true
+			// get related edge device object
+			deviceObj = &aranya.EdgeDevice{}
+			err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, deviceObj)
+			if err != nil {
+				reqLog.Error(err, "failed to get edge device for node")
+				return err
+			}
 		} else {
 			// node presents and not deleted, virtual node MUST exist
 			// (or we need to delete the all related objects)
