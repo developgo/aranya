@@ -321,11 +321,6 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 			creationOpts.ConnectivityManager = connectivityManager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
-			if !svcDeleted {
-				// service exists and we don't care about whether it has been changed
-				return
-			}
-
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
 			if creationOpts.GRPCServerListener != nil {
@@ -334,11 +329,25 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 				// NOTICE: any grpc config update will not be applied
 				// TODO: should we support grpc config change?
-				reqLog.Info("creating svc object for existing grpc service, no update will be applied to existing grpc service")
 				var port int32
 				port, err = GetListenPort(creationOpts.GRPCServerListener.Addr().String())
 				if err != nil {
+					reqLog.Error(err, "failed to get grpc listening port")
 					return err
+				}
+
+				if !svcDeleted {
+					// check if svc has right port
+					oldPort := int32(0)
+					if len(svcObj.Spec.Ports) > 0 {
+						oldPort = svcObj.Spec.Ports[0].TargetPort.IntVal
+					}
+
+					if oldPort == port {
+						// current svc has updated port value, finish reconcile
+						reqLog.Info("current svc is updated")
+						return nil
+					}
 				}
 
 				svcObj = newServiceForEdgeDevice(deviceObj, port)
@@ -348,7 +357,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 					return err
 				}
 
-				err = r.client.Create(r.ctx, svcObj)
+				reqLog.Info("creating or updating svc object for existing grpc service")
+				_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObj, func(existing runtime.Object) error { return nil })
 				if err != nil {
 					reqLog.Error(err, "failed to create svc object for existing grpc service")
 					return err

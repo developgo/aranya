@@ -67,8 +67,10 @@ func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort i
 					IntVal: grpcListenPort,
 				},
 			}},
-			Type:      corev1.ServiceTypeClusterIP,
-			ClusterIP: "",
+			Type: corev1.ServiceTypeClusterIP,
+			// no cluster ip since it's target is aranya's host node,
+			// and only one grpc backend
+			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
 }
