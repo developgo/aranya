@@ -10,10 +10,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeClient "k8s.io/client-go/kubernetes"
 	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/constant"
 	connectivityManager "arhat.dev/aranya/pkg/node/manager"
 	"arhat.dev/aranya/pkg/node/pod"
 	"arhat.dev/aranya/pkg/node/util"
@@ -138,7 +140,60 @@ func (n *Node) Start() (err error) {
 			}
 		}()
 
-		go n.InitializeRemoteDevice()
+		// initialize remote device
+		go func() {
+			for !n.closing() {
+				select {
+				case <-n.connectivityManager.DeviceConnected():
+					// we are good to go
+				case <-n.ctx.Done():
+					return
+				}
+
+				n.log.Info("device connected, starting to handle")
+
+				stopCh := make(chan struct{})
+				go func() {
+					for {
+						select {
+						case <-stopCh:
+							return
+						case <-n.ctx.Done():
+							return
+						case msg, more := <-n.connectivityManager.GlobalMessages():
+							if !more {
+								return
+							}
+							n.handleGlobalMsg(msg)
+						}
+					}
+				}()
+
+				go wait.Until(n.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, stopCh)
+
+				n.log.Info("trying to sync device pods")
+				if err := n.podManager.SyncDevicePods(); err != nil {
+					n.log.Error(err, "failed to sync device pods")
+					goto waitForDeviceDisconnect
+				}
+
+				n.log.Info("trying to sync device info")
+				if err := n.generateCacheForNodeInDevice(); err != nil {
+					n.log.Error(err, "failed to sync device node info")
+					goto waitForDeviceDisconnect
+				}
+
+			waitForDeviceDisconnect:
+				close(stopCh)
+
+				select {
+				case <-n.connectivityManager.DeviceDisconnected():
+					continue
+				case <-n.ctx.Done():
+					return
+				}
+			}
+		}()
 	})
 
 	return err

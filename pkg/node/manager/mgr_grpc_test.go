@@ -69,7 +69,6 @@ func TestGrpcSrv(t *testing.T) {
 		for msg := range mgr.GlobalMessages() {
 			i++
 			assert.NotEmpty(t, msg)
-			assert.Equal(t, []byte("foo"), msg.GetNode().GetNodeV1())
 		}
 
 		assert.Equal(t, orphanedMsgCount, i)
@@ -114,11 +113,7 @@ func TestGrpcSrv(t *testing.T) {
 		for i := 0; i < orphanedMsgCount; i++ {
 			err = syncClient.Send(&connectivity.Msg{
 				Msg: &connectivity.Msg_Node{
-					Node: &connectivity.Node{
-						Node: &connectivity.Node_NodeV1{
-							NodeV1: []byte("foo"),
-						},
-					},
+					Node: &connectivity.Node{},
 				},
 			})
 			assert.NoError(t, err)

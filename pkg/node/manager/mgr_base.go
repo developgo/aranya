@@ -31,6 +31,8 @@ type Interface interface {
 	Stop()
 	// DeviceConnected signal
 	DeviceConnected() <-chan struct{}
+	// DeviceDisconnected signal
+	DeviceDisconnected() <-chan struct{}
 	// GlobalMessages message with no session attached
 	GlobalMessages() <-chan *connectivity.Msg
 	// send a command to remote device with timeout
@@ -39,20 +41,26 @@ type Interface interface {
 }
 
 type baseServer struct {
-	sessions        *sessionManager
-	deviceConnected chan struct{}
-	globalMsgChan   chan *connectivity.Msg
-	sessionTimeout  time.Duration
-	closed          bool
+	sessions       *sessionManager
+	globalMsgChan  chan *connectivity.Msg
+	sessionTimeout time.Duration
+	closed         bool
+
+	deviceConnected    chan struct{}
+	deviceDisconnected chan struct{}
 
 	mu sync.RWMutex
 }
 
 func newBaseServer() baseServer {
+	deviceDisconnected := make(chan struct{})
+	close(deviceDisconnected)
+
 	return baseServer{
-		sessions:        newSessionManager(),
-		deviceConnected: make(chan struct{}),
-		globalMsgChan:   make(chan *connectivity.Msg, messageChannelSize),
+		sessions:           newSessionManager(),
+		deviceConnected:    make(chan struct{}),
+		deviceDisconnected: deviceDisconnected,
+		globalMsgChan:      make(chan *connectivity.Msg, messageChannelSize),
 	}
 }
 
@@ -71,6 +79,14 @@ func (s *baseServer) DeviceConnected() <-chan struct{} {
 	return s.deviceConnected
 }
 
+// DeviceDisconnected
+func (s *baseServer) DeviceDisconnected() <-chan struct{} {
+	s.mu.RLock()
+	defer s.mu.RLock()
+
+	return s.deviceDisconnected
+}
+
 func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,6 +98,8 @@ func (s *baseServer) onDeviceConnected(setConnected func() bool) error {
 	if setConnected() {
 		// signal device connected
 		close(s.deviceConnected)
+		// refresh device disconnected signal
+		s.deviceDisconnected = make(chan struct{})
 
 		return nil
 	}
@@ -120,6 +138,9 @@ func (s *baseServer) onDeviceDisconnected(setDisconnected func()) {
 
 	s.deviceConnected = make(chan struct{})
 	s.sessions.cleanup()
+
+	// signal device disconnected
+	close(s.deviceDisconnected)
 
 	close(s.globalMsgChan)
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)

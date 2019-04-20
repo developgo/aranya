@@ -19,6 +19,7 @@ rules:
   - pods/status
   verbs:
   - '*'
+# control aranya crds
 - apiGroups: [ 'aranya.arhat.dev' ]
   resources: [ '*' ]
   verbs: [ '*' ]

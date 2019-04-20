@@ -38,7 +38,7 @@ func (doPortForward portForwarder) PortForward(name string, uid types.UID, port 
 func (m *Manager) doGetContainerLogs(uid types.UID, options *corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
-	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), *options))
+	msgCh, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), *options))
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 	ctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
 
-	msgCh, err := m.remoteManager.PostCmd(ctx, initialCmd)
+	msgCh, err := m.connectivityManager.PostCmd(ctx, initialCmd)
 	if err != nil {
 		log.Error(err, "failed to post initial command")
 		return err
@@ -181,7 +181,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			}
 			log.Info("send data", "data", string(userInput.GetPodCmd().GetInputOptions().GetData()))
 
-			_, err = m.remoteManager.PostCmd(ctx, userInput)
+			_, err = m.connectivityManager.PostCmd(ctx, userInput)
 			if err != nil {
 				log.Error(err, "failed to post user input")
 				return err
@@ -221,7 +221,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			log.Info("resize", "width", size.Width, "height", size.Height)
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
-			_, err = m.remoteManager.PostCmd(ctx, resizeCmd)
+			_, err = m.connectivityManager.PostCmd(ctx, resizeCmd)
 			if err != nil {
 				return err
 			}

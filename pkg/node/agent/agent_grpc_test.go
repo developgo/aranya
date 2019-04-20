@@ -85,7 +85,7 @@ func TestGRPCAgent(t *testing.T) {
 	mgr, client = newGRPCTestManagerAndAgent(okRt)
 	defer mgr.Stop()
 
-	err = client.PostMsg(connectivity.NewNodeMsg(0, &corev1.Node{Spec: corev1.NodeSpec{Unschedulable: true}}))
+	err = client.PostMsg(connectivity.NewNodeMsg(0, nil, nil, nil, nil))
 	assert.Error(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -230,7 +230,6 @@ func assertMsgEqual(t *testing.T, expectedMsg, msg connectivity.Msg) {
 		assert.Nil(t, msg.GetNode())
 	} else {
 		assert.NotNil(t, msg.GetNode())
-		assert.Equal(t, expectedMsg.GetNode().GetNodeV1(), msg.GetNode().GetNodeV1())
 	}
 
 	if expectedMsg.GetAck() == nil {

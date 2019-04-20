@@ -70,7 +70,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletremotecommand.ServeExec(
-		w, r,                             /* http context */
+		w, r, /* http context */
 		m.doHandleExecInContainer(errCh), /* wrapped pod executor */
 		"",                               /* pod name (unused) */
 		podUID,                           /* unique id of pod */
@@ -102,7 +102,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletremotecommand.ServeAttach(
-		w, r,                             /* http context */
+		w, r, /* http context */
 		m.doHandleAttachContainer(errCh), /* wrapped pod attacher */
 		"",                               /* pod name (not used) */
 		podUID,                           /* unique id of pod */
@@ -137,7 +137,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletportforward.ServePortForward(
-		w, r,                         /* http context */
+		w, r, /* http context */
 		m.doHandlePortForward(errCh), /* wrapped pod port forwarder */
 		"",                           /* pod name (not used) */
 		podUID,                       /* unique id of pod */

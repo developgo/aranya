@@ -1,54 +1,13 @@
 package node
 
 import (
-	"context"
 	"fmt"
-	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
-
-func (n *Node) InitializeRemoteDevice() {
-	for !n.closing() {
-		connCtx, cancel := context.WithCancel(n.ctx)
-		wg := &sync.WaitGroup{}
-
-		<-n.connectivityManager.DeviceConnected()
-		n.log.Info("device connected")
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for msg := range n.connectivityManager.GlobalMessages() {
-				n.handleGlobalMsg(msg)
-			}
-		}()
-
-		n.log.Info("sync device pods")
-		if err := n.podManager.SyncDevicePods(); err != nil {
-			n.log.Error(err, "failed to sync device pods")
-			goto waitForDeviceDisconnect
-		}
-
-		n.log.Info("sync device info")
-		if err := n.generateCacheForNodeInDevice(); err != nil {
-			n.log.Error(err, "failed to sync device node info")
-			goto waitForDeviceDisconnect
-		}
-
-		// sync node status after device has been connected
-		go wait.Until(n.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, connCtx.Done())
-	waitForDeviceDisconnect:
-		wg.Wait()
-		cancel()
-	}
-}
 
 // generate in cluster node cache for remote device
 func (n *Node) generateCacheForNodeInDevice() error {

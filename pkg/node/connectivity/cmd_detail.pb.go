@@ -2626,7 +2626,7 @@ func (this *NodeCmd) GoString() string {
 	}
 	s := make([]string, 0, 5)
 	s = append(s, "&connectivity.NodeCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
+	s = append(s, "action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2636,7 +2636,7 @@ func (this *ImageCmd) GoString() string {
 	}
 	s := make([]string, 0, 5)
 	s = append(s, "&connectivity.ImageCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
+	s = append(s, "action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2646,7 +2646,7 @@ func (this *PodCmd) GoString() string {
 	}
 	s := make([]string, 0, 13)
 	s = append(s, "&connectivity.PodCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
+	s = append(s, "action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	if this.Options != nil {
 		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
 	}
@@ -4492,7 +4492,7 @@ func (this *NodeCmd) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&NodeCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
+		`action:` + fmt.Sprintf("%v", this.Action) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4502,7 +4502,7 @@ func (this *ImageCmd) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ImageCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
+		`action:` + fmt.Sprintf("%v", this.Action) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4512,7 +4512,7 @@ func (this *PodCmd) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PodCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
+		`action:` + fmt.Sprintf("%v", this.Action) + `,`,
 		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
 		`}`,
 	}, "")
@@ -4902,7 +4902,7 @@ func (m *NodeCmd) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field action", wireType)
 			}
 			m.Action = 0
 			for shift := uint(0); ; shift += 7 {
@@ -4974,7 +4974,7 @@ func (m *ImageCmd) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field action", wireType)
 			}
 			m.Action = 0
 			for shift := uint(0); ; shift += 7 {
@@ -5046,7 +5046,7 @@ func (m *PodCmd) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field action", wireType)
 			}
 			m.Action = 0
 			for shift := uint(0); ; shift += 7 {
