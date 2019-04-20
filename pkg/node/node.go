@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeClient "k8s.io/client-go/kubernetes"
 	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -29,7 +30,7 @@ type CreationOptions struct {
 	KubeClient            kubeClient.Interface
 	KubeletServerListener net.Listener
 
-	Manager manager.Interface
+	Manager manager.Manager
 
 	// optional
 	GRPCServerListener net.Listener
@@ -120,7 +121,11 @@ func (n *Node) Start() (err error) {
 		// start a kubelet http server
 		go func() {
 			n.log.Info("trying to start kubelet http server")
-			defer n.log.Info("kubelet http server exited")
+			defer func() {
+				n.log.Info("kubelet http server exited")
+
+				Delete(n.name)
+			}()
 
 			if err := n.kubeletSrv.Serve(n.opt.KubeletServerListener); err != nil && err != http.ErrServerClosed {
 				n.log.Error(err, "failed to start kubelet http server")
@@ -130,7 +135,11 @@ func (n *Node) Start() (err error) {
 
 		go func() {
 			n.log.Info("trying to start connectivity manager")
-			defer n.log.Info("connectivity manager exited")
+			defer func() {
+				n.log.Info("connectivity manager exited")
+
+				Delete(n.name)
+			}()
 
 			if err := n.opt.Manager.Start(); err != nil {
 				n.log.Error(err, "failed to start connectivity manager")
@@ -140,7 +149,11 @@ func (n *Node) Start() (err error) {
 
 		go func() {
 			n.log.Info("trying to start pod manager")
-			defer n.log.Info("pod manager exited")
+			defer func() {
+				n.log.Info("pod manager exited")
+
+				Delete(n.name)
+			}()
 
 			if err := n.podManager.Start(); err != nil {
 				n.log.Error(err, "failed to start pod manager")
@@ -151,7 +164,17 @@ func (n *Node) Start() (err error) {
 		// initialize remote device
 		go func() {
 			n.log.Info("starting to handle device connect")
-			defer n.log.Info("stopped waiting for device connect")
+			defer func() {
+				n.log.Info("stopped waiting for device connect")
+
+				Delete(n.name)
+
+				n.log.Info("trying to delete node object by virtual node")
+				err := n.kubeNodeClient.Delete(n.name, metav1.NewDeleteOptions(0))
+				if err != nil {
+					n.log.Error(err, "failed to delete node object by virtual node")
+				}
+			}()
 
 			for !n.closing() {
 				select {
@@ -185,15 +208,15 @@ func (n *Node) Start() (err error) {
 					constant.DefaultNodeStatusSyncInterval,
 					n.opt.Manager.Disconnected())
 
-				n.log.Info("trying to sync device pods")
-				if err := n.podManager.SyncDevicePods(); err != nil {
-					n.log.Error(err, "failed to sync device pods")
-					goto waitForDeviceDisconnect
-				}
-
 				n.log.Info("trying to sync device info")
 				if err := n.generateCacheForNodeInDevice(); err != nil {
 					n.log.Error(err, "failed to sync device node info")
+					goto waitForDeviceDisconnect
+				}
+
+				n.log.Info("trying to sync device pods")
+				if err := n.podManager.SyncDevicePods(); err != nil {
+					n.log.Error(err, "failed to sync device pods")
 					goto waitForDeviceDisconnect
 				}
 			waitForDeviceDisconnect:

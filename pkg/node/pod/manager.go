@@ -29,7 +29,7 @@ import (
 
 var log = logf.Log.WithName("pod")
 
-func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager manager.Interface) *Manager {
+func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager manager.Manager) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, constant.DefaultPodReSyncInterval,
 		kubeinformers.WithNamespace(corev1.NamespaceAll),
@@ -93,7 +93,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 type Manager struct {
 	ctx        context.Context
 	exit       context.CancelFunc
-	manager    manager.Interface
+	manager    manager.Manager
 	kubeClient kubeclient.Interface
 	podCache   *cache.PodCache
 

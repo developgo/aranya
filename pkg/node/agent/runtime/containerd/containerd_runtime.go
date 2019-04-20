@@ -21,8 +21,8 @@ import (
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node/agent/runtimeutil"
 	"arhat.dev/aranya/pkg/node/agent/runtime"
+	"arhat.dev/aranya/pkg/node/agent/runtimeutil"
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 

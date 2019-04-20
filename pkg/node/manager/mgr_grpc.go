@@ -11,7 +11,7 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-var _ Interface = &GRPCManager{}
+var _ Manager = &GRPCManager{}
 
 type GRPCManager struct {
 	baseManager

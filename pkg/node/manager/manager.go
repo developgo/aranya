@@ -24,7 +24,9 @@ var (
 	ErrManagerClosed          = errors.New("connectivity manager has been closed")
 )
 
-type Interface interface {
+// Manager is the connectivity manager interface, and is designed for message queue based
+// managers such as MQTT
+type Manager interface {
 	// Start manager and block until stopped
 	Start() error
 	// Stop manager at once

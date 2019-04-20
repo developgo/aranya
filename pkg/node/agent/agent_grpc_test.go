@@ -164,12 +164,12 @@ func TestGRPCAgent(t *testing.T) {
 	wg.Wait()
 }
 
-func testOnetimeCmdWithNoExpectedMsg(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd) {
+func testOnetimeCmdWithNoExpectedMsg(t *testing.T, mgr manager.Manager, cmd *connectivity.Cmd) {
 	_, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.Equal(t, manager.ErrSessionNotValid, err)
 }
 
-func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd, expectedMsg connectivity.Msg) {
+func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr manager.Manager, cmd *connectivity.Cmd, expectedMsg connectivity.Msg) {
 	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)
@@ -184,7 +184,7 @@ func testOnetimeCmdWithExpectedMsg(t *testing.T, mgr manager.Interface, cmd *con
 	assert.False(t, more)
 }
 
-func testStreamCmdWithExpectedMsgList(t *testing.T, mgr manager.Interface, cmd *connectivity.Cmd, expectedMsgList []*connectivity.Msg) {
+func testStreamCmdWithExpectedMsgList(t *testing.T, mgr manager.Manager, cmd *connectivity.Cmd, expectedMsgList []*connectivity.Msg) {
 	msgCh, err := mgr.PostCmd(context.TODO(), cmd)
 	assert.NoError(t, err)
 	assert.NotNil(t, msgCh)

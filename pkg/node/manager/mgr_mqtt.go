@@ -8,7 +8,7 @@ import (
 	"arhat.dev/aranya/pkg/node/connectivity"
 )
 
-var _ Interface = &MQTTManager{}
+var _ Manager = &MQTTManager{}
 
 type mqttClient struct {
 }
