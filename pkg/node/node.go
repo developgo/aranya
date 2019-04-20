@@ -122,7 +122,7 @@ func (n *Node) Start() (err error) {
 			n.log.Info("trying to start kubelet http server")
 			defer n.log.Info("kubelet http server exited")
 
-			if err := n.kubeletSrv.Serve(n.opt.KubeletServerListener); err != nil {
+			if err := n.kubeletSrv.Serve(n.opt.KubeletServerListener); err != nil && err != http.ErrServerClosed {
 				n.log.Error(err, "failed to start kubelet http server")
 				return
 			}

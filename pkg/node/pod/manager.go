@@ -3,6 +3,7 @@ package pod
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -54,9 +55,36 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	}
 
 	podInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
-		AddFunc:    mgr.onPodCreate,
-		UpdateFunc: mgr.onPodUpdate,
-		DeleteFunc: mgr.onPodDelete,
+		AddFunc: func(obj interface{}) {
+			pod := obj.(*corev1.Pod)
+
+			mgr.podCache.Update(pod)
+			mgr.podWorkQueue.Offer(queue.ActionCreate, pod.UID)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldPod := oldObj.(*corev1.Pod).DeepCopy()
+			newPod := newObj.(*corev1.Pod).DeepCopy()
+
+			newPod.ResourceVersion = oldPod.ResourceVersion
+			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				log.Info("skip enqueue pod update")
+				return
+			}
+
+			podDeleted := !(newPod.GetDeletionTimestamp() == nil || newPod.GetDeletionTimestamp().IsZero())
+			if podDeleted {
+				mgr.podWorkQueue.Offer(queue.ActionDelete, newPod.UID)
+				return
+			}
+
+			mgr.podCache.Update(newPod)
+			mgr.podWorkQueue.Offer(queue.ActionUpdate, newPod.UID)
+		},
+		DeleteFunc: func(obj interface{}) {
+			pod := obj.(*corev1.Pod)
+
+			mgr.podWorkQueue.Offer(queue.ActionDelete, pod.UID)
+		},
 	})
 
 	return mgr
@@ -162,6 +190,8 @@ func (m *Manager) Start() (err error) {
 						err = m.CreateDevicePod(pod)
 						if err != nil {
 							log.Error(err, "failed to create pod in device for update")
+							// pod has been deleted, only create pod next time
+							podWork.Action = queue.ActionCreate
 							goto handleError
 						}
 					case queue.ActionDelete:
@@ -182,7 +212,6 @@ func (m *Manager) Start() (err error) {
 						// invalid work, unable to handle
 						continue
 					}
-
 				handleError:
 					if err != nil {
 						// requeue when error happened
@@ -273,6 +302,7 @@ func (m *Manager) DeleteMirrorPod(podUID types.UID) error {
 	if !ok {
 		return fmt.Errorf("failed to find pod cache by id: %v", podUID)
 	}
+
 	err := m.kubeClient.CoreV1().Pods(oldPod.Namespace).Delete(oldPod.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
@@ -361,12 +391,9 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 			continue
 		}
 
-		switch msg.GetMsg().(type) {
-		case *connectivity.Msg_Pod:
-			err = m.DeleteMirrorPod(podUID)
-			if err != nil {
-				log.Error(err, "failed to delete pod")
-			}
+		err = m.DeleteMirrorPod(podUID)
+		if err != nil {
+			log.Error(err, "failed to delete pod")
 		}
 	}
 
