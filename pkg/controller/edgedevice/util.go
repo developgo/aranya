@@ -70,12 +70,12 @@ func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() (hostNodeName string, ad
 	return globalHostNodeName, result, nil
 }
 
-func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, nodeName, svcName string) (err error) {
-	node.Delete(nodeName)
+func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, name string) (err error) {
+	node.Delete(name)
 
 	needToDeleteNodeObj := true
 	nodeObj := &corev1.Node{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: nodeName}, nodeObj)
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: name}, nodeObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			needToDeleteNodeObj = false
@@ -95,7 +95,7 @@ func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, 
 
 	needToDeleteSvcObj := true
 	svcObj := &corev1.Service{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: svcName}, svcObj)
+	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, svcObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			needToDeleteSvcObj = false
