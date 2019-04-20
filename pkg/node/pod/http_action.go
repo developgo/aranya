@@ -127,7 +127,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
-	defer log.Error(err, "finished stream handle")
+	defer log.Info("finished stream handle")
 
 	ctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
@@ -174,6 +174,8 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 
 	for {
 		select {
+		case <-m.ctx.Done():
+			return
 		case userInput, more := <-inputCh:
 			if !more {
 				log.Info("input ch closed")
@@ -223,6 +225,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.manager.PostCmd(ctx, resizeCmd)
 			if err != nil {
+				log.Error(err, "failed to post resize cmd")
 				return err
 			}
 		}

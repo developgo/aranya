@@ -379,7 +379,8 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 		return nil
 	}
 
-	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Minute)
+	// TODO: get grace time
+	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Second)
 	msgCh, err := m.manager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod delete command")

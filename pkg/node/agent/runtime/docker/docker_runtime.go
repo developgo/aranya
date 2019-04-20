@@ -46,7 +46,10 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 			var dialer net.Dialer
 			if filepath.IsAbs(addr) {
 				network = "unix"
-				addr = addr[:strings.LastIndexByte(addr, ':')]
+				idx := strings.LastIndexByte(addr, ':')
+				if idx != -1 {
+					addr = addr[:idx]
+				}
 			}
 			return dialer.DialContext(ctx, network, addr)
 		}
@@ -231,6 +234,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error) {
 	deleteLog := r.Log().WithValues("action", "delete", "options", options)
 
+	deleteLog.Info("trying to find pause container")
 	pauseCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
 	if err != nil {
 		deleteLog.Error(err, "failed to find pause container")
@@ -243,7 +247,7 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	deleteCtx, cancelDelete := r.RuntimeActionContext()
 	defer cancelDelete()
 
-	// delete work containers first
+	deleteLog.Info("trying to list work containers")
 	containers, err := r.runtimeClient.ContainerList(deleteCtx, dockerType.ContainerListOptions{
 		Quiet: true,
 		Filters: dockerFilter.NewArgs(
@@ -256,11 +260,17 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 		return nil, err
 	}
 
+	// delete work containers first
 	containers = append(containers, dockerType.Container{ID: pauseCtr.ID})
 	for _, ctr := range containers {
 		timeout = timeout - time.Since(now)
 		now = time.Now()
 
+		if timeout < 0 {
+			timeout = 0
+		}
+
+		deleteLog.Info("trying to delete container", "timeout", timeout)
 		err = r.deleteContainer(ctr.ID, timeout)
 		if err != nil {
 			deleteLog.Error(err, "failed to delete container")
@@ -705,21 +715,26 @@ func (r *dockerRuntime) getImage(ctx context.Context, imageName string) (*docker
 	return &imageList[0], nil
 }
 
-func (r *dockerRuntime) findContainer(podUID, container string) (*dockerType.ContainerJSON, error) {
+func (r *dockerRuntime) findContainer(podUID, container string) (*dockerType.Container, error) {
 	findCtx, cancelFind := r.RuntimeActionContext()
 	defer cancelFind()
 
-	ctrName := runtimeutil.GetContainerName(podUID, container)
-	ctr, err := r.runtimeClient.ContainerInspect(findCtx, ctrName)
+	containers, err := r.runtimeClient.ContainerList(findCtx, dockerType.ContainerListOptions{
+		Quiet: true,
+		Filters: dockerFilter.NewArgs(
+			dockerFilter.Arg("label", constant.ContainerLabelPodUID+"="+podUID),
+			dockerFilter.Arg("label", constant.ContainerLabelPodContainer+"="+container),
+		),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if ctr.ID == "" {
+	if len(containers) != 1 {
 		return nil, errors.New("container not found")
 	}
 
-	return &ctr, err
+	return &containers[0], nil
 }
 
 func (r *dockerRuntime) createPauseContainer(
