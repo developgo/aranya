@@ -181,7 +181,6 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				log.Info("input ch closed")
 				return nil
 			}
-			log.Info("send data", "data", string(userInput.GetPodCmd().GetInputOptions().GetData()))
 
 			_, err = m.manager.PostCmd(ctx, userInput)
 			if err != nil {
@@ -193,7 +192,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				log.Info("msg ch closed")
 				return nil
 			}
-			log.Info("recv data", "data", string(msg.GetData().GetData()))
+
 			// only PodData will be received in this session
 			switch m := msg.GetMsg().(type) {
 			case *connectivity.Msg_Data:
@@ -220,7 +219,6 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				log.Info("resize ch closed")
 				return nil
 			}
-			log.Info("resize", "width", size.Width, "height", size.Height)
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			_, err = m.manager.PostCmd(ctx, resizeCmd)
