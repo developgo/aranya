@@ -6,15 +6,15 @@ import (
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha1.EdgeDevice) (svcObject *corev1.Service, l net.Listener, err error) {
+func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha1.EdgeDevice, oldSvcObj *corev1.Service) (svcObject *corev1.Service, l net.Listener, err error) {
 	grpcListenPort, err := freeport.GetFreePort()
 	if err != nil {
 		return nil, nil, err
@@ -31,13 +31,20 @@ func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha
 		}
 	}()
 
+	if oldSvcObj != nil {
+		err = r.client.Delete(r.ctx, oldSvcObj, client.GracePeriodSeconds(0))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	svcObject = newServiceForEdgeDevice(device, int32(grpcListenPort))
 	err = controllerutil.SetControllerReference(device, svcObject, r.scheme)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObject, func(existing runtime.Object) error { return nil })
+	err = r.client.Create(r.ctx, svcObject)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -214,7 +214,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	} else {
 		nodeDeleted := !(nodeObj.DeletionTimestamp == nil || nodeObj.DeletionTimestamp.IsZero())
 		if nodeDeleted {
-			// node to be deleted, delete the related virtual node and create new one
+			// node to be deleted, delete the related virtual node
 			reqLog.Info("node object deleted, destroying virtual node")
 			node.Delete(name)
 
@@ -242,7 +242,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	}
 
 	if needToCheckDeviceObject {
-		// get related edge device object
+		reqLog.Info("trying to get edge device for node check")
+
 		deviceObj = &aranya.EdgeDevice{}
 		err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, deviceObj)
 		if err != nil {
@@ -265,6 +266,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// device nil means this function was called for the node only or
 	// the device has been deleted, no more action required
 	if deviceObj == nil {
+		reqLog.Info("finished reconcile for node object")
 		return nil
 	}
 
@@ -273,7 +275,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 	if needToCreateNodeObject {
 		// new node and new virtual node
-		reqLog.Info("create node object")
+		reqLog.Info("trying to create node object")
 		creationOpts.NodeObject, creationOpts.KubeletServerListener, err = r.createNodeObjectForDevice(deviceObj)
 		if err != nil {
 			reqLog.Error(err, "failed to create node object")
@@ -298,6 +300,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// check device connectivity, check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
 	case aranya.DeviceConnectViaGRPC:
+		reqLog.Info("trying to get svc object")
+
 		svcDeleted := false
 		svcNamespacedName := types.NamespacedName{Namespace: namespace, Name: name}
 		err = r.client.Get(r.ctx, svcNamespacedName, svcObj)
@@ -306,22 +310,25 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				reqLog.Error(err, "failed to get svc object")
 				return err
 			}
+
 			svcDeleted = true
 		} else {
 			// service object exists, but to be deleted,
-			// return error to run another reconcile
 			svcDeleted = !(svcObj.DeletionTimestamp == nil || svcObj.DeletionTimestamp.IsZero())
-			if svcDeleted {
-				return fmt.Errorf("unexpected service object deleted")
-			}
+		}
+
+		if svcDeleted {
+			svcObj = nil
 		}
 
 		// service object doesn't exists,
 		// whether not created with virtual node or has been deleted
 		if needToCreateVirtualNode {
 			// need to create service object and grpc server, then we need a new grpc listener
+			reqLog.Info("trying to create grpc svc for device")
+
 			grpcConfig := deviceObj.Spec.Connectivity.Config.GRPC.ForServer
-			svcObj, creationOpts.GRPCServerListener, err = r.createGRPCSvcObjectForDevice(deviceObj)
+			svcObj, creationOpts.GRPCServerListener, err = r.createGRPCSvcObjectForDevice(deviceObj, svcObj)
 			if err != nil {
 				return err
 			}
@@ -372,23 +379,24 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 					if oldPort == port {
 						// current svc has updated port value, finish reconcile
-						reqLog.Info("current svc is updated")
+						reqLog.Info("current svc is update to date")
 						return nil
+					}
+
+					reqLog.Info("trying to delete outdated svc object")
+					err = r.client.Delete(r.ctx, svcObj, client.GracePeriodSeconds(0))
+					if err != nil {
+						reqLog.Error(err, "failed to delete svc object")
+						return err
 					}
 				}
 
 				// current svc is not up to date, need to delete and create new one
+				reqLog.Info("trying to set controller reference to svc object")
 				newSvcObj := newServiceForEdgeDevice(deviceObj, port)
 				err = controllerutil.SetControllerReference(deviceObj, newSvcObj, r.scheme)
 				if err != nil {
 					reqLog.Error(err, "failed to set controller reference to svc object")
-					return err
-				}
-
-				reqLog.Info("trying to delete outdated svc object")
-				err = r.client.Delete(r.ctx, svcObj, client.GracePeriodSeconds(0))
-				if err != nil {
-					reqLog.Error(err, "failed to delete svc object")
 					return err
 				}
 
