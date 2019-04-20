@@ -191,6 +191,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		creationOpts = &node.CreationOptions{}
 		virtualNode  *node.Node
 
+		needToCheckDeviceObject bool
 		needToCreateNodeObject  bool
 		needToCreateVirtualNode bool
 		ok                      bool
@@ -207,6 +208,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		// delete the related virtual node
 		reqLog.Info("node object not found, destroying virtual node")
 		node.Delete(name)
+
+		needToCheckDeviceObject = true
 		needToCreateNodeObject = true
 	} else {
 		nodeDeleted := !(nodeObj.DeletionTimestamp == nil || nodeObj.DeletionTimestamp.IsZero())
@@ -215,14 +218,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			reqLog.Info("node object deleted, destroying virtual node")
 			node.Delete(name)
 
+			needToCheckDeviceObject = true
 			needToCreateNodeObject = true
-			// get related edge device object
-			deviceObj = &aranya.EdgeDevice{}
-			err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, deviceObj)
-			if err != nil {
-				reqLog.Error(err, "failed to get edge device for node")
-				return err
-			}
 		} else {
 			// node presents and not deleted, virtual node MUST exist
 			// (or we need to delete the all related objects)
@@ -234,12 +231,33 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 				return fmt.Errorf("unexpected virtual node not present")
 			} else {
-				// TODO: reuse previous network listener if any
+				// get previous create options
 				oldOpts := virtualNode.CreationOptions()
 
 				creationOpts.KubeletServerListener = oldOpts.KubeletServerListener
 				creationOpts.GRPCServerListener = oldOpts.GRPCServerListener
 				creationOpts.Manager = oldOpts.Manager
+			}
+		}
+	}
+
+	if needToCheckDeviceObject {
+		// get related edge device object
+		deviceObj = &aranya.EdgeDevice{}
+		err = r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, deviceObj)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				reqLog.Info("edge device not found, node can be deleted")
+				return nil
+			}
+
+			reqLog.Error(err, "failed to get edge device for node")
+			return err
+		} else {
+			deviceDeleted := !(deviceObj.GetDeletionTimestamp() == nil || deviceObj.GetDeletionTimestamp().IsZero())
+			if deviceDeleted {
+				reqLog.Info("edge device deleted, node can be deleted")
+				return nil
 			}
 		}
 	}
