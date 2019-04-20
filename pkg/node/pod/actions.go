@@ -35,7 +35,7 @@ func (doPortForward portForwarder) PortForward(name string, uid types.UID, port 
 	return doPortForward(name, uid, port, stream)
 }
 
-func (m *Manager) getContainerLogs(uid types.UID, options *corev1.PodLogOptions) (io.ReadCloser, error) {
+func (m *Manager) doGetContainerLogs(uid types.UID, options *corev1.PodLogOptions) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 
 	msgCh, err := m.remoteManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), *options))
@@ -57,7 +57,7 @@ func (m *Manager) getContainerLogs(uid types.UID, options *corev1.PodLogOptions)
 	return reader, nil
 }
 
-func (m *Manager) handleExecInContainer(errCh chan<- error) kubeletrc.Executor {
+func (m *Manager) doHandleExecInContainer(errCh chan<- error) kubeletrc.Executor {
 	return containerExecutor(func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 		defer close(errCh)
 
@@ -71,7 +71,7 @@ func (m *Manager) handleExecInContainer(errCh chan<- error) kubeletrc.Executor {
 		}
 
 		execCmd := connectivity.NewContainerExecCmd(string(uid), options)
-		err := m.handleBidirectionalStream(execCmd, stdin, stdout, stderr, resize)
+		err := m.doServeStream(execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			errCh <- err
 			return err
@@ -81,7 +81,7 @@ func (m *Manager) handleExecInContainer(errCh chan<- error) kubeletrc.Executor {
 	})
 }
 
-func (m *Manager) handleAttachContainer(errCh chan<- error) kubeletrc.Attacher {
+func (m *Manager) doHandleAttachContainer(errCh chan<- error) kubeletrc.Attacher {
 	return containerAttacher(func(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
 		defer close(errCh)
 
@@ -94,7 +94,7 @@ func (m *Manager) handleAttachContainer(errCh chan<- error) kubeletrc.Attacher {
 		}
 
 		attachCmd := connectivity.NewContainerAttachCmd(string(uid), options)
-		err := m.handleBidirectionalStream(attachCmd, stdin, stdout, stderr, resize)
+		err := m.doServeStream(attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			errCh <- err
 			return err
@@ -104,7 +104,7 @@ func (m *Manager) handleAttachContainer(errCh chan<- error) kubeletrc.Attacher {
 	})
 }
 
-func (m *Manager) handlePortForward(errCh chan<- error) kubeletpf.PortForwarder {
+func (m *Manager) doHandlePortForward(errCh chan<- error) kubeletpf.PortForwarder {
 	return portForwarder(func(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
 		defer close(errCh)
 
@@ -113,7 +113,7 @@ func (m *Manager) handlePortForward(errCh chan<- error) kubeletpf.PortForwarder 
 		}
 
 		portForwardCmd := connectivity.NewPortForwardCmd(string(uid), options)
-		err := m.handleBidirectionalStream(portForwardCmd, stream, stream, nil, nil)
+		err := m.doServeStream(portForwardCmd, stream, stream, nil, nil)
 		if err != nil {
 			errCh <- err
 			return err
@@ -123,7 +123,7 @@ func (m *Manager) handlePortForward(errCh chan<- error) kubeletpf.PortForwarder 
 	})
 }
 
-func (m *Manager) handleBidirectionalStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
+func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}

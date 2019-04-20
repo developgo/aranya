@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,20 +38,23 @@ import (
 )
 
 func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
-	// dialCtxFunc := func(timeout time.Duration) func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-	// 	return func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
-	// 		ctx, cancel := context.WithTimeout(ctx, timeout)
-	// 		defer cancel()
-	//
-	// 		var dialer net.Dialer
-	// 		log.Printf("docker dial: %v %v", network, addr)
-	// 		return dialer.DialContext(ctx, network, addr)
-	// 	}
-	// }
+	dialCtxFunc := func(timeout time.Duration) func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+		return func(ctx context.Context, network, addr string) (conn net.Conn, e error) {
+			ctx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			var dialer net.Dialer
+			if filepath.IsAbs(addr) {
+				network = "unix"
+				addr = addr[:strings.LastIndexByte(addr, ':')]
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+	}
 
 	runtimeClient, err := dockerClient.NewClientWithOpts(
 		dockerClient.WithHost(config.EndPoints.Runtime.Address),
-		// dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
+		dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
 		dockerClient.FromEnv,
 	)
 	if err != nil {
@@ -60,7 +65,7 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 	if config.EndPoints.Image.Address != config.EndPoints.Runtime.Address {
 		imageClient, err = dockerClient.NewClientWithOpts(
 			dockerClient.WithHost(config.EndPoints.Runtime.Address),
-			// dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
+			dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
 			dockerClient.FromEnv,
 		)
 		if err != nil {
@@ -131,7 +136,7 @@ func (r *dockerRuntime) ListImages() ([]*connectivity.Image, error) {
 }
 
 func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.Pod, err error) {
-	createLog := r.Log().WithValues("namespace", options.GetNamespace(), "name", options.GetName(), "uid", options.GetPodUid(), "action", "create")
+	createLog := r.Log().WithValues("action", "create", "namespace", options.GetNamespace(), "name", options.GetName(), "uid", options.GetPodUid())
 
 	// ensure pause image (infra image to claim namespaces) exists
 	_, err = r.ensureImages(map[string]*connectivity.ContainerSpec{
@@ -224,7 +229,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 }
 
 func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.Pod, err error) {
-	deleteLog := r.Log().WithValues("uid", options.GetPodUid())
+	deleteLog := r.Log().WithValues("action", "delete", "options", options)
 
 	pauseCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
 	if err != nil {
@@ -321,7 +326,6 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 
 	// one pause container represents on Pod
 	for podUID, pauseContainer := range pauseContainers {
-		listLog.Info("inspecting pause container")
 		pauseCtrSpec, err := r.runtimeClient.ContainerInspect(listCtx, pauseContainer.ID)
 		if err != nil {
 			listLog.Error(err, "failed to inspect pause container")
@@ -330,7 +334,6 @@ func (r *dockerRuntime) ListPod(options *connectivity.ListOptions) ([]*connectiv
 
 		var containerStatus []*criRuntime.ContainerStatus
 		for _, ctr := range podContainers[podUID] {
-			listLog.Info("inspecting work container")
 			ctrInfo, err := r.runtimeClient.ContainerInspect(listCtx, ctr.ID)
 			if err != nil {
 				listLog.Error(err, "failed to inspect work container")

@@ -41,7 +41,7 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logReader, err := m.getContainerLogs(podUID, opt)
+	logReader, err := m.doGetContainerLogs(podUID, opt)
 	if err != nil {
 		log.Error(err, "failed to get container logs")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -70,20 +70,13 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletremotecommand.ServeExec(
-		// http context
-		w, r,
-		// wrapped pod executor
-		m.handleExecInContainer(errCh),
-		// namespaced pod name
-		"", // unused
-		// unique id of pod
-		podUID,
-		// container to execute in
-		containerName,
-		// commands to execute
-		cmd,
-		// stream options
-		streamOptions,
+		w, r,                             /* http context */
+		m.doHandleExecInContainer(errCh), /* wrapped pod executor */
+		"",                               /* pod name (unused) */
+		podUID,                           /* unique id of pod */
+		containerName,                    /* container name to execute in*/
+		cmd,                              /* commands to execute */
+		streamOptions,                    /* stream options */
 		// timeout options
 		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
@@ -109,18 +102,12 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletremotecommand.ServeAttach(
-		// http context
-		w, r,
-		// wrapped pod attacher
-		m.handleAttachContainer(errCh),
-		// namespaced pod name (not used)
-		"", // unused
-		// unique id of pod
-		podUID,
-		// container to execute in
-		containerName,
-		// stream options
-		streamOptions,
+		w, r,                             /* http context */
+		m.doHandleAttachContainer(errCh), /* wrapped pod attacher */
+		"",                               /* pod name (not used) */
+		podUID,                           /* unique id of pod */
+		containerName,                    /* container to execute in */
+		streamOptions,                    /* stream options */
 		// timeout options
 		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
@@ -150,16 +137,11 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	kubeletportforward.ServePortForward(
-		// http context
-		w, r,
-		// wrapped pod port forwarder
-		m.handlePortForward(errCh),
-		// namespaced pod name (not used)
-		"",
-		// unique id of pod
-		podUID,
-		// port forward options (ports)
-		portForwardOptions,
+		w, r,                         /* http context */
+		m.doHandlePortForward(errCh), /* wrapped pod port forwarder */
+		"",                           /* pod name (not used) */
+		podUID,                       /* unique id of pod */
+		portForwardOptions,           /* port forward options (ports) */
 		// timeout options
 		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
 		// supported protocols
