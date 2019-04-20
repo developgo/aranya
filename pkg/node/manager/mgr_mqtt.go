@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"crypto/tls"
+	"sync"
 
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/node/connectivity"
@@ -21,9 +22,13 @@ func NewMQTTManager(config aranya.MQTTConfig, clientCert *tls.Certificate) (*MQT
 
 type MQTTManager struct {
 	baseManager
+
+	wg sync.WaitGroup
 }
 
 func (m *MQTTManager) Start() error {
+	m.wg.Add(1)
+	m.wg.Wait()
 	return nil
 }
 
@@ -35,6 +40,6 @@ func (m *MQTTManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-ch
 
 func (m *MQTTManager) Stop() {
 	m.baseManager.onStop(func() {
-
+		m.wg.Done()
 	})
 }
