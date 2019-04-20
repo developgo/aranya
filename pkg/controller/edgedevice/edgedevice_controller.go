@@ -359,19 +359,29 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 					}
 				}
 
-				svcObj = newServiceForEdgeDevice(deviceObj, port)
-				err = controllerutil.SetControllerReference(deviceObj, svcObj, r.scheme)
+				// current svc is not up to date, need to delete and create new one
+				newSvcObj := newServiceForEdgeDevice(deviceObj, port)
+				err = controllerutil.SetControllerReference(deviceObj, newSvcObj, r.scheme)
 				if err != nil {
 					reqLog.Error(err, "failed to set controller reference to svc object")
 					return err
 				}
 
-				reqLog.Info("creating or updating svc object for existing grpc service")
-				_, err = controllerutil.CreateOrUpdate(r.ctx, r.client, svcObj, func(existing runtime.Object) error { return nil })
+				reqLog.Info("trying to delete outdated svc object")
+				err = r.client.Delete(r.ctx, svcObj, client.GracePeriodSeconds(0))
 				if err != nil {
-					reqLog.Error(err, "failed to create svc object for existing grpc service")
+					reqLog.Error(err, "failed to delete svc object")
 					return err
 				}
+
+				reqLog.Info("trying to create updated svc object")
+				err = r.client.Create(r.ctx, newSvcObj)
+				if err != nil {
+					reqLog.Error(err, "failed to create updated svc object")
+					return err
+				}
+
+				svcObj = newSvcObj
 			} else {
 				// existing virtual node doesn't work as grpc manager
 				// changes happen in EdgeDevice's spec
