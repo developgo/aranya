@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"arhat.dev/aranya/cmd/aranya/internal"
+	aranyaInternal "arhat.dev/aranya/cmd/aranya/internal"
 )
 
 func main() {
-	cmd := internal.NewAranyaCmd()
+	cmd := aranyaInternal.NewAranyaCmd()
 
 	if err := cmd.Execute(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "execute cmd failed")

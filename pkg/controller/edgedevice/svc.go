@@ -10,11 +10,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	aranyav1alpha1 "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha1.EdgeDevice, oldSvcObj *corev1.Service) (svcObject *corev1.Service, l net.Listener, err error) {
+func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranya.EdgeDevice, oldSvcObj *corev1.Service) (svcObject *corev1.Service, l net.Listener, err error) {
 	grpcListenPort, err := freeport.GetFreePort()
 	if err != nil {
 		return nil, nil, err
@@ -52,7 +52,7 @@ func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranyav1alpha
 	return svcObject, l, nil
 }
 
-func newServiceForEdgeDevice(device *aranyav1alpha1.EdgeDevice, grpcListenPort int32) *corev1.Service {
+func newServiceForEdgeDevice(device *aranya.EdgeDevice, grpcListenPort int32) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        device.Name,

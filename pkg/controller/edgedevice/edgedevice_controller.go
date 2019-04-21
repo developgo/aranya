@@ -299,7 +299,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 	// check device connectivity, check service object if grpc is used
 	switch deviceObj.Spec.Connectivity.Method {
-	case aranya.DeviceConnectViaGRPC:
+	case aranya.GRPC:
 		reqLog.Info("trying to get svc object")
 
 		svcDeleted := false
@@ -327,7 +327,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			// need to create service object and grpc server, then we need a new grpc listener
 			reqLog.Info("trying to create grpc svc for device")
 
-			grpcConfig := deviceObj.Spec.Connectivity.Config.GRPC.ForServer
+			grpcConfig := deviceObj.Spec.Connectivity.GRPCConfig
 			svcObj, creationOpts.GRPCServerListener, err = r.createGRPCSvcObjectForDevice(deviceObj, svcObj)
 			if err != nil {
 				return err
@@ -415,14 +415,14 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				reqLog.Info("connectivity method change not supported")
 			}
 		}
-	case aranya.DeviceConnectViaMQTT:
+	case aranya.MQTT:
 		if !needToCreateVirtualNode {
 			// nothing to do since mqtt doesn't require any service object
 			// TODO: should we support connectivity method change?
 			break
 		}
 
-		mqttConfig := deviceObj.Spec.Connectivity.Config.MQTT.ForServer
+		mqttConfig := deviceObj.Spec.Connectivity.MQTTConfig
 		var cert *tls.Certificate
 		if tlsRef := mqttConfig.TLSSecretRef; tlsRef != nil {
 			cert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)

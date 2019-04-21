@@ -8,20 +8,9 @@ spec:
   unschedulable: false
   connectivity:
     method: grpc
-    config:
-      grpc:
-        forServer:
-          # here, setup an insecure grpc server
-          tlsSecretRef: null
-        # configuration for device here is to annotate how to configure edge device to access
-        forDevice:
-          # public aranya address for edge device to access
-          # you may have to setup cluster edge proxy or loadbalancer to 
-          # make this accessible to edge devices
-          server: aranya.example.com:10000
-          tlsSecretRef:
-            name: my-grpc-server-secret
-            namespace: edge
+    grpcConfig:
+      # here, aranya will setup an insecure grpc server
+      tlsSecretRef: null
 ---
 # Ingress configuration to tell your ingress plugin 
 # how to redirect requests to related grpc service
@@ -52,50 +41,38 @@ kind: EdgeDevice
 metadata:
   name: example-edge-device-mqtt
 spec:
-  unschedulable: false
   connectivity:
     method: mqtt
-    config:
-      mqtt:
-        # mqtt message namespace for aranya communication
-        namespace: /aranya.arhat.dev
-        # tell aranya how to connect mqtt broker
-        forServer:
-          #  # set secret ref to use tls when connecting to broker
-          # tlsSecretRef:
-          #   # kubernetes secret name
-          #   name: my-mqtt-client-secret
-          #   # kubenetes namespace in which to find the secret
-          #   namespace: iot-edge
-          # mqtt broker address
-          server: mqtt-broker:1883
-          # mqtt version, currently only 3.1.1 supported
-          version: "3.1.1"
-          # mqtt transport protocol, one of [tcp, websocket]
-          transport: tcp
-          # MQTT CONNECT packet
-          connectPacket:
-            cleanSession: true
-            will: true
-            willQos: 2
-            willRetain: false
-            willTopic: /will/go-away
-            willMessage: "I'm leaving now."
-            username: "foo"
-            password:
-              # kubernetes secret name for password
-              name: secret-name-for-mqtt-password
-              # kubernetes namespace in which to find the secret
-              namespace: secret-stored-in-this-namespace
-            clientID: foo
-            # time in seconds
-            keepalive: 30
-        # configuration here is to annotate how to configure edge device to access
-        forDevice:
-          # public mqtt broker address for edge device to access
-          server: mqtt.example.com:8080
-          tlsSecretRef:
-            # kubernetes secret name
-            name: my-secret
-            # kubenetes namespace in which to find the secret
-            namespace: iot-edge
+    mqttConfig:
+      # mqtt message namespace for aranya communication
+      messageNamespace: /aranya.arhat.dev
+      # tell aranya how to connect mqtt broker
+      #  # set secret ref to use tls when connecting to broker
+      # tlsSecretRef:
+      #   # kubernetes secret name
+      #   name: my-mqtt-client-secret
+      #   # kubenetes namespace in which to find the secret
+      #   namespace: iot-edge
+      # mqtt broker address
+      server: mqtt-broker:1883
+      # mqtt version, currently only 3.1.1 supported
+      version: "3.1.1"
+      # mqtt transport protocol, one of [tcp, websocket]
+      transport: tcp
+      # MQTT CONNECT packet
+      connectPacket:
+        cleanSession: true
+        will: true
+        willQos: 2
+        willRetain: false
+        willTopic: /will/go-away
+        willMessage: "I'm leaving now."
+        username: "foo"
+        password:
+          # kubernetes secret name for password
+          name: secret-name-for-mqtt-password
+          # kubernetes namespace in which to find the secret
+          namespace: secret-stored-in-this-namespace
+        clientID: foo
+        # time in seconds
+        keepalive: 30s

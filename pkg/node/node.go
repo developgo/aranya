@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeClient "k8s.io/client-go/kubernetes"
@@ -171,7 +172,7 @@ func (n *Node) Start() (err error) {
 
 				n.log.Info("trying to delete node object by virtual node")
 				err := n.kubeNodeClient.Delete(n.name, metav1.NewDeleteOptions(0))
-				if err != nil {
+				if err != nil && !errors.IsNotFound(err) {
 					n.log.Error(err, "failed to delete node object by virtual node")
 				}
 			}()

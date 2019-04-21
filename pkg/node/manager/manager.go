@@ -46,7 +46,7 @@ type baseManager struct {
 	sessions       *sessionManager
 	globalMsgChan  chan *connectivity.Msg
 	sessionTimeout time.Duration
-	closed         bool
+	stopped        bool
 
 	// signals
 	connected    chan struct{}
@@ -94,7 +94,7 @@ func (s *baseManager) onConnected(setConnected func() bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed {
+	if s.stopped {
 		return ErrManagerClosed
 	}
 
@@ -114,7 +114,7 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.closed {
+	if s.stopped {
 		return
 	}
 
@@ -145,6 +145,7 @@ func (s *baseManager) onDisconnected(setDisconnected func()) {
 	s.connected = make(chan struct{})
 	// signal device disconnected
 	close(s.disconnected)
+
 	// refresh global msg chan
 	close(s.globalMsgChan)
 	s.globalMsgChan = make(chan *connectivity.Msg, messageChannelSize)
@@ -154,7 +155,7 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.closed {
+	if s.stopped {
 		return nil, ErrManagerClosed
 	}
 
@@ -200,10 +201,10 @@ func (s *baseManager) onStop(closeManager func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed {
+	if s.stopped {
 		return
 	}
 
 	closeManager()
-	s.closed = true
+	s.stopped = true
 }

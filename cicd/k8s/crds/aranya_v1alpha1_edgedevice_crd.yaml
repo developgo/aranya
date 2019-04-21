@@ -24,211 +24,54 @@ spec:
           type: object
         spec:
           properties:
-            configSource:
-              properties:
-                configMap:
-                  type: object
-              type: object
             connectivity:
               properties:
-                config:
-                  properties:
-                    grpc:
-                      properties:
-                        forDevice:
-                          properties:
-                            server:
-                              type: string
-                            tlsSecretRef:
-                              type: object
-                          type: object
-                      type: object
-                    mqtt:
-                      properties:
-                        forDevice:
-                          properties:
-                            connectPacket:
-                              properties:
-                                cleanSession:
-                                  type: boolean
-                                clientID:
-                                  type: string
-                                keepalive:
-                                  format: int32
-                                  type: integer
-                                password:
-                                  type: object
-                                username:
-                                  type: string
-                                will:
-                                  type: boolean
-                                willMessage:
-                                  type: string
-                                willQos:
-                                  format: int32
-                                  type: integer
-                                willRetain:
-                                  type: boolean
-                                willTopic:
-                                  type: string
-                              type: object
-                            server:
-                              type: string
-                            tlsSecretRef:
-                              type: object
-                            transport:
-                              type: string
-                            version:
-                              type: string
-                          type: object
-                        forServer:
-                          properties:
-                            connectPacket:
-                              properties:
-                                cleanSession:
-                                  type: boolean
-                                clientID:
-                                  type: string
-                                keepalive:
-                                  format: int32
-                                  type: integer
-                                password:
-                                  type: object
-                                username:
-                                  type: string
-                                will:
-                                  type: boolean
-                                willMessage:
-                                  type: string
-                                willQos:
-                                  format: int32
-                                  type: integer
-                                willRetain:
-                                  type: boolean
-                                willTopic:
-                                  type: string
-                              type: object
-                            server:
-                              type: string
-                            tlsSecretRef:
-                              type: object
-                            transport:
-                              type: string
-                            version:
-                              type: string
-                          type: object
-                        namespace:
-                          type: string
-                      type: object
-                  type: object
                 method:
                   type: string
-              type: object
-            taints:
-              items:
-                type: object
-              type: array
-            unschedulable:
-              type: boolean
-          type: object
+                grpcConfig:
+                  properties:
+                    server:
+                      type: string
+                    tlsSecretRef:
+                      type: object
+                mqttConfig:
+                  properties:
+                    broker:
+                      type: string
+                    tlsSecretRef:
+                      type: object
+                    transport:
+                      type: string
+                    version:
+                      type: string
+                    messageNamespace:
+                      type: string
+                    connectPacket:
+                      properties:
+                        cleanSession:
+                          type: boolean
+                        clientID:
+                          type: string
+                        keepalive:
+                          format: int32
+                          type: integer
+                        password:
+                          type: object
+                        username:
+                          type: string
+                        will:
+                          type: boolean
+                        willMessage:
+                          type: string
+                        willQos:
+                          format: int32
+                          type: integer
+                        willRetain:
+                          type: boolean
+                        willTopic:
+                          type: string
         status:
-          properties:
-            allocatable:
-              additionalProperties:
-                type: object
-              type: object
-            capacity:
-              additionalProperties:
-                type: object
-              type: object
-            conditions:
-              items:
-                properties:
-                  lastHeartbeatTime:
-                    format: date-time
-                    type: string
-                  lastTransitionTime:
-                    format: date-time
-                    type: string
-                  message:
-                    type: string
-                  reason:
-                    type: string
-                  status:
-                    type: string
-                  type:
-                    type: string
-                required:
-                - type
-                - status
-                type: object
-              type: array
-            config:
-              properties:
-                configMap:
-                  type: object
-              type: object
-            deviceInfo:
-              properties:
-                architecture:
-                  type: string
-                arhatVersion:
-                  type: string
-                bootID:
-                  type: string
-                containerRuntimeVersion:
-                  type: string
-                kernelVersion:
-                  type: string
-                machineID:
-                  type: string
-                operatingSystem:
-                  type: string
-                osImage:
-                  type: string
-                systemUUID:
-                  type: string
-              required:
-              - machineID
-              - systemUUID
-              - bootID
-              - kernelVersion
-              - osImage
-              - containerRuntimeVersion
-              - arhatVersion
-              - operatingSystem
-              - architecture
-              type: object
-            images:
-              items:
-                type: object
-              type: array
-            networks:
-              items:
-                properties:
-                  address:
-                    type: string
-                  interface:
-                    type: string
-                  isp:
-                    type: string
-                required:
-                - isp
-                - interface
-                - address
-                type: object
-              type: array
-            phase:
-              type: string
-            volumesAttached:
-              items:
-                type: object
-              type: array
-            volumesInUse:
-              items:
-                type: string
-              type: array
-          type: object
+          properties: {}
   version: v1alpha1
   versions:
   - name: v1alpha1

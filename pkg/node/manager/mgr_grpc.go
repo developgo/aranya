@@ -39,7 +39,8 @@ func (m *GRPCManager) Start() error {
 }
 
 func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
-	connCtx, closeConn := context.WithCancel(context.Background())
+	connCtx, closeConn := context.WithCancel(server.Context())
+
 	if err := m.onConnected(func() (accept bool) {
 		if m.syncSrv == nil {
 			m.syncSrv = server
@@ -52,12 +53,10 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 		return err
 	}
 
-	defer func() {
-		m.onDisconnected(func() {
-			log.Info("device disconnected")
-			m.syncSrv = nil
-		})
-	}()
+	defer m.onDisconnected(func() {
+		log.Info("device disconnected")
+		m.syncSrv = nil
+	})
 
 	msgCh := make(chan *connectivity.Msg, messageChannelSize)
 	go func() {
@@ -83,7 +82,7 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 	for {
 		select {
 		case <-connCtx.Done():
-			return connCtx.Err()
+			return nil
 		case msg, more := <-msgCh:
 			if !more {
 				return nil
