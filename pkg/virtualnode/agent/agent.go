@@ -243,7 +243,7 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 func processInNewGoroutine(sid uint64, cmdName string, process func()) {
 	go func() {
 		log.Printf("[%d] trying to handle %s", sid, cmdName)
-		defer log.Printf("[%d] finished handleing %s", sid, cmdName)
+		defer log.Printf("[%d] finished handling %s", sid, cmdName)
 
 		process()
 	}()
