@@ -5,12 +5,11 @@ kind: EdgeDevice
 metadata:
   name: example-edge-device-grpc
 spec:
-  unschedulable: false
   connectivity:
     method: grpc
     grpcConfig:
-      # here, aranya will setup an insecure grpc server
-      tlsSecretRef: null
+      # here, with empty ref, aranya will setup an insecure grpc server
+      tlsSecretRef: {}
 ---
 # Ingress configuration to tell your ingress plugin 
 # how to redirect requests to related grpc service
@@ -75,4 +74,4 @@ spec:
           namespace: secret-stored-in-this-namespace
         clientID: foo
         # time in seconds
-        keepalive: 30s
+        keepalive: 30

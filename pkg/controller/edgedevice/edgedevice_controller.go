@@ -341,8 +341,12 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			}()
 
 			var grpcSrvOptions []grpc.ServerOption
-			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil {
+			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil && tlsRef.Name != "" {
 				var grpcServerCert *tls.Certificate
+
+				if tlsRef.Namespace == "" {
+					tlsRef.Namespace = namespace
+				}
 
 				reqLog.Info("trying to get grpc server tls secret")
 				grpcServerCert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
@@ -424,15 +428,24 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 		mqttConfig := deviceObj.Spec.Connectivity.MQTTConfig
 		var cert *tls.Certificate
-		if tlsRef := mqttConfig.TLSSecretRef; tlsRef != nil {
+		if tlsRef := mqttConfig.TLSSecretRef; tlsRef != nil && tlsRef.Name != "" {
+
+			if tlsRef.Namespace == "" {
+				tlsRef.Namespace = namespace
+			}
+
+			reqLog.Info("trying to get mqtt client tls secret")
 			cert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
 			if err != nil {
+				reqLog.Error(err, "failed to get mqtt client tls secret")
 				return err
 			}
 		}
 
+		reqLog.Info("trying to create mqtt connectivity manager")
 		creationOpts.Manager, err = manager.NewMQTTManager(mqttConfig, cert)
 		if err != nil {
+			reqLog.Error(err, "failed to create mqtt connectivity manager")
 			return err
 		}
 	default:
@@ -461,10 +474,6 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 }
 
 func (r *ReconcileEdgeDevice) GetCertFromSecret(namespace, name string) (*tls.Certificate, error) {
-	if namespace == "" {
-		namespace = constant.CurrentNamespace()
-	}
-
 	tlsSecret := &corev1.Secret{}
 	err := r.client.Get(r.ctx, types.NamespacedName{Namespace: namespace, Name: name}, tlsSecret)
 	if err != nil {
