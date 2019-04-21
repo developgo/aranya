@@ -59,37 +59,71 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
 
+			log.Info("pod object created", "infoType", "create")
+
+			// always cache newly created pod
 			mgr.podCache.Update(pod)
-			mgr.podWorkQueue.Offer(queue.ActionCreate, pod.UID)
+			// always schedule work for edge device
+			mgr.podWorkQueue.MustOffer(queue.ActionCreate, pod.UID)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			// when pod object has been updated, we cache the new pod for possible future use
 			oldPod := oldObj.(*corev1.Pod).DeepCopy()
 			newPod := newObj.(*corev1.Pod).DeepCopy()
 
-			// we need to keep the pod cache always up to date
-			mgr.podCache.Update(newPod)
-
-			// pod need to be updated on device
-			// only when its spec has been changed or itself has been deleted
-			oldPod.ResourceVersion = newPod.ResourceVersion
-			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
-				log.Info("skip enqueue pod update")
-				return
-			}
+			updateLog := log.WithValues("infoType", "update")
 
 			podDeleted := !(newPod.GetDeletionTimestamp() == nil || newPod.GetDeletionTimestamp().IsZero())
 			if podDeleted {
-				mgr.podWorkQueue.Offer(queue.ActionDelete, newPod.UID)
+				// pod object has been deleted, but we do have cache for it,
+				// which means we have that pod running on the edge device
+				// delete it
+				if _, ok := mgr.podCache.GetByID(newPod.UID); !ok {
+					updateLog.Info("pod object already deleted, take no action")
+					return
+				}
+
+				if mgr.podWorkQueue.Offer(queue.ActionDelete, newPod.UID) {
+					updateLog.Info("pod object to be deleted, work scheduled")
+				} else {
+					updateLog.Info("pod object to be deleted, work discarded")
+				}
+
+				// we don't want to cache a deleted pod in any case
 				return
 			}
 
-			mgr.podWorkQueue.Offer(queue.ActionUpdate, newPod.UID)
+			// when pod object has been updated (and not deleted),
+			// we cache the new pod for possible future use
+			mgr.podCache.Update(newPod)
+
+			// pod need to be updated on device only when its spec has been changed
+			// TODO: evaluate more delicate check
+			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				log.Info("pod object not updated, skip")
+				return
+			}
+
+			if mgr.podWorkQueue.Offer(queue.ActionUpdate, newPod.UID) {
+				log.Info("pod object updated, work scheduled")
+			} else {
+				log.Info("pod object updated, work discarded")
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
 
-			mgr.podWorkQueue.Offer(queue.ActionDelete, pod.UID)
+			deleteLog := log.WithValues("infoType", "delete")
+
+			if _, ok := mgr.podCache.GetByID(pod.UID); !ok {
+				deleteLog.Info("pod object already deleted, take no action")
+				return
+			}
+
+			if mgr.podWorkQueue.Offer(queue.ActionDelete, pod.UID) {
+				deleteLog.Info("pod object to be deleted, work scheduled")
+			} else {
+				deleteLog.Info("pod object to be deleted, work discarded")
+			}
 		},
 	})
 
@@ -136,7 +170,6 @@ func (m *Manager) Start() (err error) {
 
 		for !m.exiting() {
 			// prevent work to be delivered when device is offline
-			// TODO: remove?
 			m.podWorkQueue.Stop()
 
 			select {

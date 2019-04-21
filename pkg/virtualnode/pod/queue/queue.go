@@ -188,6 +188,26 @@ func (q *WorkQueue) Offer(action workType, uid types.UID) bool {
 	return true
 }
 
+// MustOffer enqueue a work unconditionally
+func (q *WorkQueue) MustOffer(action workType, uid types.UID) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	newWork := Work{Action: action, UID: uid}
+	q.add(newWork)
+
+	// release the gate if needed
+	select {
+	case <-q.hasWork:
+		// we can reach here means q.hasWork has been closed
+	default:
+		// release the signal
+		close(q.hasWork)
+		// mark the channel closed to prevent a second close which would panic
+		q.chanClosed = true
+	}
+}
+
 // Start do nothing but mark you can perform acquire
 // actions to the work queue
 func (q *WorkQueue) Start() {
