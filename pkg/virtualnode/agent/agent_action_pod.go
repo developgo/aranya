@@ -219,12 +219,16 @@ func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	// best effort
 	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if c.config.AllowHostExec && strings.HasPrefix(opt.Command[0], "#") {
-		// host exec
-		opt.Command[0] = opt.Command[0][1:]
-		if err := execInHost(stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
-			c.handleError(sid, err)
-			return
+	if strings.HasPrefix(opt.Command[0], "#") {
+		if c.config.AllowHostExec {
+			// host exec
+			opt.Command[0] = opt.Command[0][1:]
+			if err := execInHost(stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
+				c.handleError(sid, err)
+				return
+			}
+		} else {
+			c.handleError(sid, errors.New("host exec not allowed"))
 		}
 
 		return
