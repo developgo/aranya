@@ -5,8 +5,8 @@ package runtime
 import (
 	"context"
 
-	"arhat.dev/aranya/pkg/node/agent/runtime"
-	"arhat.dev/aranya/pkg/node/agent/runtime/containerd"
+	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
+	"arhat.dev/aranya/pkg/virtualnode/agent/runtime/containerd"
 )
 
 func GetRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {

@@ -13,10 +13,11 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	"arhat.dev/aranya/cmd/arhat/internal/conn"
+	internalagent "arhat.dev/aranya/cmd/arhat/internal/agent"
 	cmdRuntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
-	"arhat.dev/aranya/pkg/node/agent/runtime"
-	"arhat.dev/aranya/pkg/node/connectivity"
+	"arhat.dev/aranya/pkg/virtualnode/agent"
+	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
 const (
@@ -30,6 +31,7 @@ var (
 type Config struct {
 	Connectivity connectivity.Config `json:"connectivity" yaml:"connectivity"`
 	Runtime      runtime.Config      `json:"runtime" yaml:"runtime"`
+	Agent        agent.Config        `json:"agent" yaml:"agent"`
 }
 
 func NewArhatCmd() *cobra.Command {
@@ -90,16 +92,17 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	for !exiting() {
-		client, err := conn.GetConnectivityClient(ctx, &config.Connectivity, rt)
+		ag, err := internalagent.New(ctx, &config.Agent, &config.Connectivity, rt)
 		if err != nil {
 			log.Printf("failed to get client: %v", err)
 			return err
 		}
 
-		if err = client.Run(ctx); err != nil {
+		if err = ag.Start(ctx); err != nil {
 			log.Printf("failed to run sync loop: %v", err)
 			return err
 		}
+
 		time.Sleep(time.Second)
 	}
 

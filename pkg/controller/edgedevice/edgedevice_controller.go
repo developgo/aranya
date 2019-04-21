@@ -28,19 +28,15 @@ import (
 
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node"
-	"arhat.dev/aranya/pkg/node/manager"
-)
-
-const (
-	controllerName = "aranya"
+	"arhat.dev/aranya/pkg/virtualnode"
+	"arhat.dev/aranya/pkg/virtualnode/manager"
 )
 
 var (
 	once = &sync.Once{}
 )
 
-var log = logf.Log.WithName(controllerName)
+var log = logf.Log.WithName("aranya")
 
 // AddToManager creates a new EdgeDevice Controller and adds it to the manager. The manager will set fields on the Controller
 // and Start it when the manager is Started.
@@ -62,7 +58,7 @@ func newReconciler(mgr controllermanager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr controllermanager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("aranya", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -188,8 +184,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	var (
 		nodeObj      = &corev1.Node{}
 		svcObj       = &corev1.Service{}
-		creationOpts = &node.CreationOptions{}
-		virtualNode  *node.Node
+		creationOpts = &virtualnode.CreationOptions{}
+		virtualNode  *virtualnode.VirtualNode
 
 		needToCheckDeviceObject bool
 		needToCreateNodeObject  bool
@@ -207,7 +203,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		// since the node object not found (has been deleted),
 		// delete the related virtual node
 		reqLog.Info("node object not found, destroying virtual node")
-		node.Delete(name)
+		virtualnode.Delete(name)
 
 		needToCheckDeviceObject = true
 		needToCreateNodeObject = true
@@ -216,14 +212,14 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		if nodeDeleted {
 			// node to be deleted, delete the related virtual node
 			reqLog.Info("node object deleted, destroying virtual node")
-			node.Delete(name)
+			virtualnode.Delete(name)
 
 			needToCheckDeviceObject = true
 			needToCreateNodeObject = true
 		} else {
 			// node presents and not deleted, virtual node MUST exist
 			// (or we need to delete the all related objects)
-			virtualNode, ok = node.Get(name)
+			virtualNode, ok = virtualnode.Get(name)
 			if !ok {
 				if err = r.cleanupVirtualNode(reqLog, namespace, name); err != nil {
 					return err
@@ -457,7 +453,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		creationOpts.KubeClient = r.kubeClient
 
 		reqLog.Info("creating virtual node", "options", creationOpts)
-		virtualNode, err = node.CreateVirtualNode(r.ctx, creationOpts)
+		virtualNode, err = virtualnode.CreateVirtualNode(r.ctx, creationOpts)
 		if err != nil {
 			reqLog.Error(err, "failed to create virtual node")
 			return err

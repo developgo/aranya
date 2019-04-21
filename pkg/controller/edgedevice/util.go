@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/node"
+	"arhat.dev/aranya/pkg/virtualnode"
 )
 
 var (
@@ -71,7 +71,7 @@ func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() (hostNodeName string, ad
 }
 
 func (r *ReconcileEdgeDevice) cleanupVirtualNode(reqLog logr.Logger, namespace, name string) (err error) {
-	node.Delete(name)
+	virtualnode.Delete(name)
 
 	needToDeleteNodeObj := true
 	nodeObj := &corev1.Node{}

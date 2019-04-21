@@ -154,6 +154,7 @@ require (
 	github.com/klauspost/compress v1.4.1 // indirect
 	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.1 // indirect
+	github.com/kr/pty v1.1.4
 	github.com/lib/pq v0.0.0-00010101000000-000000000000 // indirect
 	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mattn/go-shellwords v1.0.5 // indirect

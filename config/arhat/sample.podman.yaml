@@ -1,3 +1,6 @@
+agent:
+  allow_host_exec: false
+
 runtime:
   volume_data_dir: /tmp/arhat/data
   management_namespace: container.arhat.dev

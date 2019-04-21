@@ -15,7 +15,7 @@ ARHAT_SRC := ./cmd/arhat
 arhat-podman-grpc:
 	CGO_ENABLED=1 GOOS=linux\
 	$(GOBUILD) \
-		-tags='rt_podman conn_grpc' \
+		-tags='rt_podman agent_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -23,7 +23,7 @@ arhat-podman-grpc:
 arhat-cri-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_cri conn_grpc' \
+		-tags='rt_cri agent_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -31,7 +31,7 @@ arhat-cri-grpc:
 arhat-fake-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_fake conn_grpc' \
+		-tags='rt_fake agent_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -39,7 +39,7 @@ arhat-fake-grpc:
 arhat-containerd-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_containerd conn_grpc' \
+		-tags='rt_containerd agent_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -47,7 +47,7 @@ arhat-containerd-grpc:
 arhat-docker-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_docker conn_grpc' \
+		-tags='rt_docker agent_grpc' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -59,7 +59,7 @@ arhat-docker-grpc:
 arhat-podman-mqtt:
 	CGO_ENABLED=1 GOOS=linux \
 	$(GOBUILD) \
-		-tags='rt_podman conn_mqtt' \
+		-tags='rt_podman agent_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -67,7 +67,7 @@ arhat-podman-mqtt:
 arhat-cri-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_cri conn_mqtt' \
+		-tags='rt_cri agent_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -75,7 +75,7 @@ arhat-cri-mqtt:
 arhat-fake-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_fake conn_mqtt' \
+		-tags='rt_fake agent_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -83,7 +83,7 @@ arhat-fake-mqtt:
 arhat-containerd-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_containerd conn_mqtt' \
+		-tags='rt_containerd agent_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
 
@@ -91,6 +91,6 @@ arhat-containerd-mqtt:
 arhat-docker-mqtt:
 	CGO_ENABLED=0 \
 	$(GOBUILD) \
-		-tags='rt_docker conn_mqtt' \
+		-tags='rt_docker agent_mqtt' \
 		-o $(BUILD_DIR)/$@ \
 		$(ARHAT_SRC)
