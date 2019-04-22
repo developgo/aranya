@@ -71,6 +71,8 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
+
 		httpLog.Info("starting to serve exec")
 		kubeletremotecommand.ServeExec(
 			w, r, /* http context */
@@ -108,6 +110,8 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
+
 		httpLog.Info("starting to serve attach")
 		kubeletremotecommand.ServeAttach(
 			w, r, /* http context */
@@ -169,6 +173,8 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
+
 		httpLog.Info("starting to serve port forward")
 		kubeletportforward.ServePortForward(
 			w, r, /* http context */
