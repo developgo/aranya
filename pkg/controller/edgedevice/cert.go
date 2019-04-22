@@ -11,17 +11,17 @@ import (
 	"fmt"
 
 	"github.com/cloudflare/cfssl/csr"
-	cfsslHelpers "github.com/cloudflare/cfssl/helpers"
-	certv1beta1 "k8s.io/api/certificates/v1beta1"
+	cfsslhelpers "github.com/cloudflare/cfssl/helpers"
+	certapi "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	kubeErrors "k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeClient "k8s.io/client-go/kubernetes"
+	kubeclient "k8s.io/client-go/kubernetes"
 
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
+func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
 	var (
 		hosts                  []string
 		requiredValidAddresses = make(map[string]struct{})
@@ -60,7 +60,7 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 	pkSecret, err := secretClient.Get(secretObjName, metav1.GetOptions{})
 	if err != nil {
 		// create secret object if not found, add tls.csr
-		if kubeErrors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			needToCreateCSR = true
 		} else {
 			log.Error(err, "failed to get csr and private key secret")
@@ -133,7 +133,7 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 			log.Info("validating old csr")
 
 			var oldCSR *x509.CertificateRequest
-			oldCSR, _, err = cfsslHelpers.ParseCSR(csrBytes)
+			oldCSR, _, err = cfsslhelpers.ParseCSR(csrBytes)
 			if err != nil {
 				log.Error(err, "failed to parse old csr")
 				return nil, err
@@ -158,7 +158,7 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 			if needToCreateKubeCSR {
 				log.Info("old csr invalid, possible host node address change, recreating")
 
-				key, err := cfsslHelpers.ParsePrivateKeyPEM(privateKeyBytes)
+				key, err := cfsslhelpers.ParsePrivateKeyPEM(privateKeyBytes)
 				if err != nil {
 					log.Error(err, "failed to parse private key")
 					return nil, err
@@ -181,7 +181,7 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 		kubeCSRNotFound := false
 		csrReq, err := certClient.Get(csrObjName, metav1.GetOptions{})
 		if err != nil {
-			if kubeErrors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				kubeCSRNotFound = true
 				needToCreateKubeCSR = true
 			} else {
@@ -191,21 +191,21 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 		}
 
 		if needToCreateKubeCSR {
-			csrObj := &certv1beta1.CertificateSigningRequest{
+			csrObj := &certapi.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					// not namespaced
 					Name: csrObjName,
 				},
-				Spec: certv1beta1.CertificateSigningRequestSpec{
+				Spec: certapi.CertificateSigningRequestSpec{
 					Request: csrBytes,
 					Groups: []string{
 						"system:nodes",
 						"system:authenticated",
 					},
-					Usages: []certv1beta1.KeyUsage{
-						certv1beta1.UsageServerAuth,
-						certv1beta1.UsageDigitalSignature,
-						certv1beta1.UsageKeyEncipherment,
+					Usages: []certapi.KeyUsage{
+						certapi.UsageServerAuth,
+						certapi.UsageDigitalSignature,
+						certapi.UsageKeyEncipherment,
 					},
 				},
 			}
@@ -228,15 +228,15 @@ func getKubeletServerCert(client kubeClient.Interface, hostNodeName, virtualNode
 
 		for _, condition := range csrReq.Status.Conditions {
 			switch condition.Type {
-			case certv1beta1.CertificateApproved, certv1beta1.CertificateDenied:
+			case certapi.CertificateApproved, certapi.CertificateDenied:
 				needToApproveKubeCSR = false
 				break
 			}
 		}
 
 		if needToApproveKubeCSR {
-			csrReq.Status.Conditions = append(csrReq.Status.Conditions, certv1beta1.CertificateSigningRequestCondition{
-				Type:    certv1beta1.CertificateApproved,
+			csrReq.Status.Conditions = append(csrReq.Status.Conditions, certapi.CertificateSigningRequestCondition{
+				Type:    certapi.CertificateApproved,
 				Reason:  "AutoApproved",
 				Message: "self approved by aranya node",
 			})

@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	kubeletApis "k8s.io/kubernetes/pkg/kubelet/apis"
+	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
@@ -84,7 +84,7 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, addresses []corev1.NodeAddr
 				constant.LabelRole:        constant.LabelRoleValueEdgeDevice,
 				constant.LabelName:        device.Name,
 				"kubernetes.io/role":      "EdgeDevice",
-				kubeletApis.LabelHostname: hostname,
+				kubeletapis.LabelHostname: hostname,
 			},
 			ClusterName: device.ClusterName,
 		},

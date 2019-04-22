@@ -13,62 +13,62 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )
 
-func (c *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
-	podResp, err := c.runtime.CreatePod(options)
+func (b *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
+	podResp, err := b.runtime.CreatePod(options)
 
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
-	if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, podResp)); err != nil {
-		c.handleError(sid, err)
+	if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, podResp)); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
-	podDeleted, err := c.runtime.DeletePod(options)
+func (b *baseAgent) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
+	podDeleted, err := b.runtime.DeletePod(options)
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
-	if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, podDeleted)); err != nil {
-		c.handleError(sid, err)
+	if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, podDeleted)); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
-	pods, err := c.runtime.ListPod(options)
+func (b *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
+	pods, err := b.runtime.ListPod(options)
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
 	if len(pods) == 0 {
-		if err := c.doPostMsg(connectivity.NewPodMsg(sid, true, nil)); err != nil {
-			c.handleError(sid, err)
+		if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, nil)); err != nil {
+			b.handleError(sid, err)
 		}
 		return
 	}
 
 	lastIndex := len(pods) - 1
 	for i, p := range pods {
-		if err := c.doPostMsg(connectivity.NewPodMsg(sid, i == lastIndex, p)); err != nil {
-			c.handleError(sid, err)
+		if err := b.doPostMsg(connectivity.NewPodMsg(sid, i == lastIndex, p)); err != nil {
+			b.handleError(sid, err)
 			return
 		}
 	}
 }
 
-func (c *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
-	defer c.openedStreams.del(sid)
+func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+	defer b.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedExecOptions()
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
@@ -105,8 +105,8 @@ func (c *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
-					c.handleError(sid, err)
+				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+					b.handleError(sid, err)
 					return
 				}
 			}
@@ -122,8 +122,8 @@ func (c *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
-					c.handleError(sid, err)
+				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+					b.handleError(sid, err)
 					return
 				}
 			}
@@ -131,28 +131,28 @@ func (c *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 	}
 
 	// best effort
-	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.AttachContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
-		c.handleError(sid, err)
+	if err := b.runtime.AttachContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer func() {
-		c.openedStreams.del(sid)
+		b.openedStreams.del(sid)
 		log.Printf("finished contaienr exec")
 	}()
 
 	opt, err := options.GetResolvedExecOptions()
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
 	if len(opt.Command) == 0 {
-		c.handleError(sid, errors.New("command not provided for exec"))
+		b.handleError(sid, errors.New("command not provided for exec"))
 		return
 	}
 
@@ -191,8 +191,8 @@ func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
-					c.handleError(sid, err)
+				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+					b.handleError(sid, err)
 					return
 				}
 			}
@@ -208,8 +208,8 @@ func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
-				if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
-					c.handleError(sid, err)
+				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+					b.handleError(sid, err)
 					return
 				}
 			}
@@ -217,25 +217,25 @@ func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	}
 
 	// best effort
-	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
 	if strings.HasPrefix(opt.Command[0], "#") {
-		if c.config.AllowHostExec {
+		if b.config.AllowHostExec {
 			// host exec
 			opt.Command[0] = opt.Command[0][1:]
 			if err := execInHost(stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
-				c.handleError(sid, err)
+				b.handleError(sid, err)
 				return
 			}
 		} else {
-			c.handleError(sid, errors.New("host exec not allowed"))
+			b.handleError(sid, errors.New("host exec not allowed"))
 		}
 
 		return
 	} else {
 		// container exec
-		if err := c.runtime.ExecInContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
-			c.handleError(sid, err)
+		if err := b.runtime.ExecInContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
+			b.handleError(sid, err)
 			return
 		}
 
@@ -243,10 +243,10 @@ func (c *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	}
 }
 
-func (c *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions) {
+func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions) {
 	opt, err := options.GetResolvedLogOptions()
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
@@ -262,7 +262,7 @@ func (c *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 		s.Split(util.ScanAnyAvail)
 
 		for s.Scan() {
-			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
 				return
 			}
 		}
@@ -274,27 +274,27 @@ func (c *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 		s.Split(util.ScanAnyAvail)
 
 		for s.Scan() {
-			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
 				return
 			}
 		}
 	}()
 
 	// best effort
-	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.GetContainerLogs(options.GetPodUid(), opt, stdout, stderr); err != nil {
-		c.handleError(sid, err)
+	if err := b.runtime.GetContainerLogs(options.GetPodUid(), opt, stdout, stderr); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
-	defer c.openedStreams.del(sid)
+func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
+	defer b.openedStreams.del(sid)
 
 	opt, err := options.GetResolvedOptions()
 	if err != nil {
-		c.handleError(sid, err)
+		b.handleError(sid, err)
 		return
 	}
 
@@ -320,17 +320,17 @@ func (c *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 		s.Split(util.ScanAnyAvail)
 
 		for s.Scan() {
-			if err := c.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
 				return
 			}
 		}
 	}()
 
 	// best effort
-	defer func() { _ = c.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
+	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := c.runtime.PortForward(options.GetPodUid(), opt, input, output); err != nil {
-		c.handleError(sid, err)
+	if err := b.runtime.PortForward(options.GetPodUid(), opt, input, output); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }

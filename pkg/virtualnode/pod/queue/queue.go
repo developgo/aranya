@@ -1,10 +1,17 @@
 package queue
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
 	"k8s.io/apimachinery/pkg/types"
+)
+
+var (
+	ErrWorkDuplicate  = errors.New("work duplicated")
+	ErrWorkConflict   = errors.New("work conflicted")
+	ErrWorkCounteract = errors.New("work counteracted")
 )
 
 type workType uint8
@@ -131,29 +138,29 @@ func (q *WorkQueue) Acquire() (w Work, shouldAcquireMore bool) {
 }
 
 // Offer a work item to the work queue
-// if offered work was not added, a false result will return, otherwise true
-func (q *WorkQueue) Offer(action workType, uid types.UID) bool {
+// if offered work was not added, an error result will return, otherwise nil
+func (q *WorkQueue) Offer(action workType, uid types.UID) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
 	newWork := Work{Action: action, UID: uid}
 	_, hasSameWorkForSamePod := q.index[newWork]
 	if hasSameWorkForSamePod {
-		return false
+		return ErrWorkDuplicate
 	}
 
 	switch action {
 	case ActionCreate:
 		if q.has(ActionUpdate, uid) {
 			// pod create should only happen when pod doesn't exists or has been deleted
-			return false
+			return ErrWorkConflict
 		}
 
 		q.add(newWork)
 	case ActionUpdate:
 		if q.has(ActionCreate, uid) || q.has(ActionDelete, uid) {
 			// pod update should only happens when pod has been created and running
-			return false
+			return ErrWorkConflict
 		}
 
 		q.add(newWork)
@@ -162,7 +169,7 @@ func (q *WorkQueue) Offer(action workType, uid types.UID) bool {
 		if q.has(ActionCreate, uid) {
 			// cancel according create work
 			q.delete(ActionCreate, uid)
-			return false
+			return ErrWorkCounteract
 		}
 
 		if q.has(ActionUpdate, uid) {
@@ -185,27 +192,7 @@ func (q *WorkQueue) Offer(action workType, uid types.UID) bool {
 		q.chanClosed = true
 	}
 
-	return true
-}
-
-// MustOffer enqueue a work unconditionally
-func (q *WorkQueue) MustOffer(action workType, uid types.UID) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	newWork := Work{Action: action, UID: uid}
-	q.add(newWork)
-
-	// release the gate if needed
-	select {
-	case <-q.hasWork:
-		// we can reach here means q.hasWork has been closed
-	default:
-		// release the signal
-		close(q.hasWork)
-		// mark the channel closed to prevent a second close which would panic
-		q.chanClosed = true
-	}
+	return nil
 }
 
 // Start do nothing but mark you can perform acquire

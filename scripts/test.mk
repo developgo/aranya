@@ -2,7 +2,7 @@ include scripts/tools.mk
 
 test:
 	$(GOTEST) \
-	./pkg/node/manager \
-	./pkg/node/agent \
-	./pkg/node/pod/queue \
-	./pkg/node/pod/cache
+	./pkg/virtualnode/manager \
+	./pkg/virtualnode/agent \
+	./pkg/virtualnode/pod/queue \
+	./pkg/virtualnode/pod/cache

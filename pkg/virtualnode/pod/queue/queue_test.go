@@ -16,7 +16,7 @@ func TestWorkQueue_delete(t *testing.T) {
 
 	q := NewWorkQueue()
 	for i := 0; i < workCount; i++ {
-		q.Offer(ActionCreate, types.UID(strconv.Itoa(i)))
+		assert.NoError(t, q.Offer(ActionCreate, types.UID(strconv.Itoa(i))))
 	}
 
 	for i := 0; i < workCount/2; i++ {
@@ -63,8 +63,8 @@ func TestWorkQueueLogic(t *testing.T) {
 	q.Start()
 	assert.False(t, q.isClosed())
 
-	q.Offer(ActionUpdate, foo)
-	q.Offer(ActionUpdate, foo)
+	assert.NoError(t, q.Offer(ActionUpdate, foo))
+	assert.Equal(t, ErrWorkDuplicate, q.Offer(ActionUpdate, foo))
 
 	assert.Equal(t, 1, len(q.queue))
 	assert.Equal(t, 1, len(q.index))
@@ -76,17 +76,17 @@ func TestWorkQueueLogic(t *testing.T) {
 	assert.Equal(t, 0, len(q.queue))
 	assert.Equal(t, 0, len(q.index))
 
-	q.Offer(ActionCreate, foo)
-	q.Offer(ActionCreate, foo)
+	assert.NoError(t, q.Offer(ActionCreate, foo))
+	assert.Equal(t, ErrWorkDuplicate, q.Offer(ActionCreate, foo))
 	assert.Equal(t, 1, len(q.queue))
 	assert.Equal(t, 1, len(q.index))
 
-	q.Offer(ActionDelete, foo)
+	assert.Equal(t, ErrWorkCounteract, q.Offer(ActionDelete, foo))
 	assert.Equal(t, 0, len(q.queue))
 	assert.Equal(t, 0, len(q.index))
 
-	q.Offer(ActionUpdate, foo)
-	q.Offer(ActionDelete, foo)
+	assert.NoError(t, q.Offer(ActionUpdate, foo))
+	assert.NoError(t, q.Offer(ActionDelete, foo))
 	assert.Equal(t, 1, len(q.queue))
 	assert.Equal(t, 1, len(q.index))
 

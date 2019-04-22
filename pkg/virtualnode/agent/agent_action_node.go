@@ -11,52 +11,52 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func (c *baseAgent) doGetNodeInfoAll(sid uint64) {
-	nodeMsg := connectivity.NewNodeMsg(sid, c.getSystemInfo(), c.getResourceCapacity(), c.getResourceAllocatable(), c.getConditions())
-	if err := c.doPostMsg(nodeMsg); err != nil {
-		c.handleError(sid, err)
+func (b *baseAgent) doGetNodeInfoAll(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, b.getSystemInfo(), b.getResourceCapacity(), b.getResourceAllocatable(), b.getConditions())
+	if err := b.doPostMsg(nodeMsg); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doGetNodeSystemInfo(sid uint64) {
-	nodeMsg := connectivity.NewNodeMsg(sid, c.getSystemInfo(), nil, nil, nil)
-	if err := c.doPostMsg(nodeMsg); err != nil {
-		c.handleError(sid, err)
+func (b *baseAgent) doGetNodeSystemInfo(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, b.getSystemInfo(), nil, nil, nil)
+	if err := b.doPostMsg(nodeMsg); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doGetNodeResources(sid uint64) {
-	nodeMsg := connectivity.NewNodeMsg(sid, nil, c.getResourceCapacity(), c.getResourceAllocatable(), nil)
-	if err := c.doPostMsg(nodeMsg); err != nil {
-		c.handleError(sid, err)
+func (b *baseAgent) doGetNodeResources(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, b.getResourceCapacity(), b.getResourceAllocatable(), nil)
+	if err := b.doPostMsg(nodeMsg); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) doGetNodeConditions(sid uint64) {
-	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, c.getConditions())
-	if err := c.doPostMsg(nodeMsg); err != nil {
-		c.handleError(sid, err)
+func (b *baseAgent) doGetNodeConditions(sid uint64) {
+	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, b.getConditions())
+	if err := b.doPostMsg(nodeMsg); err != nil {
+		b.handleError(sid, err)
 		return
 	}
 }
 
-func (c *baseAgent) getSystemInfo() *corev1.NodeSystemInfo {
+func (b *baseAgent) getSystemInfo() *corev1.NodeSystemInfo {
 	nodeSystemInfo := systemInfo()
 	nodeSystemInfo.MachineID, _ = machineid.ID()
-	nodeSystemInfo.OperatingSystem = c.runtime.OS()
-	nodeSystemInfo.Architecture = c.runtime.Arch()
-	nodeSystemInfo.KernelVersion = c.runtime.KernelVersion()
-	nodeSystemInfo.ContainerRuntimeVersion = c.runtime.Name() + "://" + c.runtime.Version()
+	nodeSystemInfo.OperatingSystem = b.runtime.OS()
+	nodeSystemInfo.Architecture = b.runtime.Arch()
+	nodeSystemInfo.KernelVersion = b.runtime.KernelVersion()
+	nodeSystemInfo.ContainerRuntimeVersion = b.runtime.Name() + "://" + b.runtime.Version()
 	// TODO: set KubeletVersion and KubeProxyVersion at server side
 	// nodeSystemInfo.KubeletVersion
 	// nodeSystemInfo.KubeProxyVersion
 	return nodeSystemInfo
 }
 
-func (c *baseAgent) getResourceCapacity() corev1.ResourceList {
+func (b *baseAgent) getResourceCapacity() corev1.ResourceList {
 	return corev1.ResourceList{
 		corev1.ResourceCPU:              *resource.NewQuantity(1, resource.DecimalSI),
 		corev1.ResourceMemory:           *resource.NewQuantity(512*(2<<20), resource.BinarySI),
@@ -65,7 +65,7 @@ func (c *baseAgent) getResourceCapacity() corev1.ResourceList {
 	}
 }
 
-func (c *baseAgent) getResourceAllocatable() corev1.ResourceList {
+func (b *baseAgent) getResourceAllocatable() corev1.ResourceList {
 	return corev1.ResourceList{
 		corev1.ResourceCPU:              *resource.NewQuantity(1, resource.DecimalSI),
 		corev1.ResourceMemory:           *resource.NewQuantity(512*(2<<20), resource.BinarySI),
@@ -74,7 +74,7 @@ func (c *baseAgent) getResourceAllocatable() corev1.ResourceList {
 	}
 }
 
-func (c *baseAgent) getConditions() []corev1.NodeCondition {
+func (b *baseAgent) getConditions() []corev1.NodeCondition {
 	now := metav1.NewTime(time.Now())
 
 	return []corev1.NodeCondition{

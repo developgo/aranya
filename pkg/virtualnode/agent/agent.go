@@ -104,28 +104,28 @@ type baseAgent struct {
 
 // Called by actual connectivity client
 
-func (c *baseAgent) onConnect(connect func() error) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (b *baseAgent) onConnect(connect func() error) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	return connect()
 }
 
-func (c *baseAgent) onDisconnected(setDisconnected func()) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (b *baseAgent) onDisconnected(setDisconnected func()) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	setDisconnected()
 }
 
-func (c *baseAgent) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (b *baseAgent) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
 	return send(msg)
 }
 
-func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
+func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 	sid := cmd.GetSessionId()
 
 	switch cm := cmd.GetCmd().(type) {
@@ -133,19 +133,19 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 		switch cm.NodeCmd.GetAction() {
 		case connectivity.GetInfoAll:
 			processInNewGoroutine(sid, "node.get.all", func() {
-				c.doGetNodeInfoAll(sid)
+				b.doGetNodeInfoAll(sid)
 			})
 		case connectivity.GetSystemInfo:
 			processInNewGoroutine(sid, "node.get.sys", func() {
-				c.doGetNodeSystemInfo(sid)
+				b.doGetNodeSystemInfo(sid)
 			})
 		case connectivity.GetResources:
 			processInNewGoroutine(sid, "node.get.res", func() {
-				c.doGetNodeResources(sid)
+				b.doGetNodeResources(sid)
 			})
 		case connectivity.GetConditions:
 			processInNewGoroutine(sid, "node.get.cond", func() {
-				c.doGetNodeConditions(sid)
+				b.doGetNodeConditions(sid)
 			})
 		default:
 			log.Printf("[%d] unknown node cmd: %v", sid, cm.NodeCmd)
@@ -154,7 +154,7 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 		switch cm.ImageCmd.GetAction() {
 		case connectivity.ListImages:
 			processInNewGoroutine(sid, "image.list", func() {
-				c.doImageList(sid)
+				b.doImageList(sid)
 			})
 		default:
 			log.Printf("[%d] unknown image cmd: %v", sid, cm.ImageCmd)
@@ -164,61 +164,61 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 		// pod scope commands
 		case connectivity.CreatePod:
 			processInNewGoroutine(sid, "pod.create", func() {
-				c.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
+				b.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
 			})
 		case connectivity.DeletePod:
 			processInNewGoroutine(sid, "pod.delete", func() {
-				c.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
+				b.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
 			})
 		case connectivity.ListPods:
 			processInNewGoroutine(sid, "pod.list", func() {
-				c.doPodList(sid, cm.PodCmd.GetListOptions())
+				b.doPodList(sid, cm.PodCmd.GetListOptions())
 			})
 		case connectivity.PortForward:
 			inputCh := make(chan []byte, 1)
-			c.openedStreams.add(sid, inputCh, nil)
+			b.openedStreams.add(sid, inputCh, nil)
 
 			processInNewGoroutine(sid, "pod.portforward", func() {
-				c.doPortForward(sid, cm.PodCmd.GetPortForwardOptions(), inputCh)
+				b.doPortForward(sid, cm.PodCmd.GetPortForwardOptions(), inputCh)
 			})
 		// container scope commands
 		case connectivity.Exec:
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
-			c.openedStreams.add(sid, inputCh, resizeCh)
+			b.openedStreams.add(sid, inputCh, resizeCh)
 
 			processInNewGoroutine(sid, "pod.exec", func() {
-				c.doContainerExec(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+				b.doContainerExec(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 			})
 		case connectivity.Attach:
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
-			c.openedStreams.add(sid, inputCh, resizeCh)
+			b.openedStreams.add(sid, inputCh, resizeCh)
 
 			processInNewGoroutine(sid, "pod.attach", func() {
-				c.doContainerAttach(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+				b.doContainerAttach(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
 			})
 		case connectivity.Log:
 			processInNewGoroutine(sid, "pod.log", func() {
-				c.doContainerLog(sid, cm.PodCmd.GetLogOptions())
+				b.doContainerLog(sid, cm.PodCmd.GetLogOptions())
 			})
 		case connectivity.Input:
-			inputCh, ok := c.openedStreams.getInputChan(sid)
+			inputCh, ok := b.openedStreams.getInputChan(sid)
 			if !ok {
-				c.handleError(sid, ErrStreamSessionClosed)
+				b.handleError(sid, ErrStreamSessionClosed)
 				return
 			}
 
 			processInNewGoroutine(sid, "pod.input", func() {
 				select {
 				case inputCh <- cm.PodCmd.GetInputOptions().GetData():
-				case <-c.ctx.Done():
+				case <-b.ctx.Done():
 				}
 			})
 		case connectivity.ResizeTty:
-			resizeCh, ok := c.openedStreams.getResizeChan(sid)
+			resizeCh, ok := b.openedStreams.getResizeChan(sid)
 			if !ok {
-				c.handleError(sid, ErrStreamSessionClosed)
+				b.handleError(sid, ErrStreamSessionClosed)
 				return
 			}
 
@@ -229,7 +229,7 @@ func (c *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 				}
 				select {
 				case resizeCh <- size:
-				case <-c.ctx.Done():
+				case <-b.ctx.Done():
 				}
 			})
 		default:
@@ -251,9 +251,9 @@ func processInNewGoroutine(sid uint64, cmdName string, process func()) {
 
 // Internal processing
 
-func (c *baseAgent) handleError(sid uint64, e error) {
+func (b *baseAgent) handleError(sid uint64, e error) {
 	log.Printf("[%d] error: %v", sid, e)
-	if err := c.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
+	if err := b.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
 		log.Printf("failed to post error msg: %v", err)
 	}
 }

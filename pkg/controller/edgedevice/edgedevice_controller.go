@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	kubeClient "k8s.io/client-go/kubernetes"
+	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -51,7 +51,7 @@ func newReconciler(mgr controllermanager.Manager) reconcile.Reconciler {
 		scheme:     mgr.GetScheme(),
 		config:     mgr.GetConfig(),
 		ctx:        context.Background(),
-		kubeClient: kubeClient.NewForConfigOrDie(mgr.GetConfig()),
+		kubeClient: kubeclient.NewForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
@@ -93,7 +93,7 @@ type ReconcileEdgeDevice struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client     client.Client
-	kubeClient kubeClient.Interface
+	kubeClient kubeclient.Interface
 	scheme     *runtime.Scheme
 	config     *rest.Config
 	ctx        context.Context

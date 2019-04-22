@@ -127,14 +127,14 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
-	defer log.Info("finished stream handle")
+	defer httpStreamLog.Info("finished stream handle")
 
 	ctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
 
-	msgCh, err := m.manager.PostCmd(ctx, initialCmd)
-	if err != nil {
-		log.Error(err, "failed to post initial command")
+	var msgCh <-chan *connectivity.Msg
+	if msgCh, err = m.manager.PostCmd(ctx, initialCmd); err != nil {
+		httpStreamLog.Error(err, "failed to post initial command")
 		return err
 	}
 
@@ -153,21 +153,22 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 
 		go func() {
 			// defer close(inputCh)
+			defer httpStreamLog.Error(s.Err(), "finished stream input")
 
 			for s.Scan() {
-				inputCh <- connectivity.NewContainerInputCmd(sid, s.Bytes())
+				select {
+				case inputCh <- connectivity.NewContainerInputCmd(sid, s.Bytes()):
+				case <-ctx.Done():
+					return
+				}
 			}
-			log.Error(s.Err(), "finished stream input", "remains", s.Text())
 		}()
 	}
 
 	defer func() {
 		// close out and stderr with best effort
-		log.Info("close out writer")
 		_ = out.Close()
-
 		if stderr != nil {
-			log.Info("close err writer")
 			_ = stderr.Close()
 		}
 	}()
@@ -178,18 +179,17 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			return
 		case userInput, more := <-inputCh:
 			if !more {
-				log.Info("input ch closed")
+				httpStreamLog.Info("input channel closed")
 				return nil
 			}
 
-			_, err = m.manager.PostCmd(ctx, userInput)
-			if err != nil {
-				log.Error(err, "failed to post user input")
+			if _, err = m.manager.PostCmd(ctx, userInput); err != nil {
+				httpStreamLog.Error(err, "failed to post user input")
 				return err
 			}
 		case msg, more := <-msgCh:
 			if !more {
-				log.Info("msg ch closed")
+				httpStreamLog.Info("msg channel closed")
 				return nil
 			}
 
@@ -208,22 +208,20 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 					return fmt.Errorf("data kind unknown")
 				}
 
-				_, err = targetOutput.Write(m.Data.GetData())
-				if err != nil {
-					log.Error(err, "failed to write output")
+				if _, err = targetOutput.Write(m.Data.GetData()); err != nil {
+					httpStreamLog.Error(err, "failed to write output")
 					return err
 				}
 			}
 		case size, more := <-resizeCh:
 			if !more {
-				log.Info("resize ch closed")
+				httpStreamLog.Info("resize channel closed")
 				return nil
 			}
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
-			_, err = m.manager.PostCmd(ctx, resizeCmd)
-			if err != nil {
-				log.Error(err, "failed to post resize cmd")
+			if _, err = m.manager.PostCmd(ctx, resizeCmd); err != nil {
+				httpStreamLog.Error(err, "failed to post resize cmd")
 				return err
 			}
 		}
