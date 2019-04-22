@@ -54,13 +54,13 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
       - `grpc`
         - A gRPC server will be created and served by `aranya` according to the `spec.connectivity.grpcConfig`, `aranya` also maintains an according service object for that server.
         - If you want to access the newly created gRPC service for your edge device outside the cluster, you need to setup `Kubernetes Ingress` using applications like [`ingress-nginx`](https://github.com/kubernetes/ingress-nginx), [`traefik`](https://github.com/containous/traefik) etc. at first. Then you need to create an `Ingress` object (see [sample-ingress-traefik.yaml](./cicd/k8s/sample/sample-ingress-traefik.yaml) for example) for the gRPC service.
-        - Configure your edge device's `arhat` to connect the gRPC accoding to your `Ingress`'s host
-      - `mqtt`
+        - Configure your edge device's `arhat` to connect the gRPC server accoding to your `Ingress`'s host
+      - `mqtt` (WIP)
         - `aranya` will try to talk to your mqtt broker accoding to the `spec.connectivity.mqttConfig`.
         - You need to configure your edge device's `arhat` to talk to the same mqtt broker or one broker in the same mqtt broker cluster depending on your own usecase, the config option `messageNamespace` must match to get `arhat` able to communicate with `aranya`.
-   3. Deploy and configure `arhat` to your edge devices, start, wait to get connected to `aranya`
+   3. Deploy `arhat` with configuration to your edge devices, start and wait to get connected to `aranya`
 
-3. Create workloads with special tolerations (taints for edge devices) and use label selectors or node affinity to assign to specific edge devices (see [sample-workload.yaml](./cicd/k8s/sample/sample-workload.yaml) for example)
+3. Create workloads with tolerations (taints for edge devices) and use label selectors or node affinity to assign to specific edge devices (see [sample-workload.yaml](./cicd/k8s/sample/sample-workload.yaml) for example)
    - Common Node Taints
 
       | Taint Key             | Value                                             |
