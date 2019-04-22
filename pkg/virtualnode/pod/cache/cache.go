@@ -26,8 +26,9 @@ func (c *PodCache) Update(pod *corev1.Pod) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.uidMap[pod.UID] = pod
-	c.nameMap[types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}] = pod
+	newPod := pod.DeepCopy()
+	c.uidMap[newPod.UID] = newPod
+	c.nameMap[types.NamespacedName{Namespace: newPod.Namespace, Name: newPod.Name}] = newPod
 }
 
 func (c *PodCache) GetByID(podUID types.UID) (*corev1.Pod, bool) {

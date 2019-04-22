@@ -34,7 +34,6 @@ var (
 	informerUpdateLog = log.WithValues("informerAction", "update")
 	informerDeleteLog = log.WithValues("informerAction", "delete")
 	mirrorUpdateLog   = log.WithValues("mirrorAction", "update")
-	mirrorDeleteLog   = log.WithValues("mirrorAction", "delete")
 	deviceCreateLog   = log.WithValues("deviceAction", "create")
 	deviceDeleteLog   = log.WithValues("deviceAction", "delete")
 	deviceSyncLog     = log.WithValues("deviceAction", "sync")
@@ -330,6 +329,7 @@ func (m *Manager) UpdateMirrorPod(devicePod *connectivity.Pod) error {
 	}
 
 	newPod := m.GenerateAPIPodStatus(oldPod, status)
+	mirrorUpdateLog.Info("trying to update pod status")
 	updatedPod, err := m.kubeClient.CoreV1().Pods(oldPod.Namespace).UpdateStatus(newPod)
 	if err != nil {
 		mirrorUpdateLog.Error(err, "failed to update pod status")
@@ -337,25 +337,6 @@ func (m *Manager) UpdateMirrorPod(devicePod *connectivity.Pod) error {
 	}
 
 	m.podCache.Update(updatedPod)
-	return nil
-}
-
-// DeleteMirrorPod delete pod object immediately and clear pod cache once delete succeeded
-func (m *Manager) DeleteMirrorPod(podUID types.UID) error {
-	pod, ok := m.podCache.GetByID(podUID)
-	if !ok {
-		mirrorDeleteLog.Info("failed to find pod cache", "podUID", podUID)
-		return nil
-	}
-
-	err := m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, metav1.NewDeleteOptions(0))
-	if err != nil {
-		mirrorDeleteLog.Error(err, "failed to delete pod object")
-		return err
-	}
-
-	// delete pod cache once pod object has been deleted
-	m.podCache.Delete(podUID)
 	return nil
 }
 
@@ -394,14 +375,26 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		return err
 	}
 
-	// TODO: mark container status creating
-
 	deviceCreateLog.Info("trying to post pod create cmd to edge device")
 	podCreateCmd := connectivity.NewPodCreateCmd(pod, imagePullSecrets, containerEnvs, volumeData, hostVolume)
 	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {
 		deviceCreateLog.Error(err, "failed to post pod create command")
 		return err
+	}
+
+	// mark pod status ContainerCreating just like what the kubelet do
+	pod.Status.Phase = corev1.PodPending
+	pod.Status.ContainerStatuses = newContainerCreatingStatus(pod)
+
+	deviceCreateLog.Info("trying to update pod status to ContainerCreating")
+	updatedPod, err := m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
+	if err != nil {
+		// errored, but we should wait until work done on device
+		deviceCreateLog.Error(err, "failed to update pod status")
+	} else {
+		pod = updatedPod
+		m.podCache.Update(pod)
 	}
 
 	for msg := range msgCh {
@@ -413,13 +406,19 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 		switch podMsg := msg.GetMsg().(type) {
 		case *connectivity.Msg_Pod:
-			// TODO: mark pod status running
-			// TODO: create net listener for published pod ports
-			err = m.UpdateMirrorPod(podMsg.Pod)
+			// mark pod status running
+			pod.Status.Phase = corev1.PodRunning
+			pod.Status.ContainerStatuses = newContainerRunningStatus(pod, podMsg.Pod)
+
+			deviceCreateLog.Info("trying to update pod status to Running")
+			updatedPod, err = m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 			if err != nil {
-				deviceCreateLog.Error(err, "failed to update kube pod status")
+				deviceCreateLog.Error(err, "failed to update pod status")
 				continue
 			}
+
+			m.podCache.Update(pod)
+			// TODO: create net listener for published pod ports
 		}
 	}
 
@@ -428,12 +427,12 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 // DeleteDevicePod delete pod in edge device
 func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
-	if _, ok := m.podCache.GetByID(podUID); !ok {
+	pod, ok := m.podCache.GetByID(podUID)
+	if !ok {
 		deviceDeleteLog.Info("device pod already deleted, no action")
 		return nil
 	}
 
-	// TODO: get grace time
 	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Second)
 	msgCh, err := m.manager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
@@ -447,11 +446,17 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 			continue
 		}
 
-		// TODO: delete pod objects
-		// TODO: close net listener for published pod ports
-		if err = m.DeleteMirrorPod(podUID); err != nil {
+		deviceCreateLog.Info("trying to delete pod object immediately")
+		err := m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, metav1.NewDeleteOptions(0))
+		if err != nil {
 			deviceDeleteLog.Error(err, "failed to delete pod object")
+			return err
 		}
+
+		// delete pod cache once pod object has been deleted
+		m.podCache.Delete(podUID)
+
+		// TODO: close net listener for published pod ports
 	}
 
 	return nil
@@ -459,7 +464,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 
 func (m *Manager) SyncDevicePods() (err error) {
 	var msgCh <-chan *connectivity.Msg
-
+	deviceSyncLog.Info("trying to sync device pods")
 	msgCh, err = m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
 		deviceSyncLog.Error(err, "failed to post pod list cmd")

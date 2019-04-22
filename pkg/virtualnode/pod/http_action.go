@@ -153,7 +153,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 
 		go func() {
 			// defer close(inputCh)
-			defer httpStreamLog.Error(s.Err(), "finished stream input")
+			defer httpStreamLog.Info("finished stream input")
 
 			for s.Scan() {
 				select {
