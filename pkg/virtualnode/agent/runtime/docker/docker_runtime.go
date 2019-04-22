@@ -612,9 +612,8 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		pfLog.Error(err, "failed to find pause container")
 	}
 
-	pfLog.Info("got pause container", "netSettings", pauseCtr.NetworkSettings)
 	if pauseCtr.NetworkSettings == nil {
-		pfLog.Info("network settings empty")
+		pfLog.Info("pause container network settings empty")
 		return errors.New("pause container network settings empty")
 	}
 
@@ -630,7 +629,7 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		return errors.New("bridge ip address not found")
 	}
 
-	conn, err := net.Dial(protocol, address)
+	conn, err := net.Dial(protocol, fmt.Sprintf("%s:%s", address, strconv.FormatInt(int64(port), 10)))
 	if err != nil {
 		pfLog.Error(err, "failed to dial target")
 		return err

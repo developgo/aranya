@@ -323,6 +323,10 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
+	if options.GetProtocol() == "" {
+		options.Protocol = "tcp"
+	}
+
 	if err := b.runtime.PortForward(options.GetPodUid(), options.GetProtocol(), options.GetPort(), input, output); err != nil {
 		b.handleError(sid, err)
 		return

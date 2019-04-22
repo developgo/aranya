@@ -102,6 +102,7 @@ func (m *Manager) doHandleAttachContainer(errCh chan<- error) kubeletrc.Attacher
 
 func (m *Manager) doHandlePortForward(portProto map[int32]string, errCh chan<- error) kubeletpf.PortForwarder {
 	return portForwarder(func(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
+
 		portForwardCmd := connectivity.NewPortForwardCmd(string(uid), port, portProto[port])
 		err := m.doServeStream(portForwardCmd, stream, stream, nil, nil)
 		if err != nil {
