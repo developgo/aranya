@@ -24,6 +24,31 @@ rules:
   resources: [ '*' ]
   verbs: [ '*' ]
 # required to generate node certificates
-- apiGroups: [ 'certificates.k8s.io' ]
-  resources: [ '*' ]
-  verbs: [ '*' ]
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - '*'
+
+# TODO: find a way to create cluster role binding in script with different namespace
+
+# ---
+# apiVersion: v1
+# kind: ServiceAccount
+# metadata:
+#   name: aranya
+#   namespace: edge
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: aranya
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: aranya
+# subjects:
+# - kind: ServiceAccount
+#   name: aranya
+#   namespace: edge

@@ -24,6 +24,18 @@ spec:
           type: object
         spec:
           properties:
+            certInfo:
+              properties:
+                country:
+                  type: string
+                state:
+                  type: string
+                locality:
+                  type: string
+                org:
+                  type: string
+                orgUnit:
+                  type: string
             connectivity:
               properties:
                 method:

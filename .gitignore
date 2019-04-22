@@ -77,5 +77,6 @@ tags
 
 /.idea
 /.vscode
+private*
 
 dive.log

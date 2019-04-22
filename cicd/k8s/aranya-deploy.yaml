@@ -2,7 +2,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aranya-config
+  name: aranya
+  namespace: edge
 data:
   config.yaml: |-
     services:
@@ -16,6 +17,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aranya
+  namespace: edge
 spec:
   replicas: 1
   selector:
@@ -35,7 +37,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: aranya-config
+          name: aranya
           optional: true
       containers:
       - name: aranya
