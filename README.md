@@ -1,6 +1,6 @@
 # aranya `阿兰若`
 
-A `Kubernetes` operator for edge devices
+A `Kubernetes` operator for edge devices (also `arhat` the agent)
 
 ## Purpose
 
@@ -16,10 +16,9 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Features
 
-- `Kubernetes` Mode
-  - Full featured `Kubernetes` workload executor (except Network)
-    - Support `Pod` creation with `Env`, `Volume`
-      - Support source from plain text, `Secret` and `ConfigMap`
+- Full featured `Kubernetes` workload executor (except cluster Network, see [ROADMAP.md - Networking](./ROADMAP.md#Networking))
+  - Support `Pod` creation with `Env`, `Volume`
+    - Support source from plain text, `Secret` and `ConfigMap`
     - Support `kubectl`'s `log`, `exec`, `attach`, `portforward`
 
 ## Workflow
@@ -74,22 +73,9 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
       | `arhat.dev/role` | `EdgeDevice`         |
       | `arhat.dev/name` | The edge device name |
 
-## Q&A
-
-- Why not `k3s`?
-  - `k3s` is really awesome for some kind of edge devices, but still needs a lot of work to be done to serve all kinds of edge devices right, one significant problem is the splited networks with NAT, and we don't think problems like that should be resolved in `k3s` project wich would totally change the way `k3s` works.
-- Why not `virtual-kubelet`?
-  - `virtual-kubelet` is great for cloud providers such as `Azure`, `GCP`, `AWS` etc. and also suitable for `openstack` cluster users, however, most edge device users don't have or don't want to setup such kind of cloud infrastructure.
-  - `virtual-kubelt` deployed as a pod, if applied for edge device, large scale edge device cluster will calim a lot of pod resource, which requires a lot of node to serve.
-- Why `arhat` and `aranya` (why not `kubelet`)?
-  - `kubelet` is heavily dependent on http, maybe it's not a good idea for edge devices with poor network to communicate with each other via http.
-  - `aranya` is the watcher part in `kubelet`, lots of `kubelet`'s work such as cluster resource fetch and update is done by `aranya`, `aranya` resolves everything before command was delivered to `arhat`.
-  - `arhat` is the worker part in `kubelet`, it's an event driven agent and only tend to command execution.
-  - Due to the design decisions above, we only need to transfer necessary messages between `aranya` and `arhat` such as pod creation command, container status update, node status update etc. Keeping the edge device's data usage for management as low as possible.
-
 ## Performance
 
-Every `EdgeDevice` object needs to setup a `kubelet` server serving `kubectl` commands such as `logs`, `exec`, `attach` and `port-forward`, we need to request node certificate for `EdgeDevice`'s virtual node in any `RBAC` enabled cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my `homelab`](https://github.com/jeffreystoke/homelab) after all the required node certificates has been provisioned.
+Every `EdgeDevice` object needs to setup a `kubelet` server serving `kubectl` commands such as `logs`, `exec`, `attach` and `port-forward`, we need to request node certificate for `EdgeDevice`'s virtual node in any `RBAC` enabled cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my homelab](https://github.com/jeffreystoke/homelab) after all the required node certificates has been provisioned.
 
 - Test Workload
   - 1000 EdgeDevice using `gRPC` (generated with `./scripts/gen-deploy-script.sh 1000`)
@@ -107,6 +93,19 @@ However, after 1000 devices has been deployed and 1000 according node objects cr
 ## Roadmap
 
 see [ROADMAP.md](./ROADMAP.md)
+
+## Q&A
+
+- Why not `k3s`?
+  - `k3s` is really awesome for some kind of edge devices, but still needs a lot of work to be done to serve all kinds of edge devices right, one significant problem is the splited networks with NAT, and we don't think problems like that should be resolved in `k3s` project wich would totally change the way `k3s` works.
+- Why not `virtual-kubelet`?
+  - `virtual-kubelet` is great for cloud providers such as `Azure`, `GCP`, `AWS` etc. and also suitable for `openstack` cluster users, however, most edge device users don't have or don't want to setup such kind of cloud infrastructure.
+  - `virtual-kubelt` deployed as a pod, if applied for edge device, large scale edge device cluster will calim a lot of pod resource, which requires a lot of node to serve.
+- Why `arhat` and `aranya` (why not `kubelet`)?
+  - `kubelet` is heavily dependent on http, maybe it's not a good idea for edge devices with poor network to communicate with each other via http.
+  - `aranya` is the watcher part in `kubelet`, lots of `kubelet`'s work such as cluster resource fetch and update is done by `aranya`, `aranya` resolves everything before command was delivered to `arhat`.
+  - `arhat` is the worker part in `kubelet`, it's an event driven agent and only tend to command execution.
+  - Due to the design decisions above, we only need to transfer necessary messages between `aranya` and `arhat` such as pod creation command, container status update, node status update etc. Keeping the edge device's data usage for management as low as possible.
 
 ## Thanks to
 
