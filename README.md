@@ -114,4 +114,4 @@ This project was inspired by [`virtual-kubelet`](https://github.com/virtual-kube
 ## Authors
 
 - [Jeffrey Stoke](https://github.com/jeffreystoke) (project owner)
-  - I'm looking for jobs (associate to junior level) in Deutschland
+  - I'm looking for career opportunities (associate to junior level) in Deutschland
