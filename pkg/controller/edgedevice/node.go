@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/phayes/freeport"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +28,7 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 		return nil, nil, err
 	}
 
-	listener, err = newKubeletListener(r.kubeClient, hostNodeName, device.Name, int32(kubeletListenPort), addresses)
+	listener, err = newKubeletListener(r.kubeClient, hostNodeName, device, int32(kubeletListenPort), addresses)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,8 +54,16 @@ func (r *ReconcileEdgeDevice) createNodeObjectForDevice(device *aranya.EdgeDevic
 	return nodeObj, listener, nil
 }
 
-func newKubeletListener(kubeClient kubernetes.Interface, hostNodeName, vitualNodeName string, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
-	tlsCert, err := getKubeletServerCert(kubeClient, hostNodeName, vitualNodeName, nodeAddresses)
+func newKubeletListener(kubeClient kubernetes.Interface, hostNodeName string, deviceObj *aranya.EdgeDevice, port int32, nodeAddresses []corev1.NodeAddress) (listener net.Listener, err error) {
+	certInfo := deviceObj.Spec.CertInfo
+	csrName := csr.Name{
+		C:  certInfo.Country,
+		ST: certInfo.State,
+		L:  certInfo.Locality,
+		O:  certInfo.Organisation,
+		OU: certInfo.OrganisationUnit,
+	}
+	tlsCert, err := getKubeletServerCert(kubeClient, hostNodeName, deviceObj.Name, csrName, nodeAddresses)
 	if err != nil {
 		return nil, err
 	}
