@@ -40,9 +40,9 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 			// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
 			CN: fmt.Sprintf("system:node:%s", virtualNodeName),
 			Names: []csr.Name{
-				csrName,
 				// TODO: add or remove after debug
-				// {O: "system:nodes"},
+				{O: "system:nodes"},
+				csrName,
 			},
 			Hosts: hosts,
 		}
