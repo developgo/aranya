@@ -30,14 +30,14 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 	namespace, podName, opt, err := util.GetParamsForContainerLog(r)
 	if err != nil {
 		httpLog.Error(err, "parse container log options failed")
-
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	podUID := m.getPodUIDInCache(namespace, podName, "")
 	if podUID == "" {
-		http.Error(w, "target pod not found", http.StatusBadRequest)
+		httpLog.Info("pod not found for log", "podUID", podUID)
+		http.Error(w, "target pod not found", http.StatusNotFound)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	podUID := m.getPodUIDInCache(namespace, podName, uid)
 	if podUID == "" {
 		httpLog.Info("pod not found for exec", "podUID", podUID)
-		http.Error(w, "target pod not found", http.StatusBadRequest)
+		http.Error(w, "target pod not found", http.StatusNotFound)
 		return
 	}
 
@@ -71,8 +71,9 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		httpLog.Info("starting to serve exec")
 		kubeletremotecommand.ServeExec(
-			w, r, /* http context */
+			w, r,                             /* http context */
 			m.doHandleExecInContainer(errCh), /* wrapped pod executor */
 			"",                               /* pod name (unused) */
 			podUID,                           /* unique id of pod */
@@ -99,7 +100,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	podUID := m.getPodUIDInCache(namespace, podName, uid)
 	if podUID == "" {
 		httpLog.Info("pod not found for attach", "podUID", podUID)
-		http.Error(w, "target pod not found", http.StatusBadRequest)
+		http.Error(w, "target pod not found", http.StatusNotFound)
 		return
 	}
 
@@ -107,8 +108,9 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		httpLog.Info("starting to serve attach")
 		kubeletremotecommand.ServeAttach(
-			w, r, /* http context */
+			w, r,                             /* http context */
 			m.doHandleAttachContainer(errCh), /* wrapped pod attacher */
 			"",                               /* pod name (not used) */
 			podUID,                           /* unique id of pod */
@@ -131,13 +133,8 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 // HandlePodPortForward
 func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	namespace, podName, uid := util.GetParamsForPortForward(r)
-	podUID := m.getPodUIDInCache(namespace, podName, uid)
-	if podUID == "" {
-		httpLog.Info("pod not found for port forward", "podUID", podUID)
-		http.Error(w, "target pod not found", http.StatusBadRequest)
-		return
-	}
 
+	httpLog.Info("trying to get portforward options")
 	portForwardOptions, err := kubeletportforward.NewV4Options(r)
 	if err != nil {
 		httpLog.Error(err, "failed to parse portforward options")
@@ -145,10 +142,18 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	podUID := m.getPodUIDInCache(namespace, podName, uid)
+	if podUID == "" {
+		httpLog.Info("pod not found for port forward", "podUID", podUID)
+		http.Error(w, "target pod not found", http.StatusNotFound)
+		return
+	}
+
 	errCh := make(chan error, 1)
 	go func() {
+		httpLog.Info("starting to serve port forward")
 		kubeletportforward.ServePortForward(
-			w, r, /* http context */
+			w, r,                         /* http context */
 			m.doHandlePortForward(errCh), /* wrapped pod port forwarder */
 			"",                           /* pod name (not used) */
 			podUID,                       /* unique id of pod */
