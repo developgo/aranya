@@ -5,16 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CertInfo is the extra location info for device
-// +k8s:openapi-gen=true
-type CertInfo struct {
-	Country          string `json:"country,omitempty" protobuf:"bytes,1,opt,name=country"`
-	State            string `json:"state,omitempty" protobuf:"bytes,2,opt,name=state"`
-	Locality         string `json:"locality,omitempty" protobuf:"bytes,3,opt,name=locality"`
-	Organisation     string `json:"org,omitempty" protobuf:"bytes,4,opt,name=org"`
-	OrganisationUnit string `json:"orgUnit,omitempty" protobuf:"bytes,5,opt,name=orgUnit"`
-}
-
 // EdgeDeviceSpec defines the desired state of EdgeDevice
 // +k8s:openapi-gen=true
 type EdgeDeviceSpec struct {
@@ -22,7 +12,6 @@ type EdgeDeviceSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	CertInfo CertInfo `json:"certInfo,omitempty" protobuf:"bytes,1,opt,name=certInfo"`
 	// Connectivity designate the method by which this device connect to aranya server
 	Connectivity Connectivity `json:"connectivity,omitempty" protobuf:"bytes,2,opt,name=connectivity"`
 }

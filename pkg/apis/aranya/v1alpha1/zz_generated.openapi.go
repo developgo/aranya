@@ -17,53 +17,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/aranya/v1alpha1/.CertInfo":         schema_apis_aranya_v1alpha1__CertInfo(ref),
 		"./pkg/apis/aranya/v1alpha1/.EdgeDevice":       schema_apis_aranya_v1alpha1__EdgeDevice(ref),
 		"./pkg/apis/aranya/v1alpha1/.EdgeDeviceSpec":   schema_apis_aranya_v1alpha1__EdgeDeviceSpec(ref),
 		"./pkg/apis/aranya/v1alpha1/.EdgeDeviceStatus": schema_apis_aranya_v1alpha1__EdgeDeviceStatus(ref),
-	}
-}
-
-func schema_apis_aranya_v1alpha1__CertInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CertInfo is the extra location info for device",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"country": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"state": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"locality": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"org": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"orgUnit": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-				},
-			},
-		},
 	}
 }
 
@@ -118,11 +74,6 @@ func schema_apis_aranya_v1alpha1__EdgeDeviceSpec(ref common.ReferenceCallback) c
 				Description: "EdgeDeviceSpec defines the desired state of EdgeDevice",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"certInfo": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/aranya/v1alpha1/.CertInfo"),
-						},
-					},
 					"connectivity": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Connectivity designate the method by which this device connect to aranya server",
@@ -133,7 +84,7 @@ func schema_apis_aranya_v1alpha1__EdgeDeviceSpec(ref common.ReferenceCallback) c
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/aranya/v1alpha1/.CertInfo", "./pkg/apis/aranya/v1alpha1/.Connectivity"},
+			"./pkg/apis/aranya/v1alpha1/.Connectivity"},
 	}
 }
 

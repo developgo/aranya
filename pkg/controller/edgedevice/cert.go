@@ -21,7 +21,7 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNodeName string, csrName csr.Name, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
+func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNodeName string, nodeAddresses []corev1.NodeAddress) (*tls.Certificate, error) {
 	var (
 		hosts                  []string
 		requiredValidAddresses = make(map[string]struct{})
@@ -38,12 +38,9 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 		csrObjName = fmt.Sprintf("kubelet-tls.%s.%s", hostNodeName, virtualNodeName)
 		certReq    = &csr.CertificateRequest{
 			// CommonName is the RBAC role name, which must be `system:node:{nodeName}`
-			CN: fmt.Sprintf("system:node:%s", virtualNodeName),
-			Names: []csr.Name{
-				// TODO: add or remove after debug
-				{O: "system:nodes"},
-				csrName,
-			},
+			CN:    fmt.Sprintf("system:node:%s", virtualNodeName),
+			// Org is the RBAC groud name, which must be `system:nodes`
+			Names: []csr.Name{{O: "system:nodes"}},
 			Hosts: hosts,
 		}
 
