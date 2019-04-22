@@ -15,7 +15,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclient "k8s.io/client-go/kubernetes"
 	kubelister "k8s.io/client-go/listers/core/v1"
-	k8scache "k8s.io/client-go/tools/cache"
+	kubecache "k8s.io/client-go/tools/cache"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/constant"
@@ -66,7 +66,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		podWorkQueue: queue.NewWorkQueue(),
 	}
 
-	podInformer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
+	podInformer.AddEventHandler(kubecache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
 
@@ -149,7 +149,7 @@ type Manager struct {
 
 	podInformerFactory kubeinformers.SharedInformerFactory
 	podLister          kubelister.PodLister
-	podInformer        k8scache.SharedIndexInformer
+	podInformer        kubecache.SharedIndexInformer
 
 	podWorkQueue *queue.WorkQueue
 	once         sync.Once
@@ -171,7 +171,7 @@ func (m *Manager) Start() (err error) {
 			m.podCache.Update(po)
 		}
 
-		if ok := k8scache.WaitForCacheSync(m.ctx.Done(), m.podInformer.HasSynced); !ok {
+		if ok := kubecache.WaitForCacheSync(m.ctx.Done(), m.podInformer.HasSynced); !ok {
 			err = fmt.Errorf("failed to wait for caches to sync")
 			log.Error(err, "")
 			return

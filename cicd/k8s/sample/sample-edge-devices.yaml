@@ -11,29 +11,6 @@ spec:
       # here, with empty ref, aranya will setup an insecure grpc server
       tlsSecretRef: {}
 ---
-# Ingress configuration to tell your ingress plugin 
-# how to redirect requests to related grpc service
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: example-edge-device-grpc
-  annotations:
-    # example annotation to let traefik handle the grpc connection
-    kubernetes.io/ingress.class: traefik
-spec:
-  rules:
-  # customize you host name according to your requirements
-  - host: example-edge-device-grpc.example.com
-    http:
-      paths:
-      - path: /
-        backend:
-          # if grpc is used as connectivity method, aranya controller will create a
-          # service object with the name of that edge deivce, and label the related
-          # port with `grpc`
-          serviceName: example-edge-device-grpc
-          servicePort: grpc
----
 # An example edge device accessing via mqtt
 apiVersion: aranya.arhat.dev/v1alpha1
 kind: EdgeDevice

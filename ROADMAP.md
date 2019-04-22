@@ -1,15 +1,8 @@
 # Roadmap
 
-## Work Mode
+## Networking
 
-- Standalone Mode
-  - A `aranya` living outside of `Kubernetes`
-  - Good for small scale deployment
-
-## Network
-
-- Integrate into cluster network
+- Integrate edge devices into cluster network
   - `Kubernetes` will assign a pod address pool for the virtual node
-  - `arhat` to create an address mapping between local address and cluster address
-  - `arhat` to create DNS record to redirect local network traffic to cloud
-  - access cloud services without `Ingress` or any thing like that
+  - `arhat` to create address mappings between local address and cluster address and DNS records to redirect local network traffic to Kubernetes cluster, so we can improving the cloud secuirty by accessing cloud services without `Ingress` or any thing exposed to public.
+  - `aranya` to create userspace proxier (`kube-proxy`) to proxy specific cloud traffics for pods and services to `aranya` and finally to `arhat`, abstracting away the underlaying protocol between `aranya` and `arhat` and also enabling `kubectl proxy` commands to proxy http services running on edge devices.

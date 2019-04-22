@@ -10,6 +10,8 @@ data:
         address: "0.0.0.0"
         port: 8383
 ---
+# this is an example deployment script for test deployment only
+# use DaemonSet if possible
 apiVersion: apps/v1
 kind: Deployment
 metadata:

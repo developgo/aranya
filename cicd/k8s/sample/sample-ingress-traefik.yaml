@@ -1,0 +1,31 @@
+---
+# Ingress configuration to tell your ingress plugin 
+# how to redirect requests to related grpc service
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: example-edge-device-grpc
+  labels:
+    # labels specific to your traefik settings
+    traffic-type: external
+  annotations:
+    # example annotation to let traefik handle the grpc connection
+    kubernetes.io/ingress.class: traefik
+    # to use insecured grpc communication channel, uncomment the following field
+    # ingress.kubernetes.io/protocol: h2c
+spec:
+  rules:
+  # customize you host name according to your requirements
+  - host: example-edge-device-grpc.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          # if grpc is used as connectivity method, aranya will create a
+          # service object with the same name of that edge deivce, and label the related
+          # port with `grpc`
+          # 
+          # service name should be the same with the edge device name
+          serviceName: example-edge-device-grpc
+          # service port name shoud be `grpc`
+          servicePort: grpc
