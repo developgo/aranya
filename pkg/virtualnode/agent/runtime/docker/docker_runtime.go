@@ -426,8 +426,8 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		}
 	}()
 
-	go func() {
-		if stdin != nil {
+	if stdin != nil {
+		go func() {
 			execLog.Info("starting write routine")
 			defer func() {
 				execLog.Info("finished write routine")
@@ -437,9 +437,9 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 			if err != nil {
 				execLog.Error(err, "exception happened in write routine")
 			}
-		}
-	}()
 
+		}()
+	}
 	go func() {
 		defer execLog.Info("finished tty resize routine")
 
@@ -603,10 +603,71 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOp
 	return nil
 }
 
-func (r *dockerRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
-	pfLog := r.Log().WithValues("uid", podUID)
-	pfLog.Error(errors.New("method not implemented"), "method not implemented")
-	return errors.New("method not implemented")
+func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {
+	pfLog := r.Log().WithValues("action", "portforward", "proto", protocol, "port", port, "uid", podUID)
+
+	pfLog.Info("trying to find pause container")
+	pauseCtr, err := r.findContainer(podUID, constant.ContainerNamePause)
+	if err != nil {
+		pfLog.Error(err, "failed to find pause container")
+	}
+
+	pfLog.Info("got pause container", "netSettings", pauseCtr.NetworkSettings)
+	if pauseCtr.NetworkSettings == nil {
+		pfLog.Info("network settings empty")
+		return errors.New("pause container network settings empty")
+	}
+
+	address := ""
+	for name, network := range pauseCtr.NetworkSettings.Networks {
+		if name == "bridge" {
+			address = network.IPAddress
+			break
+		}
+	}
+	if address == "" {
+		pfLog.Info("bridge ip address not found")
+		return errors.New("bridge ip address not found")
+	}
+
+	conn, err := net.Dial(protocol, address)
+	if err != nil {
+		pfLog.Error(err, "failed to dial target")
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		pfLog.Info("starting read routine")
+		defer func() {
+			pfLog.Info("finished write routine")
+			wg.Done()
+		}()
+
+		if _, err := io.Copy(out, conn); err != nil {
+			pfLog.Error(err, "exception happened in read routine")
+			return
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		pfLog.Info("starting write routine")
+		defer func() {
+			pfLog.Info("finished write routine")
+			wg.Done()
+		}()
+
+		if _, err := io.Copy(conn, in); err != nil {
+			pfLog.Error(err, "exception happened in write routine")
+			return
+		}
+	}()
+
+	wg.Wait()
+	return nil
 }
 
 func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*dockerType.ImageSummary, error) {

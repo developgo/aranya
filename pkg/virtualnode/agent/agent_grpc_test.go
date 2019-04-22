@@ -128,8 +128,10 @@ func TestGRPCAgent(t *testing.T) {
 			connectivity.NewPodDeleteCmd(string(podReq.UID), time.Second),
 			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
 
+		// TODO: stream test is buggy due to buffered io, need to redesign
+
 		testStreamCmdWithExpectedMsgList(t, mgr,
-			connectivity.NewPortForwardCmd(string(podReq.UID), corev1.PodPortForwardOptions{Ports: []int32{2048}}),
+			connectivity.NewPortForwardCmd(string(podReq.UID), 2048, "tcp"),
 			expectedDataMsgList())
 
 		execOptions := corev1.PodExecOptions{Stdin: true, Stdout: true, Stderr: true, TTY: true, Container: "", Command: []string{}}

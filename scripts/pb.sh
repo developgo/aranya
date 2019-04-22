@@ -5,7 +5,7 @@ set -ex
 GOPATH=$(go env GOPATH)
 
 gen_connectivity_protos() {
-  local TARGET_DIR=./pkg/node/connectivity
+  local TARGET_DIR=./pkg/virtualnode/connectivity
   
   protoc \
     -I${GOPATH}/src/github.com/gogo/protobuf/protobuf \

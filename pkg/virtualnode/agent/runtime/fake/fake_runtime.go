@@ -117,7 +117,7 @@ func (r *fakeRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOpti
 	return nil
 }
 
-func (r *fakeRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *fakeRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {
 	defer closeIfNotNil(out)
 
 	if r.faulty {

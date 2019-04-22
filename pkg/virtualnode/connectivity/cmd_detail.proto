@@ -204,11 +204,8 @@ message ExecOptions {
 
 message PortForwardOptions {
     string pod_uid = 1;
-
-    oneof options {
-        // protobuf bytes of corev1.PortForwardOptions
-        bytes options_v1 = 10;
-    }
+    int32 port = 2;
+    string protocol = 3;
 }
 
 message InputOptions {

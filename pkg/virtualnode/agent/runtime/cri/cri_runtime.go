@@ -101,7 +101,7 @@ func (r *Runtime) GetContainerLogs(podUID string, options *corev1.PodLogOptions,
 	return errors.New("method not implemented")
 }
 
-func (r *Runtime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *Runtime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {
 	return errors.New("method not implemented")
 }
 

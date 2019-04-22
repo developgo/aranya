@@ -273,7 +273,7 @@ func (r *podmanRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOp
 	return runtimeutil.ReadLogs(context.Background(), target.LogPath(), options, stdout, stderr)
 }
 
-func (r *podmanRuntime) PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error {
+func (r *podmanRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {
 	rt, err := r.newRuntime()
 	if err != nil {
 		return err

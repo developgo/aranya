@@ -179,15 +179,12 @@ func NewContainerLogCmd(podUID string, options corev1.PodLogOptions) *Cmd {
 	})
 }
 
-func NewPortForwardCmd(podUID string, options corev1.PodPortForwardOptions) *Cmd {
-	optionBytes, _ := options.Marshal()
-
+func NewPortForwardCmd(podUID string, port int32, protocol string) *Cmd {
 	return newPodCmd(0, PortForward, &PodCmd_PortForwardOptions{
 		PortForwardOptions: &PortForwardOptions{
-			PodUid: podUID,
-			Options: &PortForwardOptions_OptionsV1{
-				OptionsV1: optionBytes,
-			},
+			PodUid:   podUID,
+			Port:     port,
+			Protocol: protocol,
 		},
 	})
 }

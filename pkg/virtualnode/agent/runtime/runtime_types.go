@@ -36,5 +36,5 @@ type Interface interface {
 	ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error
 	AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error
 	GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error
-	PortForward(podUID string, ports []int32, in io.Reader, out io.WriteCloser) error
+	PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error
 }
