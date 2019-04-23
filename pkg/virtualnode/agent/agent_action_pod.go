@@ -51,31 +51,19 @@ func (b *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
 	}
 }
 
-func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan remotecommand.TerminalSize) {
 	defer b.openedStreams.del(sid)
 
 	var (
-		stdin  io.ReadCloser
 		stdout io.WriteCloser
 		stderr io.WriteCloser
 
-		remoteStdin  io.WriteCloser
 		remoteStdout io.ReadCloser
 		remoteStderr io.ReadCloser
 	)
 
-	if options.Stdin {
-		stdin, remoteStdin = io.Pipe()
-		defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
-
-		go func() {
-			for inputData := range inputCh {
-				_, err := remoteStdin.Write(inputData)
-				if err != nil {
-					return
-				}
-			}
-		}()
+	if !options.Stdin {
+		stdin = nil
 	}
 
 	if options.Stdout {
@@ -121,7 +109,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 	}
 }
 
-func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
+func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan remotecommand.TerminalSize) {
 	defer func() {
 		b.openedStreams.del(sid)
 		log.Printf("finished contaienr exec")
@@ -133,29 +121,15 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	}
 
 	var (
-		stdin  io.ReadCloser
 		stdout io.WriteCloser
 		stderr io.WriteCloser
 
-		remoteStdin  io.WriteCloser
 		remoteStdout io.ReadCloser
 		remoteStderr io.ReadCloser
 	)
 
-	if options.Stdin {
-		stdin, remoteStdin = io.Pipe()
-
-		go func() {
-			// input closed, notify other
-			defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
-
-			for inputData := range inputCh {
-				_, err := remoteStdin.Write(inputData)
-				if err != nil {
-					return
-				}
-			}
-		}()
+	if !options.Stdin {
+		stdin = nil
 	}
 
 	if options.Stdout {
@@ -260,24 +234,11 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	}
 }
 
-func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, inputCh <-chan []byte) {
+func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, input io.Reader) {
 	defer b.openedStreams.del(sid)
 
-	input, remoteInput := io.Pipe()
 	remoteOutput, output := io.Pipe()
 	defer func() { _, _ = remoteOutput.Close(), output.Close() }()
-
-	// read input
-	go func() {
-		defer func() { _, _ = input.Close(), remoteInput.Close() }()
-
-		for inputData := range inputCh {
-			_, err := remoteInput.Write(inputData)
-			if err != nil {
-				return
-			}
-		}
-	}()
 
 	// read output
 	go func() {

@@ -69,6 +69,8 @@ message Data {
 
     Kind kind = 1;
     bytes data = 2;
+    // seqence to maintain
+    uint64 seq = 3;
 }
 
 message Error {
