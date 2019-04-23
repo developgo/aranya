@@ -116,9 +116,7 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 		return
 	}
 
-	if ch, ok := s.sessions.get(msg.GetSessionId()); ok {
-		ch <- msg
-
+	if ok := s.sessions.send(msg); ok {
 		// close session when error happened on device or session complete
 		if msg.GetCompleted() {
 			s.sessions.del(msg.GetSessionId())

@@ -76,16 +76,17 @@ func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd) (sid ui
 	return sid, ch
 }
 
-func (s *sessionManager) get(sid uint64) (chan *connectivity.Msg, bool) {
+func (s *sessionManager) send(msg *connectivity.Msg) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	session, ok := s.m[sid]
+	session, ok := s.m[msg.GetSessionId()]
 	if ok && !session.isClosed() {
-		return session.msgCh, true
+		session.msgCh <- msg
+		return true
 	}
 
-	return nil, false
+	return false
 }
 
 func (s *sessionManager) del(sid uint64) {

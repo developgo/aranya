@@ -35,7 +35,7 @@ func TestSessionManager_Del(t *testing.T) {
 	ctx := context.Background()
 	sid, ch := mgr.add(ctx, connectivity.NewPodListCmd("", "", true))
 	mgr.del(sid)
-	_, ok := mgr.get(sid)
+	_, ok := mgr.send(sid)
 	assert.Equal(t, false, ok)
 
 	_, more := <-ch
@@ -50,17 +50,17 @@ func TestSessionManager_Get(t *testing.T) {
 	defer cancel()
 	sidB, _ := mgr.add(timeoutCtx, connectivity.NewPodListCmd("", "", true))
 
-	_, ok := mgr.get(sidA)
+	_, ok := mgr.send(sidA)
 	assert.Equal(t, true, ok)
 
-	_, ok = mgr.get(sidB)
+	_, ok = mgr.send(sidB)
 	assert.Equal(t, true, ok)
 
 	time.Sleep(time.Second)
 
-	_, ok = mgr.get(sidA)
+	_, ok = mgr.send(sidA)
 	assert.Equal(t, true, ok)
 
-	_, ok = mgr.get(sidB)
+	_, ok = mgr.send(sidB)
 	assert.Equal(t, false, ok)
 }
