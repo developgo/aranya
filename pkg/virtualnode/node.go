@@ -18,7 +18,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/virtualnode/manager"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )
@@ -31,7 +31,7 @@ type CreationOptions struct {
 	KubeClient            kubeClient.Interface
 	KubeletServerListener net.Listener
 
-	Manager manager.Manager
+	Manager server.Manager
 
 	// optional
 	GRPCServerListener net.Listener

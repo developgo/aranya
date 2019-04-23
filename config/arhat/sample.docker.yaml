@@ -1,5 +1,12 @@
 agent:
-  allow_host_exec: false
+  log:
+    level: 5
+    dir: /var/log/arhat/
+  features:
+    allow_host_exec: false
+  timers:
+    node_status_sync_interval: 100m
+    pod_status_sync_interval: 60s
 
 runtime:
   volume_data_dir: /tmp/arhat/data

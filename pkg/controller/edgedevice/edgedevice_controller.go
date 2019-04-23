@@ -29,7 +29,7 @@ import (
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode"
-	"arhat.dev/aranya/pkg/virtualnode/manager"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 )
 
 var (
@@ -353,7 +353,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
 			}
 
-			creationOpts.Manager = manager.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
+			creationOpts.Manager = server.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
 		} else {
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
@@ -439,7 +439,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		}
 
 		reqLog.Info("trying to create mqtt connectivity manager")
-		creationOpts.Manager, err = manager.NewMQTTManager(mqttConfig, cert)
+		creationOpts.Manager, err = server.NewMQTTManager(mqttConfig, cert)
 		if err != nil {
 			reqLog.Error(err, "failed to create mqtt connectivity manager")
 			return err

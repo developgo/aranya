@@ -5,10 +5,10 @@ package runtime
 import (
 	"context"
 
-	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
-	"arhat.dev/aranya/pkg/virtualnode/agent/runtime/docker"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/client/runtime/docker"
 )
 
-func GetRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
+func New(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
 	return docker.NewRuntime(ctx, config)
 }

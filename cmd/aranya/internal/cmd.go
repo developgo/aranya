@@ -25,13 +25,9 @@ import (
 	aranyaController "arhat.dev/aranya/pkg/controller"
 )
 
-const (
-	DefaultConfigFile = "/etc/aranya/config.yaml"
-)
+const DefaultConfigFile = "/etc/aranya/config.yaml"
 
-var (
-	configFile string
-)
+var configFile string
 
 type Config struct {
 	Controller aranyaController.Config `json:"controller" yaml:"controller"`

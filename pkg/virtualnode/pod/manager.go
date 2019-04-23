@@ -22,13 +22,13 @@ import (
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/manager"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod/cache"
 	"arhat.dev/aranya/pkg/virtualnode/pod/queue"
 	"arhat.dev/aranya/pkg/virtualnode/resolver"
 )
 
-func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager manager.Manager) *Manager {
+func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager server.Manager) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, constant.DefaultPodReSyncInterval,
 		// watch all pods scheduled to the node
@@ -136,7 +136,7 @@ type Manager struct {
 	ctx        context.Context
 	exit       context.CancelFunc
 	log        logr.Logger
-	manager    manager.Manager
+	manager    server.Manager
 	kubeClient kubeclient.Interface
 	podCache   *cache.PodCache
 

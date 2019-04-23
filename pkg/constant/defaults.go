@@ -4,19 +4,24 @@ import (
 	"time"
 )
 
-// sync defaults
+// Defaults intervals
 const (
 	DefaultNodeStatusSyncInterval = 10 * time.Second
 	DefaultPodReSyncInterval      = time.Minute
 )
 
-// stream defaults
+// Default timeouts
 const (
 	DefaultStreamIdleTimeout     = 4 * time.Hour
 	DefaultStreamCreationTimeout = 30 * time.Second
 )
 
-// retry defaults
+// Default retry times
 const (
 	DefaultNodeStatusUpdateRetry = 5
+)
+
+// Default channel size
+const (
+	DefaultConnectivityMsgChannelSize = 2
 )

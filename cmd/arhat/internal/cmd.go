@@ -13,25 +13,22 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	internalagent "arhat.dev/aranya/cmd/arhat/internal/agent"
-	cmdRuntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
-	"arhat.dev/aranya/pkg/virtualnode/agent"
-	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
+	internalclient "arhat.dev/aranya/cmd/arhat/internal/client"
+	internalruntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/client"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity/client/runtime"
 )
 
-const (
-	DefaultConfigFile = "/etc/arhat/config.yaml"
-)
+const DefaultConfigFile = "/etc/arhat/config.yaml"
 
-var (
-	configFile string
-)
+var configFile string
 
+// Config for arhat
 type Config struct {
+	Agent        client.Config       `json:"agent" yaml:"agent"`
 	Connectivity connectivity.Config `json:"connectivity" yaml:"connectivity"`
 	Runtime      runtime.Config      `json:"runtime" yaml:"runtime"`
-	Agent        agent.Config        `json:"agent" yaml:"agent"`
 }
 
 func NewArhatCmd() *cobra.Command {
@@ -77,9 +74,9 @@ func NewArhatCmd() *cobra.Command {
 }
 
 func run(ctx context.Context, config *Config) error {
-	rt, err := cmdRuntime.GetRuntime(ctx, &config.Runtime)
+	rt, err := internalruntime.New(ctx, &config.Runtime)
 	if err != nil {
-		return fmt.Errorf("create runtime failed: %v", err)
+		return fmt.Errorf("failed to get runtime: %v", err)
 	}
 
 	exiting := func() bool {
@@ -92,9 +89,9 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	for !exiting() {
-		ag, err := internalagent.New(ctx, &config.Agent, &config.Connectivity, rt)
+		ag, err := internalclient.New(ctx, &config.Agent, &config.Connectivity, rt)
 		if err != nil {
-			log.Printf("failed to get client: %v", err)
+			log.Printf("failed to get connectivity client: %v", err)
 			return err
 		}
 
@@ -103,6 +100,7 @@ func run(ctx context.Context, config *Config) error {
 			return err
 		}
 
+		// TODO: backoff
 		time.Sleep(time.Second)
 	}
 

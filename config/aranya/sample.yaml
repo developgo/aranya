@@ -1,4 +1,7 @@
-controller: {}
+controller:
+  log:
+    level: 5
+    dir: /var/log/aranya/
 
 services:
   metrics:
