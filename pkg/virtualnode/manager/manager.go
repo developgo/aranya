@@ -158,10 +158,13 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 	var (
 		sid                uint64
 		sessionMustPresent bool
+		recordSession      = true
 	)
 
 	// session id should not be empty if it's a input or resize command
 	switch c := cmd.GetCmd().(type) {
+	case *connectivity.Cmd_CloseSession:
+		recordSession = false
 	case *connectivity.Cmd_Pod:
 		switch c.Pod.GetAction() {
 		case connectivity.ResizeTty, connectivity.Input:
@@ -172,19 +175,21 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		}
 	}
 
-	sid, ch = s.sessionManager.add(ctx, cmd)
-	defer func() {
-		if err != nil {
-			s.sessionManager.del(sid)
+	if recordSession {
+		sid, ch = s.sessionManager.add(ctx, cmd)
+		defer func() {
+			if err != nil {
+				s.sessionManager.del(sid)
+			}
+		}()
+
+		if sessionMustPresent && sid != cmd.GetSessionId() {
+			return nil, ErrSessionNotValid
 		}
-	}()
 
-	if sessionMustPresent && sid != cmd.GetSessionId() {
-		return nil, ErrSessionNotValid
+		// TODO: check race condition
+		cmd.SessionId = sid
 	}
-
-	// TODO: check race condition
-	cmd.SessionId = sid
 
 	if err := sendCmd(cmd); err != nil {
 		return nil, err

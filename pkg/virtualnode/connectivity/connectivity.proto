@@ -47,5 +47,7 @@ message Cmd {
     oneof cmd {
         NodeCmd node = 11;
         PodCmd pod = 12;
+        // tell agent to close this session
+        uint64 close_session = 13;
     }
 }

@@ -110,23 +110,29 @@ func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.Port
 }
 
 func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
-	httpStreamLog := m.log.WithValues("type", "stream", "cmd", initialCmd.GetCmd())
+	log := m.log.WithValues("type", "stream")
 
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
-	defer httpStreamLog.Info("finished stream handle")
+	defer log.Info("finished stream handle")
 
 	ctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
 
 	var msgCh <-chan *connectivity.Msg
 	if msgCh, err = m.manager.PostCmd(ctx, initialCmd); err != nil {
-		httpStreamLog.Error(err, "failed to post initial command")
+		log.Error(err, "failed to post initial cmd")
 		return err
 	}
 
 	sid := initialCmd.GetSessionId()
+	defer func() {
+		_, err := m.manager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
+		if err != nil {
+			log.Error(err, "failed to post session close cmd")
+		}
+	}()
 
 	// generalize resizeCh (or we may need to use reflect, which is inefficient)
 	if resizeCh == nil {
@@ -141,7 +147,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 
 		go func() {
 			// defer close(inputCh)
-			defer httpStreamLog.Info("finished stream input")
+			defer log.Info("finished stream input")
 
 			for s.Scan() {
 				select {
@@ -167,17 +173,17 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			return
 		case userInput, more := <-inputCh:
 			if !more {
-				httpStreamLog.Info("input channel closed")
+				log.Info("input channel closed")
 				return nil
 			}
 
 			if _, err = m.manager.PostCmd(ctx, userInput); err != nil {
-				httpStreamLog.Error(err, "failed to post user input")
+				log.Error(err, "failed to post user input")
 				return err
 			}
 		case msg, more := <-msgCh:
 			if !more {
-				httpStreamLog.Info("msg channel closed")
+				log.Info("msg channel closed")
 				return nil
 			}
 
@@ -197,19 +203,19 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				}
 
 				if _, err = targetOutput.Write(m.Data.GetData()); err != nil {
-					httpStreamLog.Error(err, "failed to write output")
+					log.Error(err, "failed to write output")
 					return err
 				}
 			}
 		case size, more := <-resizeCh:
 			if !more {
-				httpStreamLog.Info("resize channel closed")
+				log.Info("resize channel closed")
 				return nil
 			}
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
 			if _, err = m.manager.PostCmd(ctx, resizeCmd); err != nil {
-				httpStreamLog.Error(err, "failed to post resize cmd")
+				log.Error(err, "failed to post resize cmd")
 				return err
 			}
 		}

@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	dockerType "github.com/docker/docker/api/types"
@@ -344,55 +343,18 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	}
 	defer func() { _ = attachResp.Conn.Close() }()
 
-	// Here, we will only wait for the output
-	// since input (stdin) and resize (tty) are optional
-	// and kubectl doesn't have a detach option, so the stdout will always be there
-	// once this function call returned, base_runtime will close everything related
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		execLog.Info("starting read routine")
-		defer func() {
-			wg.Done()
-			execLog.Info("finished read routine")
-		}()
-
-		var (
-			stdOut, stdErr io.Writer
-			err            error
-		)
-		stdOut, stdErr = stdout, stderr
-		if stdout == nil {
-			stdOut = ioutil.Discard
-		}
-		if stderr == nil {
-			stdErr = ioutil.Discard
-		}
-
-		if tty {
-			_, err = io.Copy(stdOut, attachResp.Reader)
-		} else {
-			_, err = dockerCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
-		}
-		if err != nil {
-			execLog.Error(err, "exception happened in read routine")
-		}
-	}()
-
 	if stdin != nil {
 		go func() {
 			execLog.Info("starting write routine")
-			defer func() {
-				execLog.Info("finished write routine")
-			}()
+			defer execLog.Info("finished write routine")
 
 			_, err := io.Copy(attachResp.Conn, stdin)
 			if err != nil {
 				execLog.Error(err, "exception happened in write routine")
 			}
-
 		}()
 	}
+
 	go func() {
 		defer execLog.Info("finished tty resize routine")
 
@@ -417,7 +379,33 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 		}
 	}()
 
-	wg.Wait()
+	// Here, we will only wait for the output
+	// since input (stdin) and resize (tty) are optional
+	// and kubectl doesn't have a detach option, so the stdout will always be there
+	// once this function call returned, base_runtime will close everything related
+
+	execLog.Info("starting read routine")
+	defer execLog.Info("finished read routine")
+
+	var stdOut, stdErr io.Writer
+	stdOut, stdErr = stdout, stderr
+	if stdout == nil {
+		stdOut = ioutil.Discard
+	}
+	if stderr == nil {
+		stdErr = ioutil.Discard
+	}
+
+	if tty {
+		_, plainErr = io.Copy(stdOut, attachResp.Reader)
+	} else {
+		_, plainErr = dockerCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
+	}
+
+	if plainErr != nil {
+		execLog.Error(plainErr, "exception happened in read routine")
+	}
+
 	return nil
 }
 
@@ -447,26 +435,6 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		return connectivity.NewCommonError(plainErr.Error())
 	}
 	defer func() { _ = resp.Conn.Close() }()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		attachLog.Info("starting read routine")
-		defer func() {
-			wg.Done()
-			attachLog.Info("finished read routine")
-		}()
-
-		var err error
-		if stderr != nil {
-			_, err = dockerCopy.StdCopy(stdout, stderr, resp.Reader)
-		} else {
-			_, err = io.Copy(stdout, resp.Reader)
-		}
-		if err != nil {
-			attachLog.Error(err, "exception happened in read routine")
-		}
-	}()
 
 	if stdin != nil {
 		go func() {
@@ -504,7 +472,17 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		}
 	}()
 
-	wg.Wait()
+	attachLog.Info("starting read routine")
+	defer attachLog.Info("finished read routine")
+
+	if stderr != nil {
+		_, plainErr = dockerCopy.StdCopy(stdout, stderr, resp.Reader)
+	} else {
+		_, plainErr = io.Copy(stdout, resp.Reader)
+	}
+	if plainErr != nil {
+		attachLog.Error(plainErr, "exception happened in read routine")
+	}
 
 	return nil
 }
@@ -551,6 +529,7 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *connectivity.Lo
 		logLog.Error(plainErr, "exception happened in logs")
 		return connectivity.NewCommonError(plainErr.Error())
 	}
+
 	return nil
 }
 
@@ -589,25 +568,8 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		return connectivity.NewCommonError(plainErr.Error())
 	}
 	defer func() { _ = conn.Close() }()
-	wg := &sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		pfLog.Info("starting read routine")
-		defer func() {
-			pfLog.Info("finished write routine")
-			wg.Done()
-		}()
-
-		if _, err := io.Copy(out, conn); err != nil {
-			pfLog.Error(err, "exception happened in read routine")
-			return
-		}
-	}()
 
 	go func() {
-		// do not add input routine to wait group, since input is
-		// managed by us not the remote side
 		pfLog.Info("starting write routine")
 		defer pfLog.Info("finished write routine")
 
@@ -616,7 +578,13 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 			return
 		}
 	}()
-	wg.Wait()
+
+	pfLog.Info("starting read routine")
+	defer pfLog.Info("finished write routine")
+
+	if _, err := io.Copy(out, conn); err != nil {
+		pfLog.Error(err, "exception happened in read routine")
+	}
 
 	return nil
 }

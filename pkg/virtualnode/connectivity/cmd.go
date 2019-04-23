@@ -176,3 +176,11 @@ func NewContainerTtyResizeCmd(sid uint64, cols uint16, rows uint16) *Cmd {
 		},
 	})
 }
+
+func NewSessionCloseCmd(sessionToClose uint64) *Cmd {
+	return &Cmd{
+		Cmd: &Cmd_CloseSession{
+			CloseSession: sessionToClose,
+		},
+	}
+}

@@ -70,6 +70,8 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 	sid := cmd.GetSessionId()
 
 	switch cm := cmd.GetCmd().(type) {
+	case *connectivity.Cmd_CloseSession:
+		b.openedStreams.del(cm.CloseSession)
 	case *connectivity.Cmd_Node:
 		switch cm.Node.GetAction() {
 		case connectivity.GetInfoAll:
@@ -159,6 +161,10 @@ func processInNewGoroutine(sid uint64, cmdName string, process func()) {
 }
 
 func (b *baseAgent) handleRuntimeError(sid uint64, err *connectivity.Error) {
+	if err == nil {
+		return
+	}
+
 	log.Printf("[%d] E runtime error: %v", sid, err)
 
 	if err := b.doPostMsg(connectivity.NewErrorMsg(sid, err)); err != nil {
