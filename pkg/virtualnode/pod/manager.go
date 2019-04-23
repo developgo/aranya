@@ -8,6 +8,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -405,20 +406,18 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	for msg := range msgCh {
 		if err := msg.Err(); err != nil {
-			deviceCreateLog.Error(err, "failed to create pod in edge device")
-			pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
-			if err := m.UpdateMirrorPod(pod, nil); err != nil {
-				deviceCreateLog.Error(err, "failed to update pod status")
+			if err.Kind == connectivity.ErrAlreadyExists {
+				deviceCreateLog.Info("device pod already exits")
+			} else {
+				deviceCreateLog.Error(err, "failed to create pod in edge device")
+				pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
+				_ = m.UpdateMirrorPod(pod, nil)
 			}
 			continue
 		}
 
 		if devicePodStatus := msg.GetPodStatus(); devicePodStatus != nil {
-			deviceCreateLog.Info("trying to update pod status")
-			if err := m.UpdateMirrorPod(pod, devicePodStatus); err != nil {
-				deviceCreateLog.Error(err, "failed to update pod status")
-				continue
-			}
+			_ = m.UpdateMirrorPod(pod, devicePodStatus)
 		}
 	}
 
@@ -426,7 +425,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 }
 
 // DeleteDevicePod delete pod in edge device
-func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
+func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	pod, ok := m.podCache.GetByID(podUID)
 	if !ok {
 		deviceDeleteLog.Info("device pod already deleted, no action")
@@ -442,15 +441,19 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 
 	for msg := range msgCh {
 		if err := msg.Err(); err != nil {
-			deviceDeleteLog.Error(err, "failed to delete pod in device")
-			continue
+			if err.Kind == connectivity.ErrNotFound {
+				deviceDeleteLog.Info("device pod already deleted")
+			} else {
+				deviceDeleteLog.Error(err, "failed to delete pod in device")
+				continue
+			}
 		}
 
 		deviceCreateLog.Info("trying to delete pod object immediately")
 		err := m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, metav1.NewDeleteOptions(0))
-		if err != nil {
+		if err != nil && !errors.IsNotFound(err) {
 			deviceDeleteLog.Error(err, "failed to delete pod object")
-			return err
+			continue
 		}
 
 		// delete pod cache once pod object has been deleted
@@ -503,10 +506,7 @@ func (m *Manager) SyncDevicePods() error {
 			}
 
 			deviceSyncLog.Info("device pod exists, update status")
-			if err = m.UpdateMirrorPod(pod, devicePodStatus); err != nil {
-				deviceSyncLog.Error(err, "failed to update pod status")
-				continue
-			}
+			_ = m.UpdateMirrorPod(pod, devicePodStatus)
 		}
 	}
 
