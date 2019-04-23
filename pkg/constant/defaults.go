@@ -15,3 +15,8 @@ const (
 	DefaultStreamIdleTimeout     = 4 * time.Hour
 	DefaultStreamCreationTimeout = 30 * time.Second
 )
+
+// retry defaults
+const (
+	DefaultNodeStatusUpdateRetry = 5
+)

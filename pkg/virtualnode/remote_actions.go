@@ -45,7 +45,6 @@ func (vn *VirtualNode) handleGlobalMsg(msg *connectivity.Msg) {
 			vn.log.Error(err, "failed to update node cache")
 		}
 	case *connectivity.Msg_PodStatus:
-		// TODO: handle async pod status update
 		vn.log.Info("received async pod status update")
 		err := vn.podManager.UpdateMirrorPod(nil, m.PodStatus)
 		if err != nil {

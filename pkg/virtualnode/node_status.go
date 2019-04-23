@@ -5,25 +5,17 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/kubelet/util"
-)
 
-const (
-	statusReady   = 0
-	statusRunning = 1
-	statusStopped = 2
-)
-
-const (
-	nodeStatusUpdateRetry = 5
+	"arhat.dev/aranya/pkg/constant"
 )
 
 func (vn *VirtualNode) syncNodeStatus() {
-	vn.log.Info("update node status")
-	for i := 0; i < nodeStatusUpdateRetry; i++ {
+	vn.log.V(10).Info("trying to update node status")
+	for i := 0; i < constant.DefaultNodeStatusUpdateRetry; i++ {
 		if err := vn.tryUpdateNodeStatus(i); err != nil {
 			vn.log.Error(err, "failed to update node status, retry")
 		} else {
-			vn.log.Info("update node status success")
+			vn.log.V(10).Info("update node status success")
 			return
 		}
 	}

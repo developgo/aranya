@@ -1,6 +1,10 @@
 package connectivity
 
 func (m *Msg) Err() *Error {
+	if m.GetError() == nil {
+		return nil
+	}
+
 	switch m.GetError().GetKind() {
 	case ErrCommon:
 		if m.GetError().GetDescription() != "" {
@@ -14,7 +18,10 @@ func (m *Msg) Err() *Error {
 }
 
 func (m *Error) Error() string {
-	return m.GetDescription()
+	if m == nil {
+
+	}
+	return m.GetKind().String() + "/" + m.GetDescription()
 }
 
 func (m *Error) IsCommon() bool {

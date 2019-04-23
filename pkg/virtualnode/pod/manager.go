@@ -332,6 +332,9 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity
 
 	if devicePodStatus != nil {
 		pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(pod, devicePodStatus)
+		mirrorUpdateLog.Info("resolved device container status", "devicePodStatus", devicePodStatus,
+			"resolvedPhase", pod.Status.Phase,
+			"resolvedStatus", pod.Status.ContainerStatuses)
 	}
 
 	mirrorUpdateLog.Info("trying to update pod status")
@@ -438,7 +441,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 	}
 
 	for msg := range msgCh {
-		if err = msg.Err(); err != nil {
+		if err := msg.Err(); err != nil {
 			deviceDeleteLog.Error(err, "failed to delete pod in device")
 			continue
 		}
