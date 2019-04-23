@@ -328,9 +328,7 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity
 
 	if devicePodStatus != nil {
 		pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(pod, devicePodStatus)
-		log.Info("resolved device container status", "devicePodStatus", devicePodStatus,
-			"resolvedPhase", pod.Status.Phase,
-			"resolvedStatus", pod.Status.ContainerStatuses)
+		log.V(10).Info("resolved device container status")
 	}
 
 	log.Info("trying to update pod status")
