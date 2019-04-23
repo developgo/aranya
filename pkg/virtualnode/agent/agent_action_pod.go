@@ -232,11 +232,14 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	}
 }
 
-func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, input io.Reader) {
-	defer b.openedStreams.del(sid)
-
+func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardOptions, input io.ReadCloser) {
 	remoteOutput, output := io.Pipe()
-	defer func() { _, _ = remoteOutput.Close(), output.Close() }()
+
+	defer func() {
+		b.openedStreams.del(sid)
+		_, _ = remoteOutput.Close(), output.Close()
+		_ = input.Close()
+	}()
 
 	// read output
 	go func() {

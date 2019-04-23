@@ -468,8 +468,8 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 		}
 	}()
 
-	go func() {
-		if stdin != nil {
+	if stdin != nil {
+		go func() {
 			attachLog.Info("starting write routine")
 			defer attachLog.Info("finished write routine")
 
@@ -477,8 +477,8 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 			if err != nil {
 				attachLog.Error(err, "exception happened in write routine")
 			}
-		}
-	}()
+		}()
+	}
 
 	go func() {
 		attachLog.Info("starting tty resize routine")
@@ -605,20 +605,18 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		}
 	}()
 
-	wg.Add(1)
 	go func() {
+		// do not add input routine to wait group, since input is
+		// managed by us not the remote side
 		pfLog.Info("starting write routine")
-		defer func() {
-			pfLog.Info("finished write routine")
-			wg.Done()
-		}()
+		defer pfLog.Info("finished write routine")
 
 		if _, err := io.Copy(conn, in); err != nil {
 			pfLog.Error(err, "exception happened in write routine")
 			return
 		}
 	}()
-
 	wg.Wait()
+
 	return nil
 }

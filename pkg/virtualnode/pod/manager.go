@@ -407,6 +407,11 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 				log.Error(err, "failed to create pod in edge device")
 				pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
 				_ = m.UpdateMirrorPod(pod, nil)
+				if err := m.podWorkQueue.Offer(queue.ActionUpdate, pod.UID); err != nil {
+					log.Info("pod object to be update, work discarded", "reason", err.Error())
+				} else {
+					log.Info("pod object to be update, work scheduled")
+				}
 			}
 			continue
 		}

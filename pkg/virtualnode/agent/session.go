@@ -9,37 +9,39 @@ import (
 )
 
 type streamHandler struct {
-	_ctx context.Context
+	ctx context.Context
 
-	r    io.ReadCloser
-	_w   io.WriteCloser
-	_wCh chan []byte
-	sCh  chan *connectivity.TtyResizeOptions
+	r   io.ReadCloser
+	w   io.WriteCloser
+	wCh chan []byte
+	sCh chan *connectivity.TtyResizeOptions
 
-	_closed bool
-	_mu     sync.RWMutex
+	closed bool
+	mu     sync.RWMutex
 }
 
 func newStreamRW(parentCtx context.Context) *streamHandler {
 	r, w := io.Pipe()
 	h := &streamHandler{
-		_ctx: parentCtx,
-		r:    r,
-		_w:   w,
-		_wCh: make(chan []byte, 1),
-		sCh:  make(chan *connectivity.TtyResizeOptions, 1),
+		ctx: parentCtx,
+		r:   r,
+		w:   w,
+		wCh: make(chan []byte, 1),
+		sCh: make(chan *connectivity.TtyResizeOptions, 1),
 	}
 
 	go func() {
 		for {
 			select {
-			case <-parentCtx.Done():
+			case <-h.ctx.Done():
 				return
-			case data, more := <-h._wCh:
+			case data, more := <-h.wCh:
 				if !more {
 					return
 				}
-				_, _ = h._w.Write(data)
+				// pipe writer will block until all data
+				// has been read or reader has been closed
+				_, _ = h.w.Write(data)
 			}
 		}
 	}()
@@ -48,44 +50,46 @@ func newStreamRW(parentCtx context.Context) *streamHandler {
 }
 
 func (s *streamHandler) resize(size *connectivity.TtyResizeOptions) {
-	s._mu.RLock()
-	defer s._mu.RUnlock()
-	if s._closed {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
 		return
 	}
 
 	select {
-	case <-s._ctx.Done():
+	case <-s.ctx.Done():
 		return
 	case s.sCh <- size:
 	}
 }
 
 func (s *streamHandler) write(data []byte) {
-	s._mu.RLock()
-	defer s._mu.RUnlock()
-	if s._closed {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
 		return
 	}
 
 	select {
-	case <-s._ctx.Done():
+	case <-s.ctx.Done():
 		return
-	case s._wCh <- data:
+	case s.wCh <- data:
 	}
 }
 
 func (s *streamHandler) close() {
-	s._mu.Lock()
-	defer s._mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	s._closed = true
+	s.closed = true
 
 	_ = s.r.Close()
-	_ = s._w.Close()
+	_ = s.w.Close()
 
 	close(s.sCh)
-	close(s._wCh)
+	close(s.wCh)
 }
 
 type streamSession struct {
