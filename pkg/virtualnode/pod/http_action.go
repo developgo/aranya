@@ -113,6 +113,8 @@ func (m *Manager) doHandlePortForward(portProto map[int32]string, errCh chan<- e
 }
 
 func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
+	httpStreamLog := m.log.WithValues("type", "stream", "cmd", initialCmd.GetCmd())
+
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}

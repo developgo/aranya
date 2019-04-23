@@ -27,6 +27,8 @@ func (m *Manager) getPodUIDInCache(namespace, name string, podUID types.UID) typ
 
 // HandlePodContainerLog
 func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) {
+	httpLog := m.log.WithValues("type", "http", "action", "log")
+
 	namespace, podName, opt, err := util.GetParamsForContainerLog(r)
 	if err != nil {
 		httpLog.Error(err, "parse container log options failed")
@@ -59,6 +61,8 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 
 // HandlePodExec
 func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
+	httpLog := m.log.WithValues("type", "http", "action", "exec")
+
 	namespace, podName, uid, containerName, cmd := util.GetParamsForExec(r)
 	podUID := m.getPodUIDInCache(namespace, podName, uid)
 	if podUID == "" {
@@ -98,6 +102,8 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 
 // HandlePodAttach
 func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
+	httpLog := m.log.WithValues("type", "http", "action", "attach")
+
 	namespace, podName, uid, containerName, _ := util.GetParamsForExec(r)
 	podUID := m.getPodUIDInCache(namespace, podName, uid)
 	if podUID == "" {
@@ -136,6 +142,8 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 
 // HandlePodPortForward
 func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
+	httpLog := m.log.WithValues("type", "http", "action", "portforward")
+
 	namespace, podName, uid := util.GetParamsForPortForward(r)
 
 	httpLog.Info("trying to get portforward options")

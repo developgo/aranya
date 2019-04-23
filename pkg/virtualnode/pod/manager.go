@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,19 +28,6 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/resolver"
 )
 
-var (
-	log               = logf.Log.WithName("pod")
-	httpLog           = log.WithValues("httpAction", "request")
-	httpStreamLog     = log.WithValues("httpAction", "stream")
-	informerCreateLog = log.WithValues("informerAction", "create")
-	informerUpdateLog = log.WithValues("informerAction", "update")
-	informerDeleteLog = log.WithValues("informerAction", "delete")
-	mirrorUpdateLog   = log.WithValues("mirrorAction", "update")
-	deviceCreateLog   = log.WithValues("deviceAction", "create")
-	deviceDeleteLog   = log.WithValues("deviceAction", "delete")
-	deviceSyncLog     = log.WithValues("deviceAction", "sync")
-)
-
 func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager manager.Manager) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, constant.DefaultPodReSyncInterval,
@@ -53,6 +41,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformer := podInformerFactory.Core().V1().Pods().Informer()
 	ctx, exit := context.WithCancel(parentCtx)
 	mgr := &Manager{
+		log:        logf.Log.WithName(fmt.Sprintf("%s.pod", nodeName)),
 		ctx:        ctx,
 		exit:       exit,
 		manager:    manager,
@@ -69,20 +58,22 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformer.AddEventHandler(kubecache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
+			log := mgr.log.WithValues("type", "inform", "action", "add")
 
-			informerCreateLog.Info("pod object created")
+			log.Info("pod object created")
 			// always cache newly created pod
 			mgr.podCache.Update(pod)
 			// always schedule work for edge device
 			if err := mgr.podWorkQueue.Offer(queue.ActionCreate, pod.UID); err != nil {
-				informerCreateLog.Info("work discarded", "reason", err.Error())
+				log.Info("work discarded", "reason", err.Error())
 			} else {
-				informerCreateLog.Info("work scheduled")
+				log.Info("work scheduled")
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldPod := oldObj.(*corev1.Pod).DeepCopy()
 			newPod := newObj.(*corev1.Pod).DeepCopy()
+			log := mgr.log.WithValues("type", "inform", "action", "update")
 
 			podDeleted := !(newPod.GetDeletionTimestamp() == nil || newPod.GetDeletionTimestamp().IsZero())
 			if podDeleted {
@@ -90,14 +81,14 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 				// which means we have that pod running on the edge device
 				// delete it
 				if _, ok := mgr.podCache.GetByID(newPod.UID); !ok {
-					informerUpdateLog.Info("pod object already deleted, take no action")
+					log.Info("pod object already deleted, take no action")
 					return
 				}
 
 				if err := mgr.podWorkQueue.Offer(queue.ActionDelete, newPod.UID); err != nil {
-					informerUpdateLog.Info("pod object to be deleted, work discarded", "reason", err.Error())
+					log.Info("pod object to be deleted, work discarded", "reason", err.Error())
 				} else {
-					informerUpdateLog.Info("pod object to be deleted, work scheduled")
+					log.Info("pod object to be deleted, work scheduled")
 				}
 
 				// we don't want to cache a deleted pod in any case
@@ -123,16 +114,17 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
+			log := mgr.log.WithValues("type", "inform", "action", "delete")
 
 			if _, ok := mgr.podCache.GetByID(pod.UID); !ok {
-				informerDeleteLog.Info("pod object already deleted, take no action")
+				log.Info("pod object already deleted, take no action")
 				return
 			}
 
 			if err := mgr.podWorkQueue.Offer(queue.ActionDelete, pod.UID); err != nil {
-				informerDeleteLog.Info("work discarded", "reason", err.Error())
+				log.Info("work discarded", "reason", err.Error())
 			} else {
-				informerDeleteLog.Info("work scheduled")
+				log.Info("work scheduled")
 			}
 		},
 	})
@@ -143,6 +135,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 type Manager struct {
 	ctx        context.Context
 	exit       context.CancelFunc
+	log        logr.Logger
 	manager    manager.Manager
 	kubeClient kubeclient.Interface
 	podCache   *cache.PodCache
@@ -164,7 +157,7 @@ func (m *Manager) Start() (err error) {
 		// get all pods assigned to this node and build the pod cache
 		var pods []*corev1.Pod
 		if pods, err = m.GetMirrorPods(); err != nil {
-			log.Error(err, "failed to get all pod assigned to this pod")
+			m.log.Error(err, "failed to get all pod assigned to this pod")
 			return
 		}
 		for _, po := range pods {
@@ -173,7 +166,7 @@ func (m *Manager) Start() (err error) {
 
 		if ok := kubecache.WaitForCacheSync(m.ctx.Done(), m.podInformer.HasSynced); !ok {
 			err = fmt.Errorf("failed to wait for caches to sync")
-			log.Error(err, "")
+			m.log.Error(err, "")
 			return
 		}
 
@@ -198,16 +191,16 @@ func (m *Manager) Start() (err error) {
 				)
 
 				for {
-					log.Info("acquiring work", "remains", m.podWorkQueue.Remains())
+					m.log.Info("acquiring work", "remains", m.podWorkQueue.Remains())
 					podWork, shouldAcquireMore = m.podWorkQueue.Acquire()
 					if !shouldAcquireMore {
 						// no more work should be delivered when device is offline,
 						// wait for next round
-						log.Info("stopped acquiring work")
+						m.log.Info("stopped acquiring work")
 						return
 					}
 
-					workLog := log.WithValues("work", podWork.String())
+					workLog := m.log.WithValues("work", podWork.String())
 
 					workLog.Info("work acquired, trying to deliver work")
 					switch podWork.Action {
@@ -215,48 +208,48 @@ func (m *Manager) Start() (err error) {
 						workLog.Info("working on creating pod in device")
 						pod, found := m.podCache.GetByID(podWork.UID)
 						if !found {
-							log.Info("pod cache not found")
+							workLog.Info("pod cache not found")
 							continue
 						}
 
 						workLog.Info("trying to create pod in device")
 						if err = m.CreateDevicePod(pod); err != nil {
-							log.Error(err, "failed to create pod in device")
+							workLog.Error(err, "failed to create pod in device")
 							goto handleError
 						}
 					case queue.ActionUpdate:
-						log.Info("working on updating the pod in device")
+						workLog.Info("working on updating the pod in device")
 						pod, found := m.podCache.GetByID(podWork.UID)
 						if !found {
-							log.Info("pod cache not found")
+							workLog.Info("pod cache not found")
 							continue
 						}
 
-						log.Info("trying to delete pod in device")
+						workLog.Info("trying to delete pod in device")
 						if err = m.DeleteDevicePod(pod.UID); err != nil {
-							log.Error(err, "failed to delete pod in device")
+							workLog.Error(err, "failed to delete pod in device")
 							goto handleError
 						}
 
 						workLog.Info("trying to delete pod in device")
 						if err = m.CreateDevicePod(pod); err != nil {
-							log.Error(err, "failed to create pod in device")
+							workLog.Error(err, "failed to create pod in device")
 							// pod has been deleted, only need to create pod next time
 							podWork.Action = queue.ActionCreate
 							goto handleError
 						}
 					case queue.ActionDelete:
-						log.Info("working on updating the pod in device")
+						workLog.Info("working on updating the pod in device")
 						pod, found := m.podCache.GetByID(podWork.UID)
 						if !found {
-							log.Info("pod cache not found")
+							workLog.Info("pod cache not found")
 							continue
 						}
 
-						log.Info("trying to delete pod in device")
+						workLog.Info("trying to delete pod in device")
 						err = m.DeleteDevicePod(pod.UID)
 						if err != nil {
-							log.Error(err, "failed to delete pod in device for update")
+							workLog.Error(err, "failed to delete pod in device for update")
 							goto handleError
 						}
 					default:
@@ -317,6 +310,8 @@ func (m *Manager) GetMirrorPod(namespace, name string) (*corev1.Pod, error) {
 }
 
 func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity.PodStatus) error {
+	log := m.log.WithValues("type", "cloud", "action", "update")
+
 	if pod == nil {
 		if devicePodStatus != nil {
 			var ok bool
@@ -333,15 +328,15 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity
 
 	if devicePodStatus != nil {
 		pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(pod, devicePodStatus)
-		mirrorUpdateLog.Info("resolved device container status", "devicePodStatus", devicePodStatus,
+		log.Info("resolved device container status", "devicePodStatus", devicePodStatus,
 			"resolvedPhase", pod.Status.Phase,
 			"resolvedStatus", pod.Status.ContainerStatuses)
 	}
 
-	mirrorUpdateLog.Info("trying to update pod status")
+	log.Info("trying to update pod status")
 	updatedPod, err := m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 	if err != nil {
-		mirrorUpdateLog.Error(err, "failed to update pod status")
+		log.Error(err, "failed to update pod status")
 		return err
 	}
 
@@ -351,12 +346,14 @@ func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity
 
 // CreateDevicePod handle both pod resource resolution and create pod in edge device
 func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
-	deviceCreateLog.Info("trying to resolve containers dependencies")
+	log := m.log.WithValues("type", "device", "action", "create")
+
+	log.Info("trying to resolve containers dependencies")
 	containerEnvs := make(map[string]map[string]string)
 	for _, ctr := range pod.Spec.Containers {
 		envs, err := resolver.ResolveEnv(m.kubeClient, pod, &ctr)
 		if err != nil {
-			deviceCreateLog.Error(err, "failed to resolve container envs", "container", ctr.Name)
+			log.Error(err, "failed to resolve container envs", "container", ctr.Name)
 			return err
 		}
 		containerEnvs[ctr.Name] = envs
@@ -366,7 +363,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	for i, secretRef := range pod.Spec.ImagePullSecrets {
 		s, err := m.kubeClient.CoreV1().Secrets(pod.Namespace).Get(secretRef.Name, metav1.GetOptions{})
 		if err != nil {
-			deviceCreateLog.Error(err, "failed to get image pull secret", "secret", secretRef.Name)
+			log.Error(err, "failed to get image pull secret", "secret", secretRef.Name)
 			return err
 		}
 		secrets[i] = *s
@@ -374,31 +371,31 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 	imagePullSecrets, err := resolver.ResolveImagePullSecret(pod, secrets)
 	if err != nil {
-		deviceCreateLog.Error(err, "failed to resolve image pull secret")
+		log.Error(err, "failed to resolve image pull secret")
 		return err
 	}
 
 	volumeData, hostVolume, err := resolver.ResolveVolume(m.kubeClient, pod)
 	if err != nil {
-		deviceCreateLog.Error(err, "failed to resolve container volumes")
+		log.Error(err, "failed to resolve container volumes")
 		return err
 	}
 
-	deviceCreateLog.Info("trying to post pod create cmd to edge device")
+	log.Info("trying to post pod create cmd to edge device")
 	podCreateCmd := connectivity.NewPodCreateCmd(pod, imagePullSecrets, containerEnvs, volumeData, hostVolume)
 	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {
-		deviceCreateLog.Error(err, "failed to post pod create command")
+		log.Error(err, "failed to post pod create command")
 		return err
 	}
 
 	// mark pod status ContainerCreating just like what the kubelet will do
 	pod.Status.Phase, pod.Status.ContainerStatuses = newContainerCreatingStatus(pod)
-	deviceCreateLog.Info("trying to update pod status to ContainerCreating")
+	log.Info("trying to update pod status to ContainerCreating")
 	updatedPod, err := m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 	if err != nil {
 		// errored, but we should wait until work done on device
-		deviceCreateLog.Error(err, "failed to update pod status")
+		log.Error(err, "failed to update pod status")
 	} else {
 		pod = updatedPod
 		m.podCache.Update(pod)
@@ -407,9 +404,9 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	for msg := range msgCh {
 		if err := msg.Err(); err != nil {
 			if err.Kind == connectivity.ErrAlreadyExists {
-				deviceCreateLog.Info("device pod already exits")
+				log.Info("device pod already exits")
 			} else {
-				deviceCreateLog.Error(err, "failed to create pod in edge device")
+				log.Error(err, "failed to create pod in edge device")
 				pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
 				_ = m.UpdateMirrorPod(pod, nil)
 			}
@@ -426,33 +423,35 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 
 // DeleteDevicePod delete pod in edge device
 func (m *Manager) DeleteDevicePod(podUID types.UID) error {
+	log := m.log.WithValues("type", "device", "action", "delete")
+
 	pod, ok := m.podCache.GetByID(podUID)
 	if !ok {
-		deviceDeleteLog.Info("device pod already deleted, no action")
+		log.Info("device pod already deleted, no action")
 		return nil
 	}
 
 	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Second)
 	msgCh, err := m.manager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
-		deviceDeleteLog.Error(err, "failed to post pod delete command")
+		log.Error(err, "failed to post pod delete command")
 		return err
 	}
 
 	for msg := range msgCh {
 		if err := msg.Err(); err != nil {
 			if err.Kind == connectivity.ErrNotFound {
-				deviceDeleteLog.Info("device pod already deleted")
+				log.Info("device pod already deleted")
 			} else {
-				deviceDeleteLog.Error(err, "failed to delete pod in device")
+				log.Error(err, "failed to delete pod in device")
 				continue
 			}
 		}
 
-		deviceCreateLog.Info("trying to delete pod object immediately")
+		log.Info("trying to delete pod object immediately")
 		err := m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, metav1.NewDeleteOptions(0))
 		if err != nil && !errors.IsNotFound(err) {
-			deviceDeleteLog.Error(err, "failed to delete pod object")
+			log.Error(err, "failed to delete pod object")
 			continue
 		}
 
@@ -466,36 +465,37 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 }
 
 func (m *Manager) SyncDevicePods() error {
-	deviceSyncLog.Info("trying to sync device pods")
+	log := m.log.WithValues("type", "device", "action", "sync")
 
+	log.Info("trying to sync device pods")
 	msgCh, err := m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
-		deviceSyncLog.Error(err, "failed to post pod list cmd")
+		log.Error(err, "failed to post pod list cmd")
 		return err
 	}
 
 	for msg := range msgCh {
 		if err := msg.Err(); err != nil {
-			deviceSyncLog.Error(err, "failed to list device pods")
+			log.Error(err, "failed to list device pods")
 			continue
 		}
 
 		devicePodStatusList := msg.GetPodStatusList().GetPods()
 		if devicePodStatusList == nil {
-			deviceSyncLog.Info("unexpected non pod status list")
+			log.Info("unexpected non pod status list")
 			continue
 		}
 
 		for _, devicePodStatus := range devicePodStatusList {
 			podUID := types.UID(devicePodStatus.GetUid())
 			if podUID == "" {
-				deviceSyncLog.Info("device pod uid empty, discard")
+				log.Info("device pod uid empty, discard")
 				continue
 			}
 
 			pod, ok := m.podCache.GetByID(podUID)
 			if !ok {
-				deviceSyncLog.Info("device pod not cached, delete")
+				log.Info("device pod not cached, delete")
 				// no pod cache means no mirror pod for it, should be deleted
 				if err := m.podWorkQueue.Offer(queue.ActionDelete, podUID); err != nil {
 					log.Info("work to delete device pod discarded", "reason", err.Error())
@@ -505,7 +505,7 @@ func (m *Manager) SyncDevicePods() error {
 				continue
 			}
 
-			deviceSyncLog.Info("device pod exists, update status")
+			log.Info("device pod exists, update status")
 			_ = m.UpdateMirrorPod(pod, devicePodStatus)
 		}
 	}
