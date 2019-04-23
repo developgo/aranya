@@ -12,19 +12,29 @@ type session struct {
 	ctx     context.Context
 	ctxExit context.CancelFunc
 	msgCh   chan *connectivity.Msg
+
+	closed bool
+	mu     sync.RWMutex
 }
 
 func (s *session) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.closed = true
 	s.ctxExit()
 	close(s.msgCh)
 }
 
 func (s *session) isClosed() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	select {
 	case <-s.ctx.Done():
 		return true
 	default:
-		return false
+		return s.closed
 	}
 }
 
@@ -71,15 +81,11 @@ func (s *sessionManager) get(sid uint64) (chan *connectivity.Msg, bool) {
 	defer s.mu.RUnlock()
 
 	session, ok := s.m[sid]
-	if ok {
-		if session.isClosed() {
-			s.del(sid)
-		}
-
+	if ok && !session.isClosed() {
 		return session.msgCh, true
-	} else {
-		return nil, false
 	}
+
+	return nil, false
 }
 
 func (s *sessionManager) del(sid uint64) {

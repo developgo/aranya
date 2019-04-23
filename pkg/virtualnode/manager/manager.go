@@ -120,7 +120,7 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 		ch <- msg
 
 		// close session when error happened on device or session complete
-		if msg.GetCompleted() || msg.Err() != nil {
+		if msg.GetCompleted() {
 			s.sessions.del(msg.GetSessionId())
 		}
 	} else {
