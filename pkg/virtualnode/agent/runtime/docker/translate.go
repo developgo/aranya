@@ -14,10 +14,11 @@ import (
 func (r *dockerRuntime) translatePodStatus(pauseContainer *dockerType.ContainerJSON, containers []*dockerType.ContainerJSON) *connectivity.PodStatus {
 	podUID := pauseContainer.Config.Labels[constant.ContainerLabelPodUID]
 	ctrStatus := make(map[string]*connectivity.PodStatus_ContainerStatus)
+
 	for _, ctr := range containers {
 		ctrPodUID := ctr.Config.Labels[constant.ContainerLabelPodUID]
 		name := ctr.Config.Labels[constant.ContainerLabelPodContainer]
-		if name != "" || ctrPodUID != podUID {
+		if name == "" || ctrPodUID != podUID {
 			// invalid container, skip
 			continue
 		}

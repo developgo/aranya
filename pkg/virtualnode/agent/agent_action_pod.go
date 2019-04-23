@@ -13,13 +13,13 @@ import (
 )
 
 func (b *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
-	podResp, err := b.runtime.CreatePod(options)
+	podStatus, err := b.runtime.CreatePod(options)
 	if err != nil {
 		b.handleRuntimeError(sid, err)
 		return
 	}
 
-	if err := b.doPostMsg(connectivity.NewPodStatusMsg(sid, podResp)); err != nil {
+	if err := b.doPostMsg(connectivity.NewPodStatusMsg(sid, podStatus)); err != nil {
 		b.handleConnectivityError(sid, err)
 		return
 	}

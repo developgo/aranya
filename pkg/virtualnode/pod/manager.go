@@ -111,7 +111,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 			// pod need to be updated on device only when its spec has been changed
 			// TODO: evaluate more delicate check
 			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
-				log.Info("pod spec not updated, skip")
+				log.V(10).Info("pod spec not updated, skip")
 				return
 			}
 

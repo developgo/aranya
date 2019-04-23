@@ -44,7 +44,7 @@ func resolveContainerStatus(pod *corev1.Pod, devicePodStatus *connectivity.PodSt
 	statuses := make([]corev1.ContainerStatus, len(pod.Spec.Containers))
 	for i, ctr := range pod.Spec.Containers {
 		if s, ok := ctrStatusMap[ctr.Name]; ok {
-			status := corev1.ContainerStatus{
+			status := &corev1.ContainerStatus{
 				Name:        ctr.Name,
 				ContainerID: s.ContainerId,
 				Image:       ctr.Image,
@@ -83,6 +83,8 @@ func resolveContainerStatus(pod *corev1.Pod, devicePodStatus *connectivity.PodSt
 					ContainerID: s.ContainerId,
 				}
 			}
+
+			statuses[i] = *status
 		} else {
 			statuses[i] = corev1.ContainerStatus{
 				Name: ctr.Name,
