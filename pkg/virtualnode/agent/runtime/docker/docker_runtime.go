@@ -18,7 +18,6 @@ import (
 	dockerFilter "github.com/docker/docker/api/types/filters"
 	dockerClient "github.com/docker/docker/client"
 	dockerCopy "github.com/docker/docker/pkg/stdcopy"
-	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
@@ -310,7 +309,7 @@ func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connecti
 	return results, nil
 }
 
-func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) *connectivity.Error {
+func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan *connectivity.TtyResizeOptions, command []string, tty bool) *connectivity.Error {
 	execLog := r.Log().WithValues("uid", podUID, "container", container, "action", "exec")
 
 	execLog.Info("trying to find container")
@@ -403,10 +402,10 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 				if !more {
 					return
 				}
-				execLog.Info("resize tty", "height", size.Height, "width", size.Width)
+
 				err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
-					Height: uint(size.Height),
-					Width:  uint(size.Width),
+					Height: uint(size.GetRows()),
+					Width:  uint(size.GetCols()),
 				})
 				if err != nil {
 					// DO NOT break here
@@ -422,7 +421,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	return nil
 }
 
-func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) *connectivity.Error {
+func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan *connectivity.TtyResizeOptions) *connectivity.Error {
 	attachLog := r.Log().WithValues("action", "attach", "uid", podUID, "container", container)
 
 	attachLog.Info("trying to find container")
@@ -491,9 +490,10 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 				if !more {
 					return
 				}
+
 				err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockerType.ResizeOptions{
-					Height: uint(size.Height),
-					Width:  uint(size.Width),
+					Height: uint(size.GetRows()),
+					Width:  uint(size.GetCols()),
 				})
 				if err != nil {
 					attachLog.Error(err, "exception happened in tty resize routine")

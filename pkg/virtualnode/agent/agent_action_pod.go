@@ -6,8 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"k8s.io/client-go/tools/remotecommand"
-
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )
@@ -51,7 +49,7 @@ func (b *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
 	}
 }
 
-func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan remotecommand.TerminalSize) {
+func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan *connectivity.TtyResizeOptions) {
 	defer b.openedStreams.del(sid)
 
 	var (
@@ -109,7 +107,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 	}
 }
 
-func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan remotecommand.TerminalSize) {
+func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOptions, stdin io.Reader, resizeCh <-chan *connectivity.TtyResizeOptions) {
 	defer func() {
 		b.openedStreams.del(sid)
 		log.Printf("finished contaienr exec")

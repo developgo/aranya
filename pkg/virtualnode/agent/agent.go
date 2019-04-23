@@ -6,8 +6,6 @@ import (
 	"log"
 	"sync"
 
-	"k8s.io/client-go/tools/remotecommand"
-
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
@@ -29,8 +27,7 @@ func newBaseAgent(ctx context.Context, config *Config, rt runtime.Interface) bas
 		ctx:     ctx,
 		runtime: rt,
 		openedStreams: streamSession{
-			inputWriter: make(map[uint64]*streamRW),
-			resizeCh:    make(map[uint64]chan remotecommand.TerminalSize),
+			streamHandlers: make(map[uint64]*streamHandler),
 		},
 	}
 }
@@ -96,7 +93,6 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 		}
 	case *connectivity.Cmd_Pod:
 		switch cm.Pod.GetAction() {
-		// pod scope commands
 		case connectivity.CreatePod:
 			processInNewGoroutine(sid, "pod.create", func() {
 				b.doPodCreate(sid, cm.Pod.GetCreateOptions())
@@ -110,62 +106,41 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 				b.doPodList(sid, cm.Pod.GetListOptions())
 			})
 		case connectivity.PortForward:
-			rw := newStreamRW()
-			b.openedStreams.add(sid, rw, nil)
-
+			h := newStreamRW(b.ctx)
+			b.openedStreams.add(sid, h)
 			processInNewGoroutine(sid, "pod.portforward", func() {
-				b.doPortForward(sid, cm.Pod.GetPortForwardOptions(), rw.r)
+				b.doPortForward(sid, cm.Pod.GetPortForwardOptions(), h.r)
 			})
 		case connectivity.Exec:
-			rw := newStreamRW()
-			resizeCh := make(chan remotecommand.TerminalSize, 1)
-			b.openedStreams.add(sid, rw, resizeCh)
-
+			h := newStreamRW(b.ctx)
+			b.openedStreams.add(sid, h)
 			processInNewGoroutine(sid, "pod.exec", func() {
-				b.doContainerExec(sid, cm.Pod.GetExecOptions(), rw.r, resizeCh)
+				b.doContainerExec(sid, cm.Pod.GetExecOptions(), h.r, h.sCh)
 			})
 		case connectivity.Attach:
-			rw := newStreamRW()
-			resizeCh := make(chan remotecommand.TerminalSize, 1)
-			b.openedStreams.add(sid, rw, resizeCh)
-
+			h := newStreamRW(b.ctx)
+			b.openedStreams.add(sid, h)
 			processInNewGoroutine(sid, "pod.attach", func() {
-				b.doContainerAttach(sid, cm.Pod.GetExecOptions(), rw.r, resizeCh)
+				b.doContainerAttach(sid, cm.Pod.GetExecOptions(), h.r, h.sCh)
 			})
 		case connectivity.Log:
 			processInNewGoroutine(sid, "pod.log", func() {
 				b.doContainerLog(sid, cm.Pod.GetLogOptions())
 			})
 		case connectivity.Input:
-			writer, ok := b.openedStreams.getInputWriter(sid)
+			h, ok := b.openedStreams.getStreamHandler(sid)
 			if !ok {
 				b.handleRuntimeError(sid, ErrStreamSessionClosed)
 				return
 			}
-
-			// input data should not be processed in new goroutines
-			_, err := writer.Write(cm.Pod.GetInputOptions().GetData())
-			if err != nil {
-				b.handleRuntimeError(sid, connectivity.NewCommonError(err.Error()))
-				return
-			}
+			h.write(cm.Pod.GetInputOptions().GetData())
 		case connectivity.ResizeTty:
-			resizeCh, ok := b.openedStreams.getResizeChan(sid)
+			h, ok := b.openedStreams.getStreamHandler(sid)
 			if !ok {
 				b.handleRuntimeError(sid, ErrStreamSessionClosed)
 				return
 			}
-
-			processInNewGoroutine(sid, "pod.resizeTty", func() {
-				size := remotecommand.TerminalSize{
-					Width:  uint16(cm.Pod.GetResizeOptions().GetCols()),
-					Height: uint16(cm.Pod.GetResizeOptions().GetRows()),
-				}
-				select {
-				case resizeCh <- size:
-				case <-b.ctx.Done():
-				}
-			})
+			h.resize(cm.Pod.GetResizeOptions())
 		default:
 			log.Printf("[%d] unknown pod cmd: %v", sid, cm.Pod)
 		}

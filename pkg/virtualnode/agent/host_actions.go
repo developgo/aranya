@@ -6,7 +6,6 @@ import (
 	"os/exec"
 
 	"github.com/kr/pty"
-	"k8s.io/client-go/tools/remotecommand"
 
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
@@ -15,7 +14,7 @@ var (
 	ErrCommandNotProvided = connectivity.NewCommonError("command not provided for exec")
 )
 
-func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) *connectivity.Error {
+func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan *connectivity.TtyResizeOptions, command []string, tty bool) *connectivity.Error {
 	if len(command) == 0 {
 		// impossible for agent exec, but still check
 		return ErrCommandNotProvided
@@ -56,9 +55,9 @@ func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remot
 
 		go func() {
 			for size := range resizeCh {
-				err := pty.Setsize(f, &pty.Winsize{Cols: size.Width, Rows: size.Height})
+				err := pty.Setsize(f, &pty.Winsize{Cols: uint16(size.GetCols()), Rows: uint16(size.GetRows())})
 				if err != nil {
-					log.Printf("failed to resize: cols = %d, rows = %d", size.Width, size.Height)
+					log.Printf("failed to resize")
 				}
 			}
 		}()

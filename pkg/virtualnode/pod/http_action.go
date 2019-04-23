@@ -73,12 +73,11 @@ func (m *Manager) doGetContainerLogs(uid types.UID, options *corev1.PodLogOption
 	return reader, nil
 }
 
-func (m *Manager) doHandleExecInContainer(errCh chan<- error) kubeletrc.Executor {
+func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 	return containerExecutor(func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 		execCmd := connectivity.NewContainerExecCmd(string(uid), container, cmd, stdin != nil, stdout != nil, stderr != nil, tty)
 		err := m.doServeStream(execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
-			errCh <- err
 			return err
 		}
 
@@ -86,12 +85,11 @@ func (m *Manager) doHandleExecInContainer(errCh chan<- error) kubeletrc.Executor
 	})
 }
 
-func (m *Manager) doHandleAttachContainer(errCh chan<- error) kubeletrc.Attacher {
+func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 	return containerAttacher(func(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
 		attachCmd := connectivity.NewContainerAttachCmd(string(uid), container, stdin != nil, stdout != nil, stderr != nil, tty)
 		err := m.doServeStream(attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
-			errCh <- err
 			return err
 		}
 
@@ -99,12 +97,11 @@ func (m *Manager) doHandleAttachContainer(errCh chan<- error) kubeletrc.Attacher
 	})
 }
 
-func (m *Manager) doHandlePortForward(portProto map[int32]string, errCh chan<- error) kubeletpf.PortForwarder {
+func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.PortForwarder {
 	return portForwarder(func(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
 		portForwardCmd := connectivity.NewPortForwardCmd(string(uid), port, portProto[port])
 		err := m.doServeStream(portForwardCmd, stream, stream, nil, nil)
 		if err != nil {
-			errCh <- err
 			return err
 		}
 

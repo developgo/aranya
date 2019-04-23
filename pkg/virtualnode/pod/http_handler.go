@@ -71,33 +71,19 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	streamOptions := util.NewRemoteCommandOptions(r)
-
-	errCh := make(chan error, 1)
-	go func() {
-		defer close(errCh)
-
-		httpLog.Info("starting to serve exec")
-		kubeletremotecommand.ServeExec(
-			w, r, /* http context */
-			m.doHandleExecInContainer(errCh), /* wrapped pod executor */
-			"",                               /* pod name (unused) */
-			podUID,                           /* unique id of pod */
-			containerName,                    /* container name to execute in*/
-			cmd,                              /* commands to execute */
-			streamOptions,                    /* stream options */
-			// timeout options
-			constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
-			// supported protocols
-			strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
-	}()
-
-	for err := range errCh {
-		if err != nil {
-			httpLog.Error(err, "exception happened when handling exec")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	}
+	httpLog.Info("starting to serve exec")
+	kubeletremotecommand.ServeExec(
+		w, r, /* http context */
+		m.doHandleExecInContainer(),     /* wrapped pod executor */
+		"",                              /* pod name (unused) */
+		podUID,                          /* unique id of pod */
+		containerName,                   /* container name to execute in*/
+		cmd,                             /* commands to execute */
+		util.NewRemoteCommandOptions(r), /* stream options */
+		// timeout options
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
+		// supported protocols
+		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
 
 // HandlePodAttach
@@ -112,32 +98,18 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	streamOptions := util.NewRemoteCommandOptions(r)
-
-	errCh := make(chan error, 1)
-	go func() {
-		defer close(errCh)
-
-		httpLog.Info("starting to serve attach")
-		kubeletremotecommand.ServeAttach(
-			w, r, /* http context */
-			m.doHandleAttachContainer(errCh), /* wrapped pod attacher */
-			"",                               /* pod name (not used) */
-			podUID,                           /* unique id of pod */
-			containerName,                    /* container to execute in */
-			streamOptions,                    /* stream options */
-			// timeout options
-			constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
-			// supported protocols
-			strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
-	}()
-
-	for err := range errCh {
-		if err != nil {
-			httpLog.Error(err, "exception happened when handling attach")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	}
+	httpLog.Info("starting to serve attach")
+	kubeletremotecommand.ServeAttach(
+		w, r, /* http context */
+		m.doHandleAttachContainer(),     /* wrapped pod attacher */
+		"",                              /* pod name (not used) */
+		podUID,                          /* unique id of pod */
+		containerName,                   /* container to execute in */
+		util.NewRemoteCommandOptions(r), /* stream options */
+		// timeout options
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
+		// supported protocols
+		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
 
 // HandlePodPortForward
@@ -161,6 +133,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// build port protocol map
 	pod, ok := m.podCache.GetByID(podUID)
 	if !ok {
 		httpLog.Info("pod not found for port forward", "podUID", podUID)
@@ -179,27 +152,15 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		defer close(errCh)
-
-		httpLog.Info("starting to serve port forward")
-		kubeletportforward.ServePortForward(
-			w, r, /* http context */
-			m.doHandlePortForward(portProto, errCh), /* wrapped pod port forwarder */
-			"",                                      /* pod name (not used) */
-			podUID,                                  /* unique id of pod */
-			portForwardOptions,                      /* port forward options (ports) */
-			// timeout options
-			constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
-			// supported protocols
-			strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
-	}()
-
-	for err := range errCh {
-		if err != nil {
-			httpLog.Error(err, "exception happened when handling port forward")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	}
+	httpLog.Info("starting to serve port forward")
+	kubeletportforward.ServePortForward(
+		w, r, /* http context */
+		m.doHandlePortForward(portProto), /* wrapped pod port forwarder */
+		"",                               /* pod name (not used) */
+		podUID,                           /* unique id of pod */
+		portForwardOptions,               /* port forward options (ports) */
+		// timeout options
+		constant.DefaultStreamIdleTimeout, constant.DefaultStreamCreationTimeout,
+		// supported protocols
+		strings.Split(r.Header.Get("X-Stream-Protocol-Version"), ","))
 }
