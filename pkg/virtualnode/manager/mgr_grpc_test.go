@@ -39,7 +39,7 @@ func newTestGrpcSrvAndStub() (mgr *GRPCManager, stub connectivity.ConnectivityCl
 func TestNewGrpcConnectivity(t *testing.T) {
 	c := NewGRPCManager(grpc.NewServer(), nil)
 	assert.NotEmpty(t, c)
-	assert.NotEmpty(t, c.sessions)
+	assert.NotEmpty(t, c.sessionManager)
 	assert.Empty(t, c.syncSrv)
 }
 

@@ -36,14 +36,14 @@ type Manager interface {
 	Disconnected() <-chan struct{}
 	// GlobalMessages message with no session attached
 	GlobalMessages() <-chan *connectivity.Msg
-	// send a command to remote device with timeout
+	// dispatch a command to remote device with timeout
 	// return a channel of message for this session
 	PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error)
 }
 
 type baseManager struct {
-	sessions      *sessionManager
-	globalMsgChan chan *connectivity.Msg
+	sessionManager *sessionManager
+	globalMsgChan  chan *connectivity.Msg
 
 	// signals
 	connected    chan struct{}
@@ -58,10 +58,10 @@ func newBaseServer() baseManager {
 	close(disconnected)
 
 	return baseManager{
-		sessions:      newSessionManager(),
-		connected:     make(chan struct{}),
-		disconnected:  disconnected,
-		globalMsgChan: make(chan *connectivity.Msg, messageChannelSize),
+		sessionManager: newSessionManager(),
+		connected:      make(chan struct{}),
+		disconnected:   disconnected,
+		globalMsgChan:  make(chan *connectivity.Msg, messageChannelSize),
 	}
 }
 
@@ -116,10 +116,10 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 		return
 	}
 
-	if ok := s.sessions.send(msg); ok {
-		// close session when error happened on device or session complete
+	if ok := s.sessionManager.dispatch(msg); ok {
+		// close session when session is marked complete
 		if msg.GetCompleted() {
-			s.sessions.del(msg.GetSessionId())
+			s.sessionManager.del(msg.GetSessionId())
 		}
 	} else {
 		s.globalMsgChan <- msg
@@ -135,7 +135,7 @@ func (s *baseManager) onDisconnected(setDisconnected func()) {
 
 	setDisconnected()
 
-	s.sessions.cleanup()
+	s.sessionManager.cleanup()
 
 	// refresh connected signal
 	s.connected = make(chan struct{})
@@ -172,10 +172,10 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		}
 	}
 
-	sid, ch = s.sessions.add(ctx, cmd)
+	sid, ch = s.sessionManager.add(ctx, cmd)
 	defer func() {
 		if err != nil {
-			s.sessions.del(sid)
+			s.sessionManager.del(sid)
 		}
 	}()
 

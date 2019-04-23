@@ -26,16 +26,23 @@ func (s *session) close() {
 	close(s.msgCh)
 }
 
-func (s *session) isClosed() bool {
+func (s *session) deliver(msg *connectivity.Msg) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	select {
 	case <-s.ctx.Done():
-		return true
+		return false
 	default:
-		return s.closed
+		break
 	}
+
+	if !s.closed {
+		s.msgCh <- msg
+		return true
+	}
+
+	return false
 }
 
 type sessionManager struct {
@@ -76,14 +83,13 @@ func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd) (sid ui
 	return sid, ch
 }
 
-func (s *sessionManager) send(msg *connectivity.Msg) bool {
+func (s *sessionManager) dispatch(msg *connectivity.Msg) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	session, ok := s.m[msg.GetSessionId()]
-	if ok && !session.isClosed() {
-		session.msgCh <- msg
-		return true
+	if ok {
+		return session.deliver(msg)
 	}
 
 	return false
@@ -94,7 +100,6 @@ func (s *sessionManager) del(sid uint64) {
 	defer s.mu.Unlock()
 
 	if session, ok := s.m[sid]; ok {
-
 		session.close()
 		delete(s.m, sid)
 	}
@@ -108,7 +113,6 @@ func (s *sessionManager) cleanup() {
 	i := 0
 	for key, session := range s.m {
 		session.close()
-
 		keys[i] = key
 		i++
 	}
