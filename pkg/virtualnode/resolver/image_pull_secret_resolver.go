@@ -4,12 +4,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/credentialprovider"
 	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/util/parsers"
+
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func ResolveImagePullSecret(pod *corev1.Pod, secret []corev1.Secret) (map[string]*criRuntime.AuthConfig, error) {
-	imageNameToAuthConfigMap := make(map[string]*criRuntime.AuthConfig)
+func ResolveImagePullSecret(pod *corev1.Pod, secret []corev1.Secret) (map[string]*connectivity.AuthConfig, error) {
+	imageNameToAuthConfigMap := make(map[string]*connectivity.AuthConfig)
 
 	keyring, err := secrets.MakeDockerKeyring(secret, credentialprovider.NewDockerKeyring())
 	if err != nil {
@@ -29,7 +30,7 @@ func ResolveImagePullSecret(pod *corev1.Pod, secret []corev1.Secret) (map[string
 
 		for _, currentCreds := range creds {
 			authConfig := credentialprovider.LazyProvide(currentCreds)
-			auth := &criRuntime.AuthConfig{
+			imageNameToAuthConfigMap[apiCtr.Image] = &connectivity.AuthConfig{
 				Username:      authConfig.Username,
 				Password:      authConfig.Password,
 				Auth:          authConfig.Auth,
@@ -37,8 +38,6 @@ func ResolveImagePullSecret(pod *corev1.Pod, secret []corev1.Secret) (map[string
 				IdentityToken: authConfig.IdentityToken,
 				RegistryToken: authConfig.RegistryToken,
 			}
-
-			imageNameToAuthConfigMap[apiCtr.Image] = auth
 		}
 	}
 

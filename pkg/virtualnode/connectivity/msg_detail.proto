@@ -9,7 +9,7 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
-message Node {
+message NodeStatus {
     message Resource {
         // protobuf bytes of corev1.ResourceList
         map<string, bytes> capacity = 1;
@@ -27,26 +27,37 @@ message Node {
     Condition conditions = 3;
 }
 
-message Image {
-    repeated string names = 1;
-    uint64 size_bytes = 2;
+message PodStatus {
+    enum State {
+        StateUnknown = 0;
+        StatePending = 1;
+        StateRunning = 2;
+        StateSucceeded = 3;
+        StateFailed = 4;
+    }
+
+    message ContainerStatus {
+        string container_id = 1;
+        string image_id = 2;
+
+        // time values in unix nano
+        int64 created_at = 4;
+        int64 started_at = 5;
+        int64 finished_at = 6;
+        int32 exit_code = 7;
+
+        string reason = 11;
+        string message = 12;
+    }
+
+    // metadata
+    string uid = 1;
+    // status
+    map<string, ContainerStatus> container_statuses = 2;
 }
 
-message Pod {
-    message ContainerStatusV1alpha2 {
-        repeated bytes v1alpha2 = 1;
-    }
-
-    string uid = 1;
-    string ip = 2;
-
-    oneof sandbox_status {
-        bytes sandbox_v1alpha2 = 11;
-    }
-
-    oneof container_status {
-        ContainerStatusV1alpha2 container_v1alpha2 = 21;
-    }
+message PodStatusList {
+    repeated PodStatus pods = 1;
 }
 
 message Data {
@@ -57,20 +68,19 @@ message Data {
     }
 
     Kind kind = 1;
-
-    bytes data = 11;
+    bytes data = 2;
 }
 
-message Ack {
-    message Hash {
-        oneof hash {
-            // sha256 hex string
-            string sha256 = 1;
-        }
+message Error {
+    enum Kind {
+        ErrCommon = 0;
+        ErrNotFound = 1;
+        ErrAlreadyExists = 2;
+        // work not supported, aranya should ignore this error 
+        // and cancel work
+        ErrNotSupported = 3;
     }
 
-    oneof value {
-        Hash hash = 1;
-        string error = 2;
-    }
+    Kind kind = 1;
+    string description = 2;
 }

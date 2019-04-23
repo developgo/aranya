@@ -1,12 +1,12 @@
 package connectivity
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-
 	corev1 "k8s.io/api/core/v1"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
+
+func newMsg(sid uint64, completed bool, m isMsg_Msg) *Msg {
+	return &Msg{SessionId: sid, Completed: completed, Msg: m}
+}
 
 func NewNodeMsg(
 	sid uint64,
@@ -38,32 +38,20 @@ func NewNodeMsg(
 		conditionBytes = append(conditionBytes, condBytes)
 	}
 
-	return &Msg{
-		SessionId: sid,
-		Completed: true,
-		Msg: &Msg_Node{
-			Node: &Node{
+	return newMsg(sid, true,
+		&Msg_NodeStatus{
+			NodeStatus: &NodeStatus{
 				SystemInfo: systemInfoBytes,
-				Resources: &Node_Resource{
+				Resources: &NodeStatus_Resource{
 					Capacity:    capacityBytesMap,
 					Allocatable: allocatableBytesMap,
 				},
-				Conditions: &Node_Condition{
+				Conditions: &NodeStatus_Condition{
 					Conditions: conditionBytes,
 				},
 			},
 		},
-	}
-}
-
-func NewImageMsg(sid uint64, completed bool, image *Image) *Msg {
-	return &Msg{
-		SessionId: sid,
-		Completed: completed,
-		Msg: &Msg_Image{
-			Image: image,
-		},
-	}
+	)
 }
 
 func NewDataMsg(sid uint64, completed bool, kind Data_Kind, data []byte) *Msg {
@@ -79,76 +67,62 @@ func NewDataMsg(sid uint64, completed bool, kind Data_Kind, data []byte) *Msg {
 	}
 }
 
-func NewPod(podUID string, podStatus *criRuntime.PodSandboxStatus, containerStatuses []*criRuntime.ContainerStatus) *Pod {
-	var (
-		podStatusBytes       []byte
-		containerStatusBytes = make([][]byte, len(containerStatuses))
-	)
-
-	if podStatus != nil {
-		podStatusBytes, _ = podStatus.Marshal()
-	}
-
-	for i, containerStatus := range containerStatuses {
-		containerStatusBytes[i], _ = containerStatus.Marshal()
-	}
-
-	return &Pod{
-		Uid: podUID,
-		Ip:  podStatus.GetNetwork().GetIp(),
-		ContainerStatus: &Pod_ContainerV1Alpha2{
-			ContainerV1Alpha2: &Pod_ContainerStatusV1Alpha2{
-				V1Alpha2: containerStatusBytes,
-			},
-		},
-		SandboxStatus: &Pod_SandboxV1Alpha2{
-			SandboxV1Alpha2: podStatusBytes,
-		},
+func NewPodStatus(podUID string, containerStatus map[string]*PodStatus_ContainerStatus) *PodStatus {
+	return &PodStatus{
+		Uid:               podUID,
+		ContainerStatuses: containerStatus,
 	}
 }
 
-func NewPodMsg(sid uint64, completed bool, pod *Pod) *Msg {
-	return &Msg{
-		SessionId: sid,
-		Completed: completed,
-		Msg: &Msg_Pod{
-			Pod: pod,
-		},
-	}
-}
-
-func NewAckSha256Msg(sid uint64, receivedData []byte) *Msg {
-	h := sha256.New()
-	h.Write(receivedData)
-	hash := hex.EncodeToString(h.Sum(nil))
-
+func NewPodStatusMsg(sid uint64, pod *PodStatus) *Msg {
 	return &Msg{
 		SessionId: sid,
 		Completed: true,
-		Msg: &Msg_Ack{
-			Ack: &Ack{
-				Value: &Ack_Hash_{
-					Hash: &Ack_Hash{
-						Hash: &Ack_Hash_Sha256{
-							Sha256: hash,
-						},
-					},
-				},
+		Msg:       &Msg_PodStatus{PodStatus: pod},
+	}
+}
+
+func NewPodStatusListMsg(sid uint64, pods []*PodStatus) *Msg {
+	return &Msg{
+		SessionId: sid,
+		Completed: true,
+		Msg: &Msg_PodStatusList{
+			PodStatusList: &PodStatusList{
+				Pods: pods,
 			},
 		},
 	}
 }
 
-func NewErrorMsg(sid uint64, err error) *Msg {
+func newError(kind Error_Kind, description string) *Error {
+	return &Error{
+		Kind:        kind,
+		Description: description,
+	}
+}
+
+func NewCommonError(description string) *Error {
+	return newError(ErrCommon, description)
+}
+
+func NewNotFoundError(description string) *Error {
+	return newError(ErrNotFound, description)
+}
+
+func NewAlreadyExistsError(description string) *Error {
+	return newError(ErrAlreadyExists, description)
+}
+
+func NewNotSupportedError(description string) *Error {
+	return newError(ErrNotSupported, description)
+}
+
+func NewErrorMsg(sid uint64, err *Error) *Msg {
 	return &Msg{
 		SessionId: sid,
 		Completed: true,
-		Msg: &Msg_Ack{
-			Ack: &Ack{
-				Value: &Ack_Error{
-					Error: err.Error(),
-				},
-			},
+		Msg: &Msg_Error{
+			Error: err,
 		},
 	}
 }

@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	ErrClientAlreadyConnected = errors.New("client already connected ")
-	ErrClientNotConnected     = errors.New("client not connected ")
-	ErrStreamSessionClosed    = errors.New("stream session closed ")
+	ErrClientAlreadyConnected = errors.New("client already connected")
+	ErrClientNotConnected     = errors.New("client not connected")
+	ErrStreamSessionClosed    = connectivity.NewCommonError("stream session closed")
 )
 
 type Interface interface {
@@ -23,67 +23,10 @@ type Interface interface {
 	PostMsg(msg *connectivity.Msg) error
 }
 
-type streamSession struct {
-	inputCh  map[uint64]chan []byte
-	resizeCh map[uint64]chan remotecommand.TerminalSize
-	mu       sync.RWMutex
-}
-
-func (s *streamSession) add(sid uint64, dataCh chan []byte, resizeCh chan remotecommand.TerminalSize) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if oldInputCh, ok := s.inputCh[sid]; ok {
-		close(oldInputCh)
-	}
-
-	if oldResizeCh, ok := s.resizeCh[sid]; ok {
-		close(oldResizeCh)
-	}
-
-	s.inputCh[sid] = dataCh
-	s.resizeCh[sid] = resizeCh
-}
-
-func (s *streamSession) getInputChan(sid uint64) (chan []byte, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	ch, ok := s.inputCh[sid]
-	return ch, ok
-}
-
-func (s *streamSession) getResizeChan(sid uint64) (chan remotecommand.TerminalSize, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	ch, ok := s.resizeCh[sid]
-	return ch, ok
-}
-
-func (s *streamSession) del(sid uint64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if ch, ok := s.inputCh[sid]; ok {
-		if ch != nil {
-			close(ch)
-		}
-		delete(s.inputCh, sid)
-	}
-
-	if ch, ok := s.resizeCh[sid]; ok {
-		if ch != nil {
-			close(ch)
-		}
-		delete(s.resizeCh, sid)
-	}
-}
-
-func newBaseClient(ctx context.Context, config *Config, rt runtime.Interface) baseAgent {
+func newBaseAgent(ctx context.Context, config *Config, rt runtime.Interface) baseAgent {
 	return baseAgent{
+		Config:  *config,
 		ctx:     ctx,
-		config:  config,
 		runtime: rt,
 		openedStreams: streamSession{
 			inputCh:  make(map[uint64]chan []byte),
@@ -93,8 +36,9 @@ func newBaseClient(ctx context.Context, config *Config, rt runtime.Interface) ba
 }
 
 type baseAgent struct {
+	Config
+
 	ctx       context.Context
-	config    *Config
 	doPostMsg func(msg *connectivity.Msg) error
 
 	openedStreams streamSession
@@ -129,8 +73,8 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 	sid := cmd.GetSessionId()
 
 	switch cm := cmd.GetCmd().(type) {
-	case *connectivity.Cmd_NodeCmd:
-		switch cm.NodeCmd.GetAction() {
+	case *connectivity.Cmd_Node:
+		switch cm.Node.GetAction() {
 		case connectivity.GetInfoAll:
 			processInNewGoroutine(sid, "node.get.all", func() {
 				b.doGetNodeInfoAll(sid)
@@ -148,47 +92,37 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 				b.doGetNodeConditions(sid)
 			})
 		default:
-			log.Printf("[%d] unknown node cmd: %v", sid, cm.NodeCmd)
+			log.Printf("[%d] unknown node cmd: %v", sid, cm.Node)
 		}
-	case *connectivity.Cmd_ImageCmd:
-		switch cm.ImageCmd.GetAction() {
-		case connectivity.ListImages:
-			processInNewGoroutine(sid, "image.list", func() {
-				b.doImageList(sid)
-			})
-		default:
-			log.Printf("[%d] unknown image cmd: %v", sid, cm.ImageCmd)
-		}
-	case *connectivity.Cmd_PodCmd:
-		switch cm.PodCmd.GetAction() {
+	case *connectivity.Cmd_Pod:
+		switch cm.Pod.GetAction() {
 		// pod scope commands
 		case connectivity.CreatePod:
 			processInNewGoroutine(sid, "pod.create", func() {
-				b.doPodCreate(sid, cm.PodCmd.GetCreateOptions())
+				b.doPodCreate(sid, cm.Pod.GetCreateOptions())
 			})
 		case connectivity.DeletePod:
 			processInNewGoroutine(sid, "pod.delete", func() {
-				b.doPodDelete(sid, cm.PodCmd.GetDeleteOptions())
+				b.doPodDelete(sid, cm.Pod.GetDeleteOptions())
 			})
 		case connectivity.ListPods:
 			processInNewGoroutine(sid, "pod.list", func() {
-				b.doPodList(sid, cm.PodCmd.GetListOptions())
+				b.doPodList(sid, cm.Pod.GetListOptions())
 			})
 		case connectivity.PortForward:
 			inputCh := make(chan []byte, 1)
 			b.openedStreams.add(sid, inputCh, nil)
 
 			processInNewGoroutine(sid, "pod.portforward", func() {
-				b.doPortForward(sid, cm.PodCmd.GetPortForwardOptions(), inputCh)
+				b.doPortForward(sid, cm.Pod.GetPortForwardOptions(), inputCh)
 			})
-		// container scope commands
 		case connectivity.Exec:
 			inputCh := make(chan []byte, 1)
 			resizeCh := make(chan remotecommand.TerminalSize, 1)
 			b.openedStreams.add(sid, inputCh, resizeCh)
 
 			processInNewGoroutine(sid, "pod.exec", func() {
-				b.doContainerExec(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+				b.doContainerExec(sid, cm.Pod.GetExecOptions(), inputCh, resizeCh)
 			})
 		case connectivity.Attach:
 			inputCh := make(chan []byte, 1)
@@ -196,36 +130,36 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 			b.openedStreams.add(sid, inputCh, resizeCh)
 
 			processInNewGoroutine(sid, "pod.attach", func() {
-				b.doContainerAttach(sid, cm.PodCmd.GetExecOptions(), inputCh, resizeCh)
+				b.doContainerAttach(sid, cm.Pod.GetExecOptions(), inputCh, resizeCh)
 			})
 		case connectivity.Log:
 			processInNewGoroutine(sid, "pod.log", func() {
-				b.doContainerLog(sid, cm.PodCmd.GetLogOptions())
+				b.doContainerLog(sid, cm.Pod.GetLogOptions())
 			})
 		case connectivity.Input:
 			inputCh, ok := b.openedStreams.getInputChan(sid)
 			if !ok {
-				b.handleError(sid, ErrStreamSessionClosed)
+				b.handleRuntimeError(sid, ErrStreamSessionClosed)
 				return
 			}
 
 			processInNewGoroutine(sid, "pod.input", func() {
 				select {
-				case inputCh <- cm.PodCmd.GetInputOptions().GetData():
+				case inputCh <- cm.Pod.GetInputOptions().GetData():
 				case <-b.ctx.Done():
 				}
 			})
 		case connectivity.ResizeTty:
 			resizeCh, ok := b.openedStreams.getResizeChan(sid)
 			if !ok {
-				b.handleError(sid, ErrStreamSessionClosed)
+				b.handleRuntimeError(sid, ErrStreamSessionClosed)
 				return
 			}
 
 			processInNewGoroutine(sid, "pod.resizeTty", func() {
 				size := remotecommand.TerminalSize{
-					Width:  uint16(cm.PodCmd.GetResizeOptions().GetCols()),
-					Height: uint16(cm.PodCmd.GetResizeOptions().GetRows()),
+					Width:  uint16(cm.Pod.GetResizeOptions().GetCols()),
+					Height: uint16(cm.Pod.GetResizeOptions().GetRows()),
 				}
 				select {
 				case resizeCh <- size:
@@ -233,7 +167,7 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 				}
 			})
 		default:
-			log.Printf("[%d] unknown pod cmd: %v", sid, cm.PodCmd)
+			log.Printf("[%d] unknown pod cmd: %v", sid, cm.Pod)
 		}
 	default:
 		log.Printf("[%d] unknown cmd: %v", sid, cm)
@@ -242,18 +176,21 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 
 func processInNewGoroutine(sid uint64, cmdName string, process func()) {
 	go func() {
-		log.Printf("[%d] do %s", sid, cmdName)
-		defer log.Printf("[%d] done %s", sid, cmdName)
+		log.Printf("[%d] I DO %s", sid, cmdName)
+		defer log.Printf("[%d] I FIN %s", sid, cmdName)
 
 		process()
 	}()
 }
 
-// Internal processing
+func (b *baseAgent) handleRuntimeError(sid uint64, err *connectivity.Error) {
+	log.Printf("[%d] E runtime error: %v", sid, err)
 
-func (b *baseAgent) handleError(sid uint64, e error) {
-	log.Printf("[%d] error: %v", sid, e)
-	if err := b.doPostMsg(connectivity.NewErrorMsg(sid, e)); err != nil {
-		log.Printf("failed to post error msg: %v", err)
+	if err := b.doPostMsg(connectivity.NewErrorMsg(sid, err)); err != nil {
+		b.handleConnectivityError(sid, err)
 	}
+}
+
+func (b *baseAgent) handleConnectivityError(sid uint64, err error) {
+	log.Printf("[%d] E connectivity error: %v", sid, err)
 }

@@ -14,7 +14,6 @@ import (
 func (b *baseAgent) doGetNodeInfoAll(sid uint64) {
 	nodeMsg := connectivity.NewNodeMsg(sid, b.getSystemInfo(), b.getResourceCapacity(), b.getResourceAllocatable(), b.getConditions())
 	if err := b.doPostMsg(nodeMsg); err != nil {
-		b.handleError(sid, err)
 		return
 	}
 }
@@ -22,7 +21,6 @@ func (b *baseAgent) doGetNodeInfoAll(sid uint64) {
 func (b *baseAgent) doGetNodeSystemInfo(sid uint64) {
 	nodeMsg := connectivity.NewNodeMsg(sid, b.getSystemInfo(), nil, nil, nil)
 	if err := b.doPostMsg(nodeMsg); err != nil {
-		b.handleError(sid, err)
 		return
 	}
 }
@@ -30,7 +28,6 @@ func (b *baseAgent) doGetNodeSystemInfo(sid uint64) {
 func (b *baseAgent) doGetNodeResources(sid uint64) {
 	nodeMsg := connectivity.NewNodeMsg(sid, nil, b.getResourceCapacity(), b.getResourceAllocatable(), nil)
 	if err := b.doPostMsg(nodeMsg); err != nil {
-		b.handleError(sid, err)
 		return
 	}
 }
@@ -38,7 +35,6 @@ func (b *baseAgent) doGetNodeResources(sid uint64) {
 func (b *baseAgent) doGetNodeConditions(sid uint64) {
 	nodeMsg := connectivity.NewNodeMsg(sid, nil, nil, nil, b.getConditions())
 	if err := b.doPostMsg(nodeMsg); err != nil {
-		b.handleError(sid, err)
 		return
 	}
 }

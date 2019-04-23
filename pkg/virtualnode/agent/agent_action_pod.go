@@ -2,7 +2,6 @@ package agent
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"log"
 	"strings"
@@ -15,14 +14,13 @@ import (
 
 func (b *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
 	podResp, err := b.runtime.CreatePod(options)
-
 	if err != nil {
-		b.handleError(sid, err)
+		b.handleRuntimeError(sid, err)
 		return
 	}
 
-	if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, podResp)); err != nil {
-		b.handleError(sid, err)
+	if err := b.doPostMsg(connectivity.NewPodStatusMsg(sid, podResp)); err != nil {
+		b.handleConnectivityError(sid, err)
 		return
 	}
 }
@@ -30,47 +28,31 @@ func (b *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions)
 func (b *baseAgent) doPodDelete(sid uint64, options *connectivity.DeleteOptions) {
 	podDeleted, err := b.runtime.DeletePod(options)
 	if err != nil {
-		b.handleError(sid, err)
+		b.handleRuntimeError(sid, err)
 		return
 	}
 
-	if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, podDeleted)); err != nil {
-		b.handleError(sid, err)
+	if err := b.doPostMsg(connectivity.NewPodStatusMsg(sid, podDeleted)); err != nil {
+		b.handleConnectivityError(sid, err)
 		return
 	}
 }
 
 func (b *baseAgent) doPodList(sid uint64, options *connectivity.ListOptions) {
-	pods, err := b.runtime.ListPod(options)
+	pods, err := b.runtime.ListPods(options)
 	if err != nil {
-		b.handleError(sid, err)
+		b.handleRuntimeError(sid, err)
 		return
 	}
 
-	if len(pods) == 0 {
-		if err := b.doPostMsg(connectivity.NewPodMsg(sid, true, nil)); err != nil {
-			b.handleError(sid, err)
-		}
+	if err := b.doPostMsg(connectivity.NewPodStatusListMsg(sid, pods)); err != nil {
+		b.handleConnectivityError(sid, err)
 		return
-	}
-
-	lastIndex := len(pods) - 1
-	for i, p := range pods {
-		if err := b.doPostMsg(connectivity.NewPodMsg(sid, i == lastIndex, p)); err != nil {
-			b.handleError(sid, err)
-			return
-		}
 	}
 }
 
 func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOptions, inputCh <-chan []byte, resizeCh <-chan remotecommand.TerminalSize) {
 	defer b.openedStreams.del(sid)
-
-	opt, err := options.GetResolvedExecOptions()
-	if err != nil {
-		b.handleError(sid, err)
-		return
-	}
 
 	var (
 		stdin  io.ReadCloser
@@ -82,7 +64,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 		remoteStderr io.ReadCloser
 	)
 
-	if opt.Stdin {
+	if options.Stdin {
 		stdin, remoteStdin = io.Pipe()
 		defer func() { _, _ = stdin.Close(), remoteStdin.Close() }()
 
@@ -96,7 +78,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 		}()
 	}
 
-	if opt.Stdout {
+	if options.Stdout {
 		remoteStdout, stdout = io.Pipe()
 		defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
@@ -106,14 +88,14 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
-					b.handleError(sid, err)
+					b.handleConnectivityError(sid, err)
 					return
 				}
 			}
 		}()
 	}
 
-	if opt.Stderr {
+	if options.Stderr {
 		remoteStderr, stderr = io.Pipe()
 		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
@@ -123,7 +105,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
-					b.handleError(sid, err)
+					b.handleConnectivityError(sid, err)
 					return
 				}
 			}
@@ -133,8 +115,8 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := b.runtime.AttachContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh); err != nil {
-		b.handleError(sid, err)
+	if err := b.runtime.AttachContainer(options.PodUid, options.Container, stdin, stdout, stderr, resizeCh); err != nil {
+		b.handleRuntimeError(sid, err)
 		return
 	}
 }
@@ -145,14 +127,8 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 		log.Printf("finished contaienr exec")
 	}()
 
-	opt, err := options.GetResolvedExecOptions()
-	if err != nil {
-		b.handleError(sid, err)
-		return
-	}
-
-	if len(opt.Command) == 0 {
-		b.handleError(sid, errors.New("command not provided for exec"))
+	if len(options.Command) == 0 {
+		b.handleRuntimeError(sid, ErrCommandNotProvided)
 		return
 	}
 
@@ -166,7 +142,7 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 		remoteStderr io.ReadCloser
 	)
 
-	if opt.Stdin {
+	if options.Stdin {
 		stdin, remoteStdin = io.Pipe()
 
 		go func() {
@@ -182,7 +158,7 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 		}()
 	}
 
-	if opt.Stdout {
+	if options.Stdout {
 		remoteStdout, stdout = io.Pipe()
 		defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
@@ -192,14 +168,14 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
-					b.handleError(sid, err)
+					b.handleConnectivityError(sid, err)
 					return
 				}
 			}
 		}()
 	}
 
-	if opt.Stderr {
+	if options.Stderr {
 		remoteStderr, stderr = io.Pipe()
 		defer func() { _, _ = remoteStderr.Close(), stderr.Close() }()
 
@@ -209,7 +185,7 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
-					b.handleError(sid, err)
+					b.handleConnectivityError(sid, err)
 					return
 				}
 			}
@@ -219,24 +195,23 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if strings.HasPrefix(opt.Command[0], "#") {
-		if b.config.AllowHostExec {
+	if strings.HasPrefix(options.Command[0], "#") {
+		if b.AllowHostExec {
 			// host exec
-			opt.Command[0] = opt.Command[0][1:]
-			if err := execInHost(stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
-				b.handleError(sid, err)
+			options.Command[0] = options.Command[0][1:]
+			if err := execInHost(stdin, stdout, stderr, resizeCh, options.Command, options.Tty); err != nil {
+				b.handleRuntimeError(sid, err)
 				return
 			}
 		} else {
-			b.handleError(sid, errors.New("host exec not allowed"))
+			b.handleRuntimeError(sid, connectivity.NewCommonError("host exec not allowed"))
 		}
 
 		return
 	} else {
 		// container exec
-		if err := b.runtime.ExecInContainer(options.GetPodUid(), opt.Container, stdin, stdout, stderr, resizeCh, opt.Command, opt.TTY); err != nil {
-			b.handleError(sid, err)
-			return
+		if err := b.runtime.ExecInContainer(options.PodUid, options.Container, stdin, stdout, stderr, resizeCh, options.Command, options.Tty); err != nil {
+			b.handleRuntimeError(sid, err)
 		}
 
 		return
@@ -244,12 +219,6 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 }
 
 func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions) {
-	opt, err := options.GetResolvedLogOptions()
-	if err != nil {
-		b.handleError(sid, err)
-		return
-	}
-
 	remoteStdout, stdout := io.Pipe()
 	defer func() { _, _ = remoteStdout.Close(), stdout.Close() }()
 
@@ -263,6 +232,7 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+				b.handleConnectivityError(sid, err)
 				return
 			}
 		}
@@ -275,6 +245,7 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
+				b.handleConnectivityError(sid, err)
 				return
 			}
 		}
@@ -283,8 +254,8 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := b.runtime.GetContainerLogs(options.GetPodUid(), opt, stdout, stderr); err != nil {
-		b.handleError(sid, err)
+	if err := b.runtime.GetContainerLogs(options.PodUid, options, stdout, stderr); err != nil {
+		b.handleRuntimeError(sid, err)
 		return
 	}
 }
@@ -315,6 +286,7 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
+				b.handleConnectivityError(sid, err)
 				return
 			}
 		}
@@ -323,12 +295,12 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if options.GetProtocol() == "" {
+	if options.Protocol == "" {
 		options.Protocol = "tcp"
 	}
 
-	if err := b.runtime.PortForward(options.GetPodUid(), options.GetProtocol(), options.GetPort(), input, output); err != nil {
-		b.handleError(sid, err)
+	if err := b.runtime.PortForward(options.PodUid, options.Protocol, options.Port, input, output); err != nil {
+		b.handleRuntimeError(sid, err)
 		return
 	}
 }

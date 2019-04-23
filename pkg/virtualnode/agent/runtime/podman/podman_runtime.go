@@ -12,10 +12,8 @@ import (
 
 	libpodRuntime "github.com/containers/libpod/libpod"
 	podmanVersion "github.com/containers/libpod/version"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtimeutil"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -63,39 +61,7 @@ func (r *podmanRuntime) newRuntime() (*libpodRuntime.Runtime, error) {
 	)
 }
 
-func (r *podmanRuntime) ListImages() ([]*connectivity.Image, error) {
-	rt, err := r.newRuntime()
-	if err != nil {
-		return nil, err
-	}
-
-	listCtx, cancelList := r.ImageActionContext()
-	defer cancelList()
-
-	imageRt := rt.ImageRuntime()
-	localImages, err := imageRt.GetImages()
-	var images []*connectivity.Image
-	for _, img := range localImages {
-		sizePtr, err := img.Size(listCtx)
-		if err != nil {
-			return nil, err
-		}
-
-		var names []string
-		for _, imageName := range append(img.ImageResult.RepoTags, img.ImageResult.RepoDigests...) {
-			runtimeutil.GenerateImageName(r.Defaults.ImageDomain, img.Repository, imageName)
-		}
-
-		images = append(images, &connectivity.Image{
-			Names:     names,
-			SizeBytes: *sizePtr,
-		})
-	}
-
-	return images, nil
-}
-
-func (r *podmanRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
+func (r *podmanRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.PodStatus, error) {
 	ctx, cancelCtx := r.RuntimeActionContext()
 	defer cancelCtx()
 
@@ -110,11 +76,7 @@ func (r *podmanRuntime) CreatePod(options *connectivity.CreateOptions) (*connect
 	}
 
 	// ensure image exists per container spec and apply image pull policy
-	authConfig, err := options.GetResolvedImagePullAuthConfig()
-	if err != nil {
-		return nil, err
-	}
-	imageMap, err := ensureImages(rt.ImageRuntime(), options.GetContainers(), authConfig)
+	imageMap, err := ensureImages(rt.ImageRuntime(), options.GetContainers(), options.GetImagePullAuthConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -167,15 +129,15 @@ func (r *podmanRuntime) CreatePod(options *connectivity.CreateOptions) (*connect
 		}
 	}
 
-	podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, options.GetPodUid(), podmanPod, infraCtrID)
-	if err != nil {
-		return nil, err
-	}
+	// podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, options.GetPodUid(), podmanPod, infraCtrID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return connectivity.NewPod(options.GetPodUid(), podStatus, containerStatuses), nil
+	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
 }
 
-func (r *podmanRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *podmanRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.PodStatus, error) {
 	rt, err := r.newRuntime()
 	if err != nil {
 		return nil, err
@@ -202,27 +164,27 @@ func (r *podmanRuntime) DeletePod(options *connectivity.DeleteOptions) (*connect
 	return nil, nil
 }
 
-func (r *podmanRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
-	rt, err := r.newRuntime()
-	if err != nil {
-		return nil, err
-	}
+func (r *podmanRuntime) ListPods(options *connectivity.ListOptions) ([]*connectivity.PodStatus, error) {
+	// rt, err := r.newRuntime()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	pods, err := rt.Pods()
-	var allPodStatus []*connectivity.Pod
-	for _, p := range pods {
-		infraID, err := p.InfraContainerID()
-		if err != nil {
-			return nil, err
-		}
-
-		podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, p.Name(), p, infraID)
-		if err != nil {
-			return nil, err
-		}
-
-		allPodStatus = append(allPodStatus, connectivity.NewPod(p.Labels()[constant.ContainerLabelPodUID], podStatus, containerStatuses))
-	}
+	// pods, err := rt.Pods()
+	var allPodStatus []*connectivity.PodStatus
+	// for _, p := range pods {
+	// 	infraID, err := p.InfraContainerID()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	//
+	// 	podStatus, containerStatuses, err := translateLibpodStatusToCriStatus(rt, p.Name(), p, infraID)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	//
+	// 	allPodStatus = append(allPodStatus, connectivity.NewPodStatus(p.Labels()[constant.ContainerLabelPodUID], podStatus, containerStatuses))
+	// }
 
 	return allPodStatus, nil
 }
@@ -257,7 +219,7 @@ func (r *podmanRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	return target.Exec(tty, false, nil, command, "", "", newStreamOptions(stdin, stdout, stderr))
 }
 
-func (r *podmanRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+func (r *podmanRuntime) GetContainerLogs(podUID string, options *connectivity.LogOptions, stdout, stderr io.WriteCloser) error {
 	defer func() { _, _ = stdout.Close(), stderr.Close() }()
 
 	rt, err := r.newRuntime()
@@ -270,7 +232,7 @@ func (r *podmanRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOp
 		return err
 	}
 
-	return runtimeutil.ReadLogs(context.Background(), target.LogPath(), options, stdout, stderr)
+	return runtimeutil.ReadLogs(context.Background(), target.LogPath(), nil, stdout, stderr)
 }
 
 func (r *podmanRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {

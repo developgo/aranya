@@ -22,7 +22,7 @@ type GRPCAgent struct {
 
 func NewGRPCAgent(ctx context.Context, config *Config, conn *grpc.ClientConn, rt runtime.Interface) (*GRPCAgent, error) {
 	client := &GRPCAgent{
-		baseAgent: newBaseClient(ctx, config, rt),
+		baseAgent: newBaseAgent(ctx, config, rt),
 		client:    connectivity.NewConnectivityClient(conn),
 	}
 

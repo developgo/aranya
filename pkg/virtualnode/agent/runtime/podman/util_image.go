@@ -7,12 +7,11 @@ import (
 	imageTypes "github.com/containers/image/types"
 	libpodImage "github.com/containers/libpod/libpod/image"
 	corev1 "k8s.io/api/core/v1"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func ensureImages(imageRuntime *libpodImage.Runtime, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]*libpodImage.Image, error) {
+func ensureImages(imageRuntime *libpodImage.Runtime, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*connectivity.AuthConfig) (map[string]*libpodImage.Image, error) {
 	imageMap := make(map[string]*libpodImage.Image)
 	imageToPull := make([]string, 0)
 

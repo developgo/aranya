@@ -315,22 +315,27 @@ func (m *Manager) GetMirrorPod(namespace, name string) (*corev1.Pod, error) {
 	return m.podLister.Pods(namespace).Get(name)
 }
 
-func (m *Manager) UpdateMirrorPod(devicePod *connectivity.Pod) error {
-	status, err := devicePod.GetResolvedKubePodStatus()
-	if err != nil {
-		mirrorUpdateLog.Error(err, "failed to get resolved kube pod status")
-		return err
+func (m *Manager) UpdateMirrorPod(pod *corev1.Pod, devicePodStatus *connectivity.PodStatus) error {
+	if pod == nil {
+		if devicePodStatus != nil {
+			var ok bool
+
+			podUID := types.UID(devicePodStatus.Uid)
+			pod, ok = m.podCache.GetByID(types.UID(devicePodStatus.Uid))
+			if !ok {
+				return m.podWorkQueue.Offer(queue.ActionDelete, podUID)
+			}
+		} else {
+			return fmt.Errorf("pod cache not found for device pod status")
+		}
 	}
 
-	oldPod, ok := m.podCache.GetByID(status.ID)
-	if !ok {
-		mirrorUpdateLog.Info("failed to find pod cache", "podUID", status.ID)
-		return nil
+	if devicePodStatus != nil {
+		pod.Status.Phase, pod.Status.ContainerStatuses = resolveContainerStatus(pod, devicePodStatus)
 	}
 
-	newPod := m.GenerateAPIPodStatus(oldPod, status)
 	mirrorUpdateLog.Info("trying to update pod status")
-	updatedPod, err := m.kubeClient.CoreV1().Pods(oldPod.Namespace).UpdateStatus(newPod)
+	updatedPod, err := m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 	if err != nil {
 		mirrorUpdateLog.Error(err, "failed to update pod status")
 		return err
@@ -383,10 +388,8 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		return err
 	}
 
-	// mark pod status ContainerCreating just like what the kubelet do
-	pod.Status.Phase = corev1.PodPending
-	pod.Status.ContainerStatuses = newContainerCreatingStatus(pod)
-
+	// mark pod status ContainerCreating just like what the kubelet will do
+	pod.Status.Phase, pod.Status.ContainerStatuses = newContainerCreatingStatus(pod)
 	deviceCreateLog.Info("trying to update pod status to ContainerCreating")
 	updatedPod, err := m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 	if err != nil {
@@ -398,27 +401,21 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	}
 
 	for msg := range msgCh {
-		if err := msg.Error(); err != nil {
-			// TODO: mark pod error
+		if err := msg.Err(); err != nil {
 			deviceCreateLog.Error(err, "failed to create pod in edge device")
+			pod.Status.Phase, pod.Status.ContainerStatuses = newContainerErrorStatus(pod)
+			if err := m.UpdateMirrorPod(pod, nil); err != nil {
+				deviceCreateLog.Error(err, "failed to update pod status")
+			}
 			continue
 		}
 
-		switch podMsg := msg.GetMsg().(type) {
-		case *connectivity.Msg_Pod:
-			// mark pod status running
-			pod.Status.Phase = corev1.PodRunning
-			pod.Status.ContainerStatuses = newContainerRunningStatus(pod, podMsg.Pod)
-
-			deviceCreateLog.Info("trying to update pod status to Running")
-			updatedPod, err = m.kubeClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
-			if err != nil {
+		if devicePodStatus := msg.GetPodStatus(); devicePodStatus != nil {
+			deviceCreateLog.Info("trying to update pod status")
+			if err := m.UpdateMirrorPod(pod, devicePodStatus); err != nil {
 				deviceCreateLog.Error(err, "failed to update pod status")
 				continue
 			}
-
-			m.podCache.Update(pod)
-			// TODO: create net listener for published pod ports
 		}
 	}
 
@@ -441,7 +438,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 	}
 
 	for msg := range msgCh {
-		if err = msg.Error(); err != nil {
+		if err = msg.Err(); err != nil {
 			deviceDeleteLog.Error(err, "failed to delete pod in device")
 			continue
 		}
@@ -462,30 +459,36 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) (err error) {
 	return nil
 }
 
-func (m *Manager) SyncDevicePods() (err error) {
-	var msgCh <-chan *connectivity.Msg
+func (m *Manager) SyncDevicePods() error {
 	deviceSyncLog.Info("trying to sync device pods")
-	msgCh, err = m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
+
+	msgCh, err := m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
 		deviceSyncLog.Error(err, "failed to post pod list cmd")
 		return err
 	}
 
 	for msg := range msgCh {
-		if err = msg.Error(); err != nil {
+		if err := msg.Err(); err != nil {
 			deviceSyncLog.Error(err, "failed to list device pods")
 			continue
 		}
 
-		switch podMsg := msg.GetMsg().(type) {
-		case *connectivity.Msg_Pod:
-			podUID := types.UID(podMsg.Pod.GetUid())
+		devicePodStatusList := msg.GetPodStatusList().GetPods()
+		if devicePodStatusList == nil {
+			deviceSyncLog.Info("unexpected non pod status list")
+			continue
+		}
+
+		for _, devicePodStatus := range devicePodStatusList {
+			podUID := types.UID(devicePodStatus.GetUid())
 			if podUID == "" {
 				deviceSyncLog.Info("device pod uid empty, discard")
 				continue
 			}
 
-			if _, ok := m.podCache.GetByID(podUID); !ok {
+			pod, ok := m.podCache.GetByID(podUID)
+			if !ok {
 				deviceSyncLog.Info("device pod not cached, delete")
 				// no pod cache means no mirror pod for it, should be deleted
 				if err := m.podWorkQueue.Offer(queue.ActionDelete, podUID); err != nil {
@@ -497,7 +500,7 @@ func (m *Manager) SyncDevicePods() (err error) {
 			}
 
 			deviceSyncLog.Info("device pod exists, update status")
-			if err = m.UpdateMirrorPod(podMsg.Pod); err != nil {
+			if err = m.UpdateMirrorPod(pod, devicePodStatus); err != nil {
 				deviceSyncLog.Error(err, "failed to update pod status")
 				continue
 			}

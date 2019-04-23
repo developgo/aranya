@@ -25,15 +25,19 @@ message Msg {
     bool completed = 2;
 
     oneof msg {
-        Node node = 11;
-        // used by list and device active pod update
-        Pod pod = 12;
+        // error
+        Error error = 11;
+
         // io data
-        Data data = 13;
-        // ack info
-        Ack ack = 14;
-        // images
-        Image image = 15;
+        Data data = 12;
+
+        // node status
+        NodeStatus node_status = 13;
+
+        // pod status
+        PodStatus pod_status = 14;
+        // pod status list (cmd pod list)
+        PodStatusList pod_status_list = 15;
     }
 }
 
@@ -41,8 +45,7 @@ message Cmd {
     uint64 session_id = 1;
 
     oneof cmd {
-        NodeCmd node_cmd = 11;
-        PodCmd pod_cmd = 12;
-        ImageCmd image_cmd = 13;
+        NodeCmd node = 11;
+        PodCmd pod = 12;
     }
 }

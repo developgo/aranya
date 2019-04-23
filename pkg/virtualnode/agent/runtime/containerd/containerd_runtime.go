@@ -18,7 +18,6 @@ import (
 	"github.com/satori/go.uuid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
@@ -61,53 +60,26 @@ type containerdRuntime struct {
 	imageClient, runtimeClient *containerd.Client
 }
 
-func (r *containerdRuntime) ListImages() ([]*connectivity.Image, error) {
-	listCtx, cancelList := r.ImageActionContext()
-	defer cancelList()
-
-	localImages, err := r.imageClient.ListImages(listCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	var images []*connectivity.Image
-	for _, img := range localImages {
-		imageConfig, err := img.Config(listCtx)
-		if err != nil {
-			return nil, err
-		}
-
-		images = append(images, &connectivity.Image{
-			Names:     imageConfig.URLs,
-			SizeBytes: uint64(imageConfig.Size),
-		})
-	}
-	return images, nil
-}
-
-func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.Pod, err error) {
+func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.PodStatus, err *connectivity.Error) {
 	imagePullCtx, cancelPull := r.ImageActionContext()
 	defer cancelPull()
 
 	// ensure pause image (infra image to claim namespaces) exists
-	pauseImageMap, err := r.ensureImages(imagePullCtx, map[string]*connectivity.ContainerSpec{
+	var plainErr error
+	pauseImageMap, plainErr := r.ensureImages(imagePullCtx, map[string]*connectivity.ContainerSpec{
 		"pause": {
 			Image:           r.PauseImage,
 			ImagePullPolicy: string(corev1.PullIfNotPresent),
 		},
 	}, nil)
-	if err != nil {
-		return nil, err
+	if plainErr != nil {
+		return nil, &connectivity.Error{Kind: connectivity.ErrCommon, Description: plainErr.Error()}
 	}
 
 	pauseImage := pauseImageMap["pause"]
 
-	authConfig, err := options.GetResolvedImagePullAuthConfig()
-	if err != nil {
-		return nil, err
-	}
 	// ensure all images exists
-	images, err := r.ensureImages(imagePullCtx, options.GetContainers(), authConfig)
+	images, err := r.ensureImages(imagePullCtx, options.GetContainers(), options.GetImagePullAuthConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -226,8 +198,8 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 				source = hostPath
 			}
 
-			if volData, isVolData := options.GetVolumeData()[volumeName]; isVolData && volData.GetData() != nil {
-				dataMap := volData.GetData()
+			if volData, isVolData := options.GetVolumeData()[volumeName]; isVolData && volData.GetDataMap() != nil {
+				dataMap := volData.GetDataMap()
 
 				dir := r.PodVolumeDir(options.GetPodUid(), "native", volumeName)
 				if err = os.MkdirAll(dir, 0755); err != nil {
@@ -269,23 +241,18 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 		}()
 	}
 
-	return connectivity.NewPod(options.GetPodUid(), &criRuntime.PodSandboxStatus{
-		Metadata: &criRuntime.PodSandboxMetadata{
-			Namespace: "foo",
-			Name:      "bar",
-		},
-	}, []*criRuntime.ContainerStatus{}), nil
+	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
 }
 
-func (r *containerdRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *containerdRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.PodStatus, *connectivity.Error) {
 	return nil, errors.New("method not implemented")
 }
 
-func (r *containerdRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
+func (r *containerdRuntime) ListPods(options *connectivity.ListOptions) ([]*connectivity.PodStatus, *connectivity.Error) {
 	return nil, errors.New("method not implemented")
 }
 
-func (r *containerdRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+func (r *containerdRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) *connectivity.Error {
 	timeoutCtx, cancel := r.RuntimeActionContext()
 	defer cancel()
 
@@ -350,7 +317,7 @@ func (r *containerdRuntime) ExecInContainer(podUID, container string, stdin io.R
 	return nil
 }
 
-func (r *containerdRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) error {
+func (r *containerdRuntime) AttachContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) *connectivity.Error {
 	timeoutCtx, cancel := r.RuntimeActionContext()
 	defer cancel()
 
@@ -391,15 +358,15 @@ func (r *containerdRuntime) AttachContainer(podUID, container string, stdin io.R
 	return nil
 }
 
-func (r *containerdRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+func (r *containerdRuntime) GetContainerLogs(podUID string, options *connectivity.LogOptions, stdout, stderr io.WriteCloser) *connectivity.Error {
 	return errors.New("method not implemented")
 }
 
-func (r *containerdRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) error {
+func (r *containerdRuntime) PortForward(podUID string, protocol string, port int32, in io.Reader, out io.WriteCloser) *connectivity.Error {
 	return nil
 }
 
-func (r *containerdRuntime) ensureImages(ctx context.Context, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*criRuntime.AuthConfig) (map[string]containerd.Image, error) {
+func (r *containerdRuntime) ensureImages(ctx context.Context, containers map[string]*connectivity.ContainerSpec, authConfig map[string]*connectivity.AuthConfig) (map[string]containerd.Image, error) {
 	imageMap := make(map[string]containerd.Image)
 	imageToPull := make([]string, 0)
 

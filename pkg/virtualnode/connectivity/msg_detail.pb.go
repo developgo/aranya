@@ -27,6 +27,36 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+type PodStatus_State int32
+
+const (
+	StateUnknown   PodStatus_State = 0
+	StatePending   PodStatus_State = 1
+	StateRunning   PodStatus_State = 2
+	StateSucceeded PodStatus_State = 3
+	StateFailed    PodStatus_State = 4
+)
+
+var PodStatus_State_name = map[int32]string{
+	0: "StateUnknown",
+	1: "StatePending",
+	2: "StateRunning",
+	3: "StateSucceeded",
+	4: "StateFailed",
+}
+
+var PodStatus_State_value = map[string]int32{
+	"StateUnknown":   0,
+	"StatePending":   1,
+	"StateRunning":   2,
+	"StateSucceeded": 3,
+	"StateFailed":    4,
+}
+
+func (PodStatus_State) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{1, 0}
+}
+
 type Data_Kind int32
 
 const (
@@ -51,24 +81,53 @@ func (Data_Kind) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{3, 0}
 }
 
-type Node struct {
-	// protobuf bytes of corev1.NodeSystemInfo
-	SystemInfo []byte          `protobuf:"bytes,1,opt,name=system_info,json=systemInfo,proto3" json:"system_info,omitempty"`
-	Resources  *Node_Resource  `protobuf:"bytes,2,opt,name=resources,proto3" json:"resources,omitempty"`
-	Conditions *Node_Condition `protobuf:"bytes,3,opt,name=conditions,proto3" json:"conditions,omitempty"`
+type Error_Kind int32
+
+const (
+	ErrCommon        Error_Kind = 0
+	ErrNotFound      Error_Kind = 1
+	ErrAlreadyExists Error_Kind = 2
+	// work not supported, aranya should ignore this error
+	// and cancel work
+	ErrNotSupported Error_Kind = 3
+)
+
+var Error_Kind_name = map[int32]string{
+	0: "ErrCommon",
+	1: "ErrNotFound",
+	2: "ErrAlreadyExists",
+	3: "ErrNotSupported",
 }
 
-func (m *Node) Reset()      { *m = Node{} }
-func (*Node) ProtoMessage() {}
-func (*Node) Descriptor() ([]byte, []int) {
+var Error_Kind_value = map[string]int32{
+	"ErrCommon":        0,
+	"ErrNotFound":      1,
+	"ErrAlreadyExists": 2,
+	"ErrNotSupported":  3,
+}
+
+func (Error_Kind) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{4, 0}
+}
+
+type NodeStatus struct {
+	// protobuf bytes of corev1.NodeSystemInfo
+	SystemInfo []byte                `protobuf:"bytes,1,opt,name=system_info,json=systemInfo,proto3" json:"system_info,omitempty"`
+	Resources  *NodeStatus_Resource  `protobuf:"bytes,2,opt,name=resources,proto3" json:"resources,omitempty"`
+	Conditions *NodeStatus_Condition `protobuf:"bytes,3,opt,name=conditions,proto3" json:"conditions,omitempty"`
+}
+
+func (m *NodeStatus) Reset()      { *m = NodeStatus{} }
+func (*NodeStatus) ProtoMessage() {}
+func (*NodeStatus) Descriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{0}
 }
-func (m *Node) XXX_Unmarshal(b []byte) error {
+func (m *NodeStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Node) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *NodeStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Node.Marshal(b, m, deterministic)
+		return xxx_messageInfo_NodeStatus.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -78,60 +137,60 @@ func (m *Node) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Node) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Node.Merge(m, src)
+func (m *NodeStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeStatus.Merge(m, src)
 }
-func (m *Node) XXX_Size() int {
+func (m *NodeStatus) XXX_Size() int {
 	return m.Size()
 }
-func (m *Node) XXX_DiscardUnknown() {
-	xxx_messageInfo_Node.DiscardUnknown(m)
+func (m *NodeStatus) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeStatus.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Node proto.InternalMessageInfo
+var xxx_messageInfo_NodeStatus proto.InternalMessageInfo
 
-func (m *Node) GetSystemInfo() []byte {
+func (m *NodeStatus) GetSystemInfo() []byte {
 	if m != nil {
 		return m.SystemInfo
 	}
 	return nil
 }
 
-func (m *Node) GetResources() *Node_Resource {
+func (m *NodeStatus) GetResources() *NodeStatus_Resource {
 	if m != nil {
 		return m.Resources
 	}
 	return nil
 }
 
-func (m *Node) GetConditions() *Node_Condition {
+func (m *NodeStatus) GetConditions() *NodeStatus_Condition {
 	if m != nil {
 		return m.Conditions
 	}
 	return nil
 }
 
-func (*Node) XXX_MessageName() string {
-	return "connectivity.Node"
+func (*NodeStatus) XXX_MessageName() string {
+	return "connectivity.NodeStatus"
 }
 
-type Node_Resource struct {
+type NodeStatus_Resource struct {
 	// protobuf bytes of corev1.ResourceList
 	Capacity    map[string][]byte `protobuf:"bytes,1,rep,name=capacity,proto3" json:"capacity,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Allocatable map[string][]byte `protobuf:"bytes,2,rep,name=allocatable,proto3" json:"allocatable,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (m *Node_Resource) Reset()      { *m = Node_Resource{} }
-func (*Node_Resource) ProtoMessage() {}
-func (*Node_Resource) Descriptor() ([]byte, []int) {
+func (m *NodeStatus_Resource) Reset()      { *m = NodeStatus_Resource{} }
+func (*NodeStatus_Resource) ProtoMessage() {}
+func (*NodeStatus_Resource) Descriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{0, 0}
 }
-func (m *Node_Resource) XXX_Unmarshal(b []byte) error {
+func (m *NodeStatus_Resource) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Node_Resource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *NodeStatus_Resource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Node_Resource.Marshal(b, m, deterministic)
+		return xxx_messageInfo_NodeStatus_Resource.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -141,52 +200,52 @@ func (m *Node_Resource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *Node_Resource) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Node_Resource.Merge(m, src)
+func (m *NodeStatus_Resource) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeStatus_Resource.Merge(m, src)
 }
-func (m *Node_Resource) XXX_Size() int {
+func (m *NodeStatus_Resource) XXX_Size() int {
 	return m.Size()
 }
-func (m *Node_Resource) XXX_DiscardUnknown() {
-	xxx_messageInfo_Node_Resource.DiscardUnknown(m)
+func (m *NodeStatus_Resource) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeStatus_Resource.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Node_Resource proto.InternalMessageInfo
+var xxx_messageInfo_NodeStatus_Resource proto.InternalMessageInfo
 
-func (m *Node_Resource) GetCapacity() map[string][]byte {
+func (m *NodeStatus_Resource) GetCapacity() map[string][]byte {
 	if m != nil {
 		return m.Capacity
 	}
 	return nil
 }
 
-func (m *Node_Resource) GetAllocatable() map[string][]byte {
+func (m *NodeStatus_Resource) GetAllocatable() map[string][]byte {
 	if m != nil {
 		return m.Allocatable
 	}
 	return nil
 }
 
-func (*Node_Resource) XXX_MessageName() string {
-	return "connectivity.Node.Resource"
+func (*NodeStatus_Resource) XXX_MessageName() string {
+	return "connectivity.NodeStatus.Resource"
 }
 
-type Node_Condition struct {
+type NodeStatus_Condition struct {
 	// protobuf bytes of corev1.NodeCondition
 	Conditions [][]byte `protobuf:"bytes,1,rep,name=conditions,proto3" json:"conditions,omitempty"`
 }
 
-func (m *Node_Condition) Reset()      { *m = Node_Condition{} }
-func (*Node_Condition) ProtoMessage() {}
-func (*Node_Condition) Descriptor() ([]byte, []int) {
+func (m *NodeStatus_Condition) Reset()      { *m = NodeStatus_Condition{} }
+func (*NodeStatus_Condition) ProtoMessage() {}
+func (*NodeStatus_Condition) Descriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{0, 1}
 }
-func (m *Node_Condition) XXX_Unmarshal(b []byte) error {
+func (m *NodeStatus_Condition) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Node_Condition) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *NodeStatus_Condition) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Node_Condition.Marshal(b, m, deterministic)
+		return xxx_messageInfo_NodeStatus_Condition.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -196,45 +255,47 @@ func (m *Node_Condition) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
-func (m *Node_Condition) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Node_Condition.Merge(m, src)
+func (m *NodeStatus_Condition) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeStatus_Condition.Merge(m, src)
 }
-func (m *Node_Condition) XXX_Size() int {
+func (m *NodeStatus_Condition) XXX_Size() int {
 	return m.Size()
 }
-func (m *Node_Condition) XXX_DiscardUnknown() {
-	xxx_messageInfo_Node_Condition.DiscardUnknown(m)
+func (m *NodeStatus_Condition) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeStatus_Condition.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Node_Condition proto.InternalMessageInfo
+var xxx_messageInfo_NodeStatus_Condition proto.InternalMessageInfo
 
-func (m *Node_Condition) GetConditions() [][]byte {
+func (m *NodeStatus_Condition) GetConditions() [][]byte {
 	if m != nil {
 		return m.Conditions
 	}
 	return nil
 }
 
-func (*Node_Condition) XXX_MessageName() string {
-	return "connectivity.Node.Condition"
+func (*NodeStatus_Condition) XXX_MessageName() string {
+	return "connectivity.NodeStatus.Condition"
 }
 
-type Image struct {
-	Names     []string `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
-	SizeBytes uint64   `protobuf:"varint,2,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+type PodStatus struct {
+	// metadata
+	Uid string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
+	// status
+	ContainerStatuses map[string]*PodStatus_ContainerStatus `protobuf:"bytes,2,rep,name=container_statuses,json=containerStatuses,proto3" json:"container_statuses,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (m *Image) Reset()      { *m = Image{} }
-func (*Image) ProtoMessage() {}
-func (*Image) Descriptor() ([]byte, []int) {
+func (m *PodStatus) Reset()      { *m = PodStatus{} }
+func (*PodStatus) ProtoMessage() {}
+func (*PodStatus) Descriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{1}
 }
-func (m *Image) XXX_Unmarshal(b []byte) error {
+func (m *PodStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PodStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Image.Marshal(b, m, deterministic)
+		return xxx_messageInfo_PodStatus.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -244,244 +305,59 @@ func (m *Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Image) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Image.Merge(m, src)
+func (m *PodStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PodStatus.Merge(m, src)
 }
-func (m *Image) XXX_Size() int {
+func (m *PodStatus) XXX_Size() int {
 	return m.Size()
 }
-func (m *Image) XXX_DiscardUnknown() {
-	xxx_messageInfo_Image.DiscardUnknown(m)
+func (m *PodStatus) XXX_DiscardUnknown() {
+	xxx_messageInfo_PodStatus.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Image proto.InternalMessageInfo
+var xxx_messageInfo_PodStatus proto.InternalMessageInfo
 
-func (m *Image) GetNames() []string {
-	if m != nil {
-		return m.Names
-	}
-	return nil
-}
-
-func (m *Image) GetSizeBytes() uint64 {
-	if m != nil {
-		return m.SizeBytes
-	}
-	return 0
-}
-
-func (*Image) XXX_MessageName() string {
-	return "connectivity.Image"
-}
-
-type Pod struct {
-	Uid string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Ip  string `protobuf:"bytes,2,opt,name=ip,proto3" json:"ip,omitempty"`
-	// Types that are valid to be assigned to SandboxStatus:
-	//	*Pod_SandboxV1Alpha2
-	SandboxStatus isPod_SandboxStatus `protobuf_oneof:"sandbox_status"`
-	// Types that are valid to be assigned to ContainerStatus:
-	//	*Pod_ContainerV1Alpha2
-	ContainerStatus isPod_ContainerStatus `protobuf_oneof:"container_status"`
-}
-
-func (m *Pod) Reset()      { *m = Pod{} }
-func (*Pod) ProtoMessage() {}
-func (*Pod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{2}
-}
-func (m *Pod) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Pod) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Pod.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Pod) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Pod.Merge(m, src)
-}
-func (m *Pod) XXX_Size() int {
-	return m.Size()
-}
-func (m *Pod) XXX_DiscardUnknown() {
-	xxx_messageInfo_Pod.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Pod proto.InternalMessageInfo
-
-type isPod_SandboxStatus interface {
-	isPod_SandboxStatus()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-type isPod_ContainerStatus interface {
-	isPod_ContainerStatus()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type Pod_SandboxV1Alpha2 struct {
-	SandboxV1Alpha2 []byte `protobuf:"bytes,11,opt,name=sandbox_v1alpha2,json=sandboxV1alpha2,proto3,oneof"`
-}
-type Pod_ContainerV1Alpha2 struct {
-	ContainerV1Alpha2 *Pod_ContainerStatusV1Alpha2 `protobuf:"bytes,21,opt,name=container_v1alpha2,json=containerV1alpha2,proto3,oneof"`
-}
-
-func (*Pod_SandboxV1Alpha2) isPod_SandboxStatus()     {}
-func (*Pod_ContainerV1Alpha2) isPod_ContainerStatus() {}
-
-func (m *Pod) GetSandboxStatus() isPod_SandboxStatus {
-	if m != nil {
-		return m.SandboxStatus
-	}
-	return nil
-}
-func (m *Pod) GetContainerStatus() isPod_ContainerStatus {
-	if m != nil {
-		return m.ContainerStatus
-	}
-	return nil
-}
-
-func (m *Pod) GetUid() string {
+func (m *PodStatus) GetUid() string {
 	if m != nil {
 		return m.Uid
 	}
 	return ""
 }
 
-func (m *Pod) GetIp() string {
+func (m *PodStatus) GetContainerStatuses() map[string]*PodStatus_ContainerStatus {
 	if m != nil {
-		return m.Ip
-	}
-	return ""
-}
-
-func (m *Pod) GetSandboxV1Alpha2() []byte {
-	if x, ok := m.GetSandboxStatus().(*Pod_SandboxV1Alpha2); ok {
-		return x.SandboxV1Alpha2
+		return m.ContainerStatuses
 	}
 	return nil
 }
 
-func (m *Pod) GetContainerV1Alpha2() *Pod_ContainerStatusV1Alpha2 {
-	if x, ok := m.GetContainerStatus().(*Pod_ContainerV1Alpha2); ok {
-		return x.ContainerV1Alpha2
-	}
-	return nil
+func (*PodStatus) XXX_MessageName() string {
+	return "connectivity.PodStatus"
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Pod) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Pod_OneofMarshaler, _Pod_OneofUnmarshaler, _Pod_OneofSizer, []interface{}{
-		(*Pod_SandboxV1Alpha2)(nil),
-		(*Pod_ContainerV1Alpha2)(nil),
-	}
+type PodStatus_ContainerStatus struct {
+	ContainerId string `protobuf:"bytes,1,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	ImageId     string `protobuf:"bytes,2,opt,name=image_id,json=imageId,proto3" json:"image_id,omitempty"`
+	// time values in unix nano
+	CreatedAt  int64  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	StartedAt  int64  `protobuf:"varint,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	FinishedAt int64  `protobuf:"varint,6,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	ExitCode   int32  `protobuf:"varint,7,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	Reason     string `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message    string `protobuf:"bytes,12,opt,name=message,proto3" json:"message,omitempty"`
 }
 
-func _Pod_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Pod)
-	// sandbox_status
-	switch x := m.SandboxStatus.(type) {
-	case *Pod_SandboxV1Alpha2:
-		_ = b.EncodeVarint(11<<3 | proto.WireBytes)
-		_ = b.EncodeRawBytes(x.SandboxV1Alpha2)
-	case nil:
-	default:
-		return fmt.Errorf("Pod.SandboxStatus has unexpected type %T", x)
-	}
-	// container_status
-	switch x := m.ContainerStatus.(type) {
-	case *Pod_ContainerV1Alpha2:
-		_ = b.EncodeVarint(21<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ContainerV1Alpha2); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Pod.ContainerStatus has unexpected type %T", x)
-	}
-	return nil
+func (m *PodStatus_ContainerStatus) Reset()      { *m = PodStatus_ContainerStatus{} }
+func (*PodStatus_ContainerStatus) ProtoMessage() {}
+func (*PodStatus_ContainerStatus) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{1, 0}
 }
-
-func _Pod_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Pod)
-	switch tag {
-	case 11: // sandbox_status.sandbox_v1alpha2
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.SandboxStatus = &Pod_SandboxV1Alpha2{x}
-		return true, err
-	case 21: // container_status.container_v1alpha2
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Pod_ContainerStatusV1Alpha2)
-		err := b.DecodeMessage(msg)
-		m.ContainerStatus = &Pod_ContainerV1Alpha2{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Pod_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Pod)
-	// sandbox_status
-	switch x := m.SandboxStatus.(type) {
-	case *Pod_SandboxV1Alpha2:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.SandboxV1Alpha2)))
-		n += len(x.SandboxV1Alpha2)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	// container_status
-	switch x := m.ContainerStatus.(type) {
-	case *Pod_ContainerV1Alpha2:
-		s := proto.Size(x.ContainerV1Alpha2)
-		n += 2 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-func (*Pod) XXX_MessageName() string {
-	return "connectivity.Pod"
-}
-
-type Pod_ContainerStatusV1Alpha2 struct {
-	V1Alpha2 [][]byte `protobuf:"bytes,1,rep,name=v1alpha2,proto3" json:"v1alpha2,omitempty"`
-}
-
-func (m *Pod_ContainerStatusV1Alpha2) Reset()      { *m = Pod_ContainerStatusV1Alpha2{} }
-func (*Pod_ContainerStatusV1Alpha2) ProtoMessage() {}
-func (*Pod_ContainerStatusV1Alpha2) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{2, 0}
-}
-func (m *Pod_ContainerStatusV1Alpha2) XXX_Unmarshal(b []byte) error {
+func (m *PodStatus_ContainerStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Pod_ContainerStatusV1Alpha2) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *PodStatus_ContainerStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Pod_ContainerStatusV1Alpha2.Marshal(b, m, deterministic)
+		return xxx_messageInfo_PodStatus_ContainerStatus.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -491,32 +367,128 @@ func (m *Pod_ContainerStatusV1Alpha2) XXX_Marshal(b []byte, deterministic bool) 
 		return b[:n], nil
 	}
 }
-func (m *Pod_ContainerStatusV1Alpha2) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Pod_ContainerStatusV1Alpha2.Merge(m, src)
+func (m *PodStatus_ContainerStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PodStatus_ContainerStatus.Merge(m, src)
 }
-func (m *Pod_ContainerStatusV1Alpha2) XXX_Size() int {
+func (m *PodStatus_ContainerStatus) XXX_Size() int {
 	return m.Size()
 }
-func (m *Pod_ContainerStatusV1Alpha2) XXX_DiscardUnknown() {
-	xxx_messageInfo_Pod_ContainerStatusV1Alpha2.DiscardUnknown(m)
+func (m *PodStatus_ContainerStatus) XXX_DiscardUnknown() {
+	xxx_messageInfo_PodStatus_ContainerStatus.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Pod_ContainerStatusV1Alpha2 proto.InternalMessageInfo
+var xxx_messageInfo_PodStatus_ContainerStatus proto.InternalMessageInfo
 
-func (m *Pod_ContainerStatusV1Alpha2) GetV1Alpha2() [][]byte {
+func (m *PodStatus_ContainerStatus) GetContainerId() string {
 	if m != nil {
-		return m.V1Alpha2
+		return m.ContainerId
+	}
+	return ""
+}
+
+func (m *PodStatus_ContainerStatus) GetImageId() string {
+	if m != nil {
+		return m.ImageId
+	}
+	return ""
+}
+
+func (m *PodStatus_ContainerStatus) GetCreatedAt() int64 {
+	if m != nil {
+		return m.CreatedAt
+	}
+	return 0
+}
+
+func (m *PodStatus_ContainerStatus) GetStartedAt() int64 {
+	if m != nil {
+		return m.StartedAt
+	}
+	return 0
+}
+
+func (m *PodStatus_ContainerStatus) GetFinishedAt() int64 {
+	if m != nil {
+		return m.FinishedAt
+	}
+	return 0
+}
+
+func (m *PodStatus_ContainerStatus) GetExitCode() int32 {
+	if m != nil {
+		return m.ExitCode
+	}
+	return 0
+}
+
+func (m *PodStatus_ContainerStatus) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
+func (m *PodStatus_ContainerStatus) GetMessage() string {
+	if m != nil {
+		return m.Message
+	}
+	return ""
+}
+
+func (*PodStatus_ContainerStatus) XXX_MessageName() string {
+	return "connectivity.PodStatus.ContainerStatus"
+}
+
+type PodStatusList struct {
+	Pods []*PodStatus `protobuf:"bytes,1,rep,name=pods,proto3" json:"pods,omitempty"`
+}
+
+func (m *PodStatusList) Reset()      { *m = PodStatusList{} }
+func (*PodStatusList) ProtoMessage() {}
+func (*PodStatusList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{2}
+}
+func (m *PodStatusList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PodStatusList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PodStatusList.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PodStatusList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PodStatusList.Merge(m, src)
+}
+func (m *PodStatusList) XXX_Size() int {
+	return m.Size()
+}
+func (m *PodStatusList) XXX_DiscardUnknown() {
+	xxx_messageInfo_PodStatusList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PodStatusList proto.InternalMessageInfo
+
+func (m *PodStatusList) GetPods() []*PodStatus {
+	if m != nil {
+		return m.Pods
 	}
 	return nil
 }
 
-func (*Pod_ContainerStatusV1Alpha2) XXX_MessageName() string {
-	return "connectivity.Pod.ContainerStatusV1alpha2"
+func (*PodStatusList) XXX_MessageName() string {
+	return "connectivity.PodStatusList"
 }
 
 type Data struct {
 	Kind Data_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=connectivity.Data_Kind" json:"kind,omitempty"`
-	Data []byte    `protobuf:"bytes,11,opt,name=data,proto3" json:"data,omitempty"`
+	Data []byte    `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (m *Data) Reset()      { *m = Data{} }
@@ -569,24 +541,22 @@ func (*Data) XXX_MessageName() string {
 	return "connectivity.Data"
 }
 
-type Ack struct {
-	// Types that are valid to be assigned to Value:
-	//	*Ack_Hash_
-	//	*Ack_Error
-	Value isAck_Value `protobuf_oneof:"value"`
+type Error struct {
+	Kind        Error_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=connectivity.Error_Kind" json:"kind,omitempty"`
+	Description string     `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 }
 
-func (m *Ack) Reset()      { *m = Ack{} }
-func (*Ack) ProtoMessage() {}
-func (*Ack) Descriptor() ([]byte, []int) {
+func (m *Error) Reset()      { *m = Error{} }
+func (*Error) ProtoMessage() {}
+func (*Error) Descriptor() ([]byte, []int) {
 	return fileDescriptor_97b3080873330fb4, []int{4}
 }
-func (m *Ack) XXX_Unmarshal(b []byte) error {
+func (m *Error) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Ack) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Ack.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Error.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -596,313 +566,117 @@ func (m *Ack) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Ack) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Ack.Merge(m, src)
+func (m *Error) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Error.Merge(m, src)
 }
-func (m *Ack) XXX_Size() int {
+func (m *Error) XXX_Size() int {
 	return m.Size()
 }
-func (m *Ack) XXX_DiscardUnknown() {
-	xxx_messageInfo_Ack.DiscardUnknown(m)
+func (m *Error) XXX_DiscardUnknown() {
+	xxx_messageInfo_Error.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Ack proto.InternalMessageInfo
+var xxx_messageInfo_Error proto.InternalMessageInfo
 
-type isAck_Value interface {
-	isAck_Value()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type Ack_Hash_ struct {
-	Hash *Ack_Hash `protobuf:"bytes,1,opt,name=hash,proto3,oneof"`
-}
-type Ack_Error struct {
-	Error string `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
-}
-
-func (*Ack_Hash_) isAck_Value() {}
-func (*Ack_Error) isAck_Value() {}
-
-func (m *Ack) GetValue() isAck_Value {
+func (m *Error) GetKind() Error_Kind {
 	if m != nil {
-		return m.Value
+		return m.Kind
 	}
-	return nil
+	return ErrCommon
 }
 
-func (m *Ack) GetHash() *Ack_Hash {
-	if x, ok := m.GetValue().(*Ack_Hash_); ok {
-		return x.Hash
-	}
-	return nil
-}
-
-func (m *Ack) GetError() string {
-	if x, ok := m.GetValue().(*Ack_Error); ok {
-		return x.Error
+func (m *Error) GetDescription() string {
+	if m != nil {
+		return m.Description
 	}
 	return ""
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Ack) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Ack_OneofMarshaler, _Ack_OneofUnmarshaler, _Ack_OneofSizer, []interface{}{
-		(*Ack_Hash_)(nil),
-		(*Ack_Error)(nil),
-	}
-}
-
-func _Ack_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Ack)
-	// value
-	switch x := m.Value.(type) {
-	case *Ack_Hash_:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Hash); err != nil {
-			return err
-		}
-	case *Ack_Error:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		_ = b.EncodeStringBytes(x.Error)
-	case nil:
-	default:
-		return fmt.Errorf("Ack.Value has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Ack_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Ack)
-	switch tag {
-	case 1: // value.hash
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Ack_Hash)
-		err := b.DecodeMessage(msg)
-		m.Value = &Ack_Hash_{msg}
-		return true, err
-	case 2: // value.error
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.Value = &Ack_Error{x}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Ack_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Ack)
-	// value
-	switch x := m.Value.(type) {
-	case *Ack_Hash_:
-		s := proto.Size(x.Hash)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Ack_Error:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Error)))
-		n += len(x.Error)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-func (*Ack) XXX_MessageName() string {
-	return "connectivity.Ack"
-}
-
-type Ack_Hash struct {
-	// Types that are valid to be assigned to Hash:
-	//	*Ack_Hash_Sha256
-	Hash isAck_Hash_Hash `protobuf_oneof:"hash"`
-}
-
-func (m *Ack_Hash) Reset()      { *m = Ack_Hash{} }
-func (*Ack_Hash) ProtoMessage() {}
-func (*Ack_Hash) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{4, 0}
-}
-func (m *Ack_Hash) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Ack_Hash) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Ack_Hash.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Ack_Hash) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Ack_Hash.Merge(m, src)
-}
-func (m *Ack_Hash) XXX_Size() int {
-	return m.Size()
-}
-func (m *Ack_Hash) XXX_DiscardUnknown() {
-	xxx_messageInfo_Ack_Hash.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Ack_Hash proto.InternalMessageInfo
-
-type isAck_Hash_Hash interface {
-	isAck_Hash_Hash()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type Ack_Hash_Sha256 struct {
-	Sha256 string `protobuf:"bytes,1,opt,name=sha256,proto3,oneof"`
-}
-
-func (*Ack_Hash_Sha256) isAck_Hash_Hash() {}
-
-func (m *Ack_Hash) GetHash() isAck_Hash_Hash {
-	if m != nil {
-		return m.Hash
-	}
-	return nil
-}
-
-func (m *Ack_Hash) GetSha256() string {
-	if x, ok := m.GetHash().(*Ack_Hash_Sha256); ok {
-		return x.Sha256
-	}
-	return ""
-}
-
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Ack_Hash) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Ack_Hash_OneofMarshaler, _Ack_Hash_OneofUnmarshaler, _Ack_Hash_OneofSizer, []interface{}{
-		(*Ack_Hash_Sha256)(nil),
-	}
-}
-
-func _Ack_Hash_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Ack_Hash)
-	// hash
-	switch x := m.Hash.(type) {
-	case *Ack_Hash_Sha256:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		_ = b.EncodeStringBytes(x.Sha256)
-	case nil:
-	default:
-		return fmt.Errorf("Ack_Hash.Hash has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Ack_Hash_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Ack_Hash)
-	switch tag {
-	case 1: // hash.sha256
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.Hash = &Ack_Hash_Sha256{x}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Ack_Hash_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Ack_Hash)
-	// hash
-	switch x := m.Hash.(type) {
-	case *Ack_Hash_Sha256:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.Sha256)))
-		n += len(x.Sha256)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-func (*Ack_Hash) XXX_MessageName() string {
-	return "connectivity.Ack.Hash"
+func (*Error) XXX_MessageName() string {
+	return "connectivity.Error"
 }
 func init() {
+	proto.RegisterEnum("connectivity.PodStatus_State", PodStatus_State_name, PodStatus_State_value)
 	proto.RegisterEnum("connectivity.Data_Kind", Data_Kind_name, Data_Kind_value)
-	proto.RegisterType((*Node)(nil), "connectivity.Node")
-	proto.RegisterType((*Node_Resource)(nil), "connectivity.Node.Resource")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.Node.Resource.AllocatableEntry")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.Node.Resource.CapacityEntry")
-	proto.RegisterType((*Node_Condition)(nil), "connectivity.Node.Condition")
-	proto.RegisterType((*Image)(nil), "connectivity.Image")
-	proto.RegisterType((*Pod)(nil), "connectivity.Pod")
-	proto.RegisterType((*Pod_ContainerStatusV1Alpha2)(nil), "connectivity.Pod.ContainerStatusV1alpha2")
+	proto.RegisterEnum("connectivity.Error_Kind", Error_Kind_name, Error_Kind_value)
+	proto.RegisterType((*NodeStatus)(nil), "connectivity.NodeStatus")
+	proto.RegisterType((*NodeStatus_Resource)(nil), "connectivity.NodeStatus.Resource")
+	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NodeStatus.Resource.AllocatableEntry")
+	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NodeStatus.Resource.CapacityEntry")
+	proto.RegisterType((*NodeStatus_Condition)(nil), "connectivity.NodeStatus.Condition")
+	proto.RegisterType((*PodStatus)(nil), "connectivity.PodStatus")
+	proto.RegisterMapType((map[string]*PodStatus_ContainerStatus)(nil), "connectivity.PodStatus.ContainerStatusesEntry")
+	proto.RegisterType((*PodStatus_ContainerStatus)(nil), "connectivity.PodStatus.ContainerStatus")
+	proto.RegisterType((*PodStatusList)(nil), "connectivity.PodStatusList")
 	proto.RegisterType((*Data)(nil), "connectivity.Data")
-	proto.RegisterType((*Ack)(nil), "connectivity.Ack")
-	proto.RegisterType((*Ack_Hash)(nil), "connectivity.Ack.Hash")
+	proto.RegisterType((*Error)(nil), "connectivity.Error")
 }
 
 func init() { proto.RegisterFile("msg_detail.proto", fileDescriptor_97b3080873330fb4) }
 
 var fileDescriptor_97b3080873330fb4 = []byte{
-	// 684 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x94, 0xcf, 0x4e, 0x1b, 0x49,
-	0x10, 0xc6, 0xa7, 0xc7, 0x63, 0x2f, 0x2e, 0x7b, 0xd9, 0xd9, 0xd6, 0x2e, 0x58, 0xde, 0xdd, 0x5e,
-	0xe4, 0x93, 0x11, 0x64, 0x50, 0x1c, 0x11, 0x91, 0x04, 0x45, 0xc2, 0x60, 0xc9, 0x28, 0x12, 0xa0,
-	0x86, 0xe4, 0x90, 0x8b, 0xd5, 0x9e, 0x19, 0xec, 0x96, 0xed, 0x69, 0x6b, 0xa6, 0x8d, 0xe2, 0x1c,
-	0xa2, 0xbc, 0x40, 0xa4, 0x3c, 0x41, 0xce, 0x79, 0x14, 0x8e, 0x1c, 0x39, 0x06, 0xfb, 0x92, 0x53,
-	0xc4, 0x23, 0x44, 0xd3, 0x3d, 0xfe, 0x87, 0x12, 0xa4, 0xdc, 0xaa, 0x6a, 0x7e, 0xf5, 0x55, 0xe9,
-	0xab, 0xd6, 0x80, 0xdd, 0x8b, 0x5a, 0x0d, 0xcf, 0x97, 0x8c, 0x77, 0x9d, 0x7e, 0x28, 0xa4, 0xc0,
-	0x79, 0x57, 0x04, 0x81, 0xef, 0x4a, 0x7e, 0xc1, 0xe5, 0xb0, 0xf8, 0xa0, 0xc5, 0x65, 0x7b, 0xd0,
-	0x74, 0x5c, 0xd1, 0xdb, 0x6a, 0x89, 0x96, 0xd8, 0x52, 0x50, 0x73, 0x70, 0xae, 0x32, 0x95, 0xa8,
-	0x48, 0x37, 0x97, 0xbe, 0xa5, 0xc0, 0x3a, 0x12, 0x9e, 0x8f, 0xff, 0x87, 0x5c, 0x34, 0x8c, 0xa4,
-	0xdf, 0x6b, 0xf0, 0xe0, 0x5c, 0x14, 0xd0, 0x1a, 0x2a, 0xe7, 0x29, 0xe8, 0xd2, 0x61, 0x70, 0x2e,
-	0xf0, 0x13, 0xc8, 0x86, 0x7e, 0x24, 0x06, 0xa1, 0xeb, 0x47, 0x05, 0x73, 0x0d, 0x95, 0x73, 0x95,
-	0x7f, 0x9c, 0xf9, 0xd1, 0x4e, 0xac, 0xe3, 0xd0, 0x84, 0xa1, 0x33, 0x1a, 0xef, 0x02, 0xb8, 0x22,
-	0xf0, 0xb8, 0xe4, 0x22, 0x88, 0x0a, 0x29, 0xd5, 0xfb, 0xef, 0x0f, 0x7a, 0xf7, 0x27, 0x10, 0x9d,
-	0xe3, 0x8b, 0x9f, 0x4c, 0x58, 0x9a, 0xa8, 0xe2, 0x1a, 0x2c, 0xb9, 0xac, 0xcf, 0x5c, 0x2e, 0x87,
-	0x05, 0xb4, 0x96, 0x2a, 0xe7, 0x2a, 0xeb, 0xf7, 0x2c, 0xe1, 0xec, 0x27, 0x6c, 0x2d, 0x90, 0xe1,
-	0x90, 0x4e, 0x5b, 0xf1, 0x11, 0xe4, 0x58, 0xb7, 0x2b, 0x5c, 0x26, 0x59, 0xb3, 0xeb, 0x17, 0x4c,
-	0xa5, 0xb4, 0x79, 0x9f, 0xd2, 0xde, 0x0c, 0xd7, 0x62, 0xf3, 0x02, 0xc5, 0x67, 0xf0, 0xfb, 0xc2,
-	0x28, 0x6c, 0x43, 0xaa, 0xe3, 0x0f, 0x95, 0x8d, 0x59, 0x1a, 0x87, 0xf8, 0x2f, 0x48, 0x5f, 0xb0,
-	0xee, 0xc0, 0x57, 0xde, 0xe5, 0xa9, 0x4e, 0x9e, 0x9a, 0x3b, 0xa8, 0xf8, 0x1c, 0xec, 0xbb, 0xea,
-	0xbf, 0xd4, 0xbf, 0x01, 0xd9, 0xa9, 0x73, 0x98, 0x2c, 0x78, 0x1d, 0x5b, 0x94, 0x9f, 0x77, 0xb3,
-	0xb4, 0x0b, 0xe9, 0xc3, 0x1e, 0x6b, 0xf9, 0xb1, 0x5e, 0xc0, 0x7a, 0xbe, 0x66, 0xb2, 0x54, 0x27,
-	0xf8, 0x3f, 0x80, 0x88, 0xbf, 0xf5, 0x1b, 0xcd, 0xa1, 0x4c, 0xce, 0x6c, 0xd1, 0x6c, 0x5c, 0xa9,
-	0xc6, 0x85, 0xd2, 0x07, 0x13, 0x52, 0x27, 0xc2, 0x8b, 0xd7, 0x1b, 0x70, 0x6f, 0xb2, 0xde, 0x80,
-	0x7b, 0x78, 0x19, 0x4c, 0xde, 0x57, 0x0d, 0x59, 0x6a, 0xf2, 0x3e, 0xde, 0x00, 0x3b, 0x62, 0x81,
-	0xd7, 0x14, 0x6f, 0x1a, 0x17, 0x0f, 0x59, 0xb7, 0xdf, 0x66, 0x95, 0x42, 0x2e, 0xde, 0xbc, 0x6e,
-	0xd0, 0x3f, 0x92, 0x2f, 0xaf, 0x92, 0x0f, 0xf8, 0x35, 0x60, 0x57, 0x04, 0x92, 0xf1, 0xc0, 0x0f,
-	0x67, 0xf8, 0xdf, 0xea, 0xa1, 0xdc, 0xb9, 0xef, 0x89, 0xf0, 0xe2, 0x77, 0xa2, 0xd9, 0x53, 0xc9,
-	0xe4, 0x20, 0x9a, 0xc8, 0xd4, 0x11, 0xfd, 0x73, 0x2a, 0x33, 0x29, 0x16, 0xb7, 0x61, 0xf5, 0x27,
-	0x3c, 0x2e, 0xc2, 0xd2, 0x74, 0x98, 0x76, 0x6a, 0x9a, 0x57, 0x6d, 0x58, 0x9e, 0xec, 0x1f, 0xa9,
-	0xae, 0x2a, 0x06, 0x7b, 0xb6, 0xa4, 0xae, 0x95, 0x42, 0xb0, 0x0e, 0x98, 0x64, 0x78, 0x03, 0xac,
-	0x0e, 0x0f, 0xb4, 0x21, 0xcb, 0x95, 0xd5, 0xc5, 0x95, 0x63, 0xc2, 0x79, 0xc1, 0x03, 0x8f, 0x2a,
-	0x08, 0x63, 0xb0, 0x3c, 0x26, 0x99, 0xb6, 0x83, 0xaa, 0xb8, 0xb4, 0x0e, 0x56, 0x4c, 0x60, 0x80,
-	0xcc, 0xe9, 0xd9, 0xc1, 0xf1, 0xcb, 0x33, 0xdb, 0x48, 0xe2, 0x1a, 0xa5, 0x36, 0xc2, 0x59, 0x48,
-	0x1f, 0x9f, 0xd5, 0x6b, 0xd4, 0x36, 0x4b, 0xef, 0x20, 0xb5, 0xe7, 0x76, 0xf0, 0x26, 0x58, 0x6d,
-	0x16, 0xb5, 0xd5, 0xc8, 0x5c, 0x65, 0x65, 0x71, 0xe4, 0x9e, 0xdb, 0x71, 0xea, 0x2c, 0x6a, 0xd7,
-	0x0d, 0xaa, 0x28, 0xbc, 0x02, 0x69, 0x3f, 0x0c, 0x45, 0xa8, 0x2f, 0x54, 0x37, 0xa8, 0x4e, 0x8b,
-	0x65, 0xb0, 0x62, 0x0e, 0x17, 0x20, 0x13, 0xb5, 0x59, 0x65, 0xfb, 0xb1, 0xbe, 0x69, 0xdd, 0xa0,
-	0x49, 0x5e, 0xcd, 0xe8, 0x39, 0xd5, 0xdf, 0x92, 0xf7, 0x57, 0xdd, 0xb9, 0xba, 0x21, 0xc6, 0xf5,
-	0x0d, 0x31, 0x6e, 0x6f, 0x08, 0x7a, 0x3f, 0x22, 0xe8, 0xf3, 0x88, 0xa0, 0xcb, 0x11, 0x41, 0x57,
-	0x23, 0x82, 0xbe, 0x8c, 0x08, 0xfa, 0x3a, 0x22, 0xc6, 0xed, 0x88, 0xa0, 0x8f, 0x63, 0x62, 0x5c,
-	0x8e, 0x09, 0xba, 0x1a, 0x13, 0xe3, 0x7a, 0x4c, 0x8c, 0x66, 0x46, 0xfd, 0x73, 0x1e, 0x7d, 0x0f,
-	0x00, 0x00, 0xff, 0xff, 0xe8, 0x6b, 0x1a, 0x69, 0xc4, 0x04, 0x00, 0x00,
+	// 826 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x55, 0xcb, 0x6e, 0x1b, 0x37,
+	0x14, 0x15, 0xf5, 0xb0, 0xad, 0x3b, 0x72, 0xcc, 0xb2, 0x41, 0x3a, 0x55, 0xd1, 0xa9, 0x32, 0x9b,
+	0xaa, 0x48, 0x2b, 0x03, 0xee, 0x26, 0xe8, 0x13, 0x8a, 0xa3, 0xa0, 0x46, 0x8a, 0x24, 0x1d, 0x39,
+	0xcb, 0x42, 0xa0, 0x86, 0xb4, 0x42, 0x58, 0x22, 0x05, 0x92, 0x93, 0x46, 0xbb, 0x7e, 0x40, 0x17,
+	0xfd, 0x8c, 0x22, 0x5f, 0x92, 0x5d, 0xbd, 0xcc, 0xb2, 0x96, 0x37, 0x5d, 0xe6, 0x07, 0x0a, 0x14,
+	0xe4, 0x8c, 0xe5, 0x91, 0x90, 0xc0, 0xed, 0x8e, 0xf7, 0xdc, 0x73, 0xce, 0xbd, 0x38, 0x43, 0x62,
+	0x00, 0xcf, 0xcc, 0x64, 0xc4, 0xb8, 0xa5, 0x62, 0xda, 0x9b, 0x6b, 0x65, 0x15, 0x69, 0xa5, 0x4a,
+	0x4a, 0x9e, 0x5a, 0xf1, 0x5c, 0xd8, 0x45, 0xfb, 0x8b, 0x89, 0xb0, 0xcf, 0xb2, 0x71, 0x2f, 0x55,
+	0xb3, 0xfd, 0x89, 0x9a, 0xa8, 0x7d, 0x4f, 0x1a, 0x67, 0x27, 0xbe, 0xf2, 0x85, 0x3f, 0xe5, 0xe2,
+	0xf8, 0xb7, 0x3a, 0xc0, 0x23, 0xc5, 0xf8, 0xd0, 0x52, 0x9b, 0x19, 0xf2, 0x09, 0x04, 0x66, 0x61,
+	0x2c, 0x9f, 0x8d, 0x84, 0x3c, 0x51, 0x21, 0xea, 0xa0, 0x6e, 0x2b, 0x81, 0x1c, 0x3a, 0x92, 0x27,
+	0x8a, 0x7c, 0x0f, 0x4d, 0xcd, 0x8d, 0xca, 0x74, 0xca, 0x4d, 0x58, 0xed, 0xa0, 0x6e, 0x70, 0x70,
+	0xbb, 0x57, 0x5e, 0xa0, 0x77, 0xe5, 0xd6, 0x4b, 0x0a, 0x66, 0x72, 0xa5, 0x21, 0xf7, 0x00, 0x52,
+	0x25, 0x99, 0xb0, 0x42, 0x49, 0x13, 0xd6, 0xbc, 0x43, 0xfc, 0x4e, 0x87, 0xc3, 0x4b, 0x6a, 0x52,
+	0x52, 0xb5, 0x5f, 0x56, 0x61, 0xe7, 0xd2, 0x9b, 0x3c, 0x84, 0x9d, 0x94, 0xce, 0x69, 0x2a, 0xec,
+	0x22, 0x44, 0x9d, 0x5a, 0x37, 0x38, 0xd8, 0xbf, 0x76, 0xa1, 0xde, 0x61, 0xa1, 0x18, 0x48, 0xab,
+	0x17, 0xc9, 0xca, 0x80, 0x1c, 0x43, 0x40, 0xa7, 0x53, 0x95, 0x52, 0x4b, 0xc7, 0x53, 0x1e, 0x56,
+	0xbd, 0xdf, 0xc1, 0xf5, 0x7e, 0xfd, 0x2b, 0x51, 0x6e, 0x59, 0xb6, 0x69, 0x7f, 0x0d, 0xbb, 0x6b,
+	0x03, 0x09, 0x86, 0xda, 0x29, 0x5f, 0xf8, 0x78, 0x9b, 0x89, 0x3b, 0x92, 0x9b, 0xd0, 0x78, 0x4e,
+	0xa7, 0x19, 0xf7, 0x99, 0xb6, 0x92, 0xbc, 0xf8, 0xaa, 0x7a, 0x17, 0xb5, 0xbf, 0x03, 0xbc, 0xe9,
+	0xfe, 0xbf, 0xf4, 0x77, 0xa0, 0xb9, 0x4a, 0x91, 0x44, 0x6b, 0xe9, 0xbb, 0xb8, 0x5a, 0xe5, 0x64,
+	0xe3, 0x3f, 0xeb, 0xd0, 0x7c, 0xa2, 0x58, 0x71, 0x1b, 0x30, 0xd4, 0x32, 0xc1, 0x2e, 0xc7, 0x64,
+	0x82, 0x91, 0x9f, 0x81, 0xa4, 0x4a, 0x5a, 0x2a, 0x24, 0xd7, 0x23, 0xe3, 0x59, 0xfe, 0x1e, 0xb8,
+	0x98, 0x7a, 0xeb, 0x31, 0xad, 0x6c, 0xdc, 0x47, 0xcc, 0x15, 0xc3, 0x42, 0x90, 0x47, 0xf4, 0x5e,
+	0xba, 0x89, 0xb7, 0xff, 0x41, 0xb0, 0xb7, 0xc1, 0x26, 0xb7, 0xa1, 0x75, 0x35, 0x72, 0xb5, 0x4d,
+	0xb0, 0xc2, 0x8e, 0x18, 0xf9, 0x10, 0x76, 0xc4, 0x8c, 0x4e, 0xb8, 0x6b, 0x57, 0x7d, 0x7b, 0xdb,
+	0xd7, 0x47, 0x8c, 0x7c, 0x0c, 0x90, 0x6a, 0x4e, 0x2d, 0x67, 0x23, 0x6a, 0xc3, 0x7a, 0x07, 0x75,
+	0x6b, 0x49, 0xb3, 0x40, 0xfa, 0xd6, 0xb5, 0x8d, 0xa5, 0xba, 0x68, 0x37, 0xf2, 0x76, 0x81, 0xf4,
+	0xad, 0x7b, 0x0e, 0x27, 0x42, 0x0a, 0xf3, 0x2c, 0xef, 0x6f, 0xf9, 0x3e, 0x5c, 0x42, 0x7d, 0x4b,
+	0x3e, 0x82, 0x26, 0x7f, 0x21, 0xec, 0x28, 0x55, 0x8c, 0x87, 0xdb, 0x1d, 0xd4, 0x6d, 0x24, 0x3b,
+	0x0e, 0x38, 0x54, 0x8c, 0x93, 0x5b, 0xb0, 0xa5, 0x39, 0x35, 0x4a, 0x86, 0x81, 0x5f, 0xaa, 0xa8,
+	0x48, 0x08, 0xdb, 0x33, 0x6e, 0x0c, 0x9d, 0xf0, 0xb0, 0x95, 0x6f, 0x5b, 0x94, 0xed, 0x19, 0xdc,
+	0x7a, 0x7b, 0x58, 0x6f, 0xf9, 0xe2, 0xdf, 0x96, 0xbf, 0x78, 0x70, 0xf0, 0xe9, 0x7f, 0x4c, 0xbf,
+	0x74, 0x35, 0xe2, 0x31, 0x34, 0x1c, 0xc8, 0x09, 0x86, 0x96, 0x3f, 0x3c, 0x95, 0xa7, 0x52, 0xfd,
+	0x22, 0x71, 0x65, 0x85, 0x3c, 0xe1, 0x92, 0x09, 0x39, 0xc1, 0x68, 0x85, 0x24, 0x99, 0x94, 0x0e,
+	0xa9, 0x12, 0x02, 0x37, 0x3c, 0x32, 0xcc, 0xd2, 0x94, 0x73, 0xc6, 0x19, 0xae, 0x91, 0x3d, 0x08,
+	0x3c, 0xf6, 0x80, 0x8a, 0x29, 0x67, 0xb8, 0x1e, 0x7f, 0x03, 0xbb, 0xab, 0x5d, 0x7e, 0x14, 0xc6,
+	0x92, 0x3b, 0x50, 0x9f, 0x2b, 0x66, 0x8a, 0xb7, 0xfa, 0xc1, 0x3b, 0xd6, 0x4e, 0x3c, 0x29, 0xd6,
+	0x50, 0xbf, 0x4f, 0x2d, 0x75, 0xa2, 0x53, 0x21, 0xf3, 0x8f, 0x7f, 0x63, 0x53, 0xe4, 0x18, 0xbd,
+	0x87, 0x42, 0xb2, 0xc4, 0x93, 0x08, 0x81, 0x3a, 0xa3, 0x96, 0x16, 0x4f, 0xc1, 0x9f, 0xe3, 0xcf,
+	0xa0, 0xee, 0x18, 0x04, 0x60, 0x6b, 0x78, 0x7c, 0xff, 0xf1, 0xd3, 0x63, 0x5c, 0x29, 0xce, 0x83,
+	0x24, 0xc1, 0x88, 0x34, 0xa1, 0xf1, 0xf8, 0xf8, 0x87, 0x41, 0x82, 0xab, 0xf1, 0x4b, 0x04, 0x8d,
+	0x81, 0xd6, 0x4a, 0x93, 0xcf, 0xd7, 0xa6, 0x86, 0xeb, 0x53, 0x3d, 0xa5, 0x3c, 0xb6, 0x03, 0x01,
+	0xe3, 0x26, 0xd5, 0x62, 0xee, 0xde, 0x52, 0x71, 0x11, 0xcb, 0x50, 0xfc, 0x53, 0xb1, 0xc4, 0x2e,
+	0x34, 0x07, 0x5a, 0x1f, 0xaa, 0xd9, 0x4c, 0xb9, 0xac, 0xf7, 0x20, 0x18, 0x68, 0xfd, 0x48, 0xd9,
+	0x07, 0x2a, 0x93, 0x0c, 0x23, 0x72, 0x13, 0xf0, 0x40, 0xeb, 0xfe, 0x54, 0x73, 0xca, 0x16, 0x83,
+	0x17, 0xc2, 0x58, 0x83, 0xab, 0xe4, 0x7d, 0xd8, 0xcb, 0x69, 0xc3, 0x6c, 0x3e, 0x57, 0xee, 0x86,
+	0xe2, 0xda, 0xbd, 0xbb, 0x67, 0xe7, 0x51, 0xe5, 0xf5, 0x79, 0x54, 0x79, 0x73, 0x1e, 0xa1, 0x5f,
+	0x97, 0x11, 0xfa, 0x63, 0x19, 0xa1, 0x57, 0xcb, 0x08, 0x9d, 0x2d, 0x23, 0xf4, 0xd7, 0x32, 0x42,
+	0x7f, 0x2f, 0xa3, 0xca, 0x9b, 0x65, 0x84, 0x7e, 0xbf, 0x88, 0x2a, 0xaf, 0x2e, 0x22, 0x74, 0x76,
+	0x11, 0x55, 0x5e, 0x5f, 0x44, 0x95, 0xf1, 0x96, 0xff, 0x01, 0x7c, 0xf9, 0x6f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x6f, 0x86, 0x43, 0x49, 0x51, 0x06, 0x00, 0x00,
 }
 
+func (x PodStatus_State) String() string {
+	s, ok := PodStatus_State_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
 func (x Data_Kind) String() string {
 	s, ok := Data_Kind_name[int32(x)]
 	if ok {
@@ -910,14 +684,21 @@ func (x Data_Kind) String() string {
 	}
 	return strconv.Itoa(int(x))
 }
-func (this *Node) Equal(that interface{}) bool {
+func (x Error_Kind) String() string {
+	s, ok := Error_Kind_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (this *NodeStatus) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Node)
+	that1, ok := that.(*NodeStatus)
 	if !ok {
-		that2, ok := that.(Node)
+		that2, ok := that.(NodeStatus)
 		if ok {
 			that1 = &that2
 		} else {
@@ -940,14 +721,14 @@ func (this *Node) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Node_Resource) Equal(that interface{}) bool {
+func (this *NodeStatus_Resource) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Node_Resource)
+	that1, ok := that.(*NodeStatus_Resource)
 	if !ok {
-		that2, ok := that.(Node_Resource)
+		that2, ok := that.(NodeStatus_Resource)
 		if ok {
 			that1 = &that2
 		} else {
@@ -977,14 +758,14 @@ func (this *Node_Resource) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Node_Condition) Equal(that interface{}) bool {
+func (this *NodeStatus_Condition) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Node_Condition)
+	that1, ok := that.(*NodeStatus_Condition)
 	if !ok {
-		that2, ok := that.(Node_Condition)
+		that2, ok := that.(NodeStatus_Condition)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1006,46 +787,14 @@ func (this *Node_Condition) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Image) Equal(that interface{}) bool {
+func (this *PodStatus) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Image)
+	that1, ok := that.(*PodStatus)
 	if !ok {
-		that2, ok := that.(Image)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Names) != len(that1.Names) {
-		return false
-	}
-	for i := range this.Names {
-		if this.Names[i] != that1.Names[i] {
-			return false
-		}
-	}
-	if this.SizeBytes != that1.SizeBytes {
-		return false
-	}
-	return true
-}
-func (this *Pod) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Pod)
-	if !ok {
-		that2, ok := that.(Pod)
+		that2, ok := that.(PodStatus)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1060,37 +809,24 @@ func (this *Pod) Equal(that interface{}) bool {
 	if this.Uid != that1.Uid {
 		return false
 	}
-	if this.Ip != that1.Ip {
+	if len(this.ContainerStatuses) != len(that1.ContainerStatuses) {
 		return false
 	}
-	if that1.SandboxStatus == nil {
-		if this.SandboxStatus != nil {
+	for i := range this.ContainerStatuses {
+		if !this.ContainerStatuses[i].Equal(that1.ContainerStatuses[i]) {
 			return false
 		}
-	} else if this.SandboxStatus == nil {
-		return false
-	} else if !this.SandboxStatus.Equal(that1.SandboxStatus) {
-		return false
-	}
-	if that1.ContainerStatus == nil {
-		if this.ContainerStatus != nil {
-			return false
-		}
-	} else if this.ContainerStatus == nil {
-		return false
-	} else if !this.ContainerStatus.Equal(that1.ContainerStatus) {
-		return false
 	}
 	return true
 }
-func (this *Pod_SandboxV1Alpha2) Equal(that interface{}) bool {
+func (this *PodStatus_ContainerStatus) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Pod_SandboxV1Alpha2)
+	that1, ok := that.(*PodStatus_ContainerStatus)
 	if !ok {
-		that2, ok := that.(Pod_SandboxV1Alpha2)
+		that2, ok := that.(PodStatus_ContainerStatus)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1102,19 +838,40 @@ func (this *Pod_SandboxV1Alpha2) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.SandboxV1Alpha2, that1.SandboxV1Alpha2) {
+	if this.ContainerId != that1.ContainerId {
+		return false
+	}
+	if this.ImageId != that1.ImageId {
+		return false
+	}
+	if this.CreatedAt != that1.CreatedAt {
+		return false
+	}
+	if this.StartedAt != that1.StartedAt {
+		return false
+	}
+	if this.FinishedAt != that1.FinishedAt {
+		return false
+	}
+	if this.ExitCode != that1.ExitCode {
+		return false
+	}
+	if this.Reason != that1.Reason {
+		return false
+	}
+	if this.Message != that1.Message {
 		return false
 	}
 	return true
 }
-func (this *Pod_ContainerV1Alpha2) Equal(that interface{}) bool {
+func (this *PodStatusList) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Pod_ContainerV1Alpha2)
+	that1, ok := that.(*PodStatusList)
 	if !ok {
-		that2, ok := that.(Pod_ContainerV1Alpha2)
+		that2, ok := that.(PodStatusList)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1126,35 +883,11 @@ func (this *Pod_ContainerV1Alpha2) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.ContainerV1Alpha2.Equal(that1.ContainerV1Alpha2) {
+	if len(this.Pods) != len(that1.Pods) {
 		return false
 	}
-	return true
-}
-func (this *Pod_ContainerStatusV1Alpha2) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Pod_ContainerStatusV1Alpha2)
-	if !ok {
-		that2, ok := that.(Pod_ContainerStatusV1Alpha2)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.V1Alpha2) != len(that1.V1Alpha2) {
-		return false
-	}
-	for i := range this.V1Alpha2 {
-		if !bytes.Equal(this.V1Alpha2[i], that1.V1Alpha2[i]) {
+	for i := range this.Pods {
+		if !this.Pods[i].Equal(that1.Pods[i]) {
 			return false
 		}
 	}
@@ -1187,14 +920,14 @@ func (this *Data) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Ack) Equal(that interface{}) bool {
+func (this *Error) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Ack)
+	that1, ok := that.(*Error)
 	if !ok {
-		that2, ok := that.(Ack)
+		that2, ok := that.(Error)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1206,125 +939,20 @@ func (this *Ack) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if that1.Value == nil {
-		if this.Value != nil {
-			return false
-		}
-	} else if this.Value == nil {
+	if this.Kind != that1.Kind {
 		return false
-	} else if !this.Value.Equal(that1.Value) {
+	}
+	if this.Description != that1.Description {
 		return false
 	}
 	return true
 }
-func (this *Ack_Hash_) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Ack_Hash_)
-	if !ok {
-		that2, ok := that.(Ack_Hash_)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Hash.Equal(that1.Hash) {
-		return false
-	}
-	return true
-}
-func (this *Ack_Error) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Ack_Error)
-	if !ok {
-		that2, ok := that.(Ack_Error)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Error != that1.Error {
-		return false
-	}
-	return true
-}
-func (this *Ack_Hash) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Ack_Hash)
-	if !ok {
-		that2, ok := that.(Ack_Hash)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if that1.Hash == nil {
-		if this.Hash != nil {
-			return false
-		}
-	} else if this.Hash == nil {
-		return false
-	} else if !this.Hash.Equal(that1.Hash) {
-		return false
-	}
-	return true
-}
-func (this *Ack_Hash_Sha256) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Ack_Hash_Sha256)
-	if !ok {
-		that2, ok := that.(Ack_Hash_Sha256)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Sha256 != that1.Sha256 {
-		return false
-	}
-	return true
-}
-func (this *Node) GoString() string {
+func (this *NodeStatus) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&connectivity.Node{")
+	s = append(s, "&connectivity.NodeStatus{")
 	s = append(s, "SystemInfo: "+fmt.Sprintf("%#v", this.SystemInfo)+",\n")
 	if this.Resources != nil {
 		s = append(s, "Resources: "+fmt.Sprintf("%#v", this.Resources)+",\n")
@@ -1335,12 +963,12 @@ func (this *Node) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Node_Resource) GoString() string {
+func (this *NodeStatus_Resource) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&connectivity.Node_Resource{")
+	s = append(s, "&connectivity.NodeStatus_Resource{")
 	keysForCapacity := make([]string, 0, len(this.Capacity))
 	for k, _ := range this.Capacity {
 		keysForCapacity = append(keysForCapacity, k)
@@ -1370,67 +998,65 @@ func (this *Node_Resource) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Node_Condition) GoString() string {
+func (this *NodeStatus_Condition) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&connectivity.Node_Condition{")
+	s = append(s, "&connectivity.NodeStatus_Condition{")
 	s = append(s, "Conditions: "+fmt.Sprintf("%#v", this.Conditions)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Image) GoString() string {
+func (this *PodStatus) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&connectivity.Image{")
-	s = append(s, "Names: "+fmt.Sprintf("%#v", this.Names)+",\n")
-	s = append(s, "SizeBytes: "+fmt.Sprintf("%#v", this.SizeBytes)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Pod) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 8)
-	s = append(s, "&connectivity.Pod{")
+	s = append(s, "&connectivity.PodStatus{")
 	s = append(s, "Uid: "+fmt.Sprintf("%#v", this.Uid)+",\n")
-	s = append(s, "Ip: "+fmt.Sprintf("%#v", this.Ip)+",\n")
-	if this.SandboxStatus != nil {
-		s = append(s, "SandboxStatus: "+fmt.Sprintf("%#v", this.SandboxStatus)+",\n")
+	keysForContainerStatuses := make([]string, 0, len(this.ContainerStatuses))
+	for k, _ := range this.ContainerStatuses {
+		keysForContainerStatuses = append(keysForContainerStatuses, k)
 	}
-	if this.ContainerStatus != nil {
-		s = append(s, "ContainerStatus: "+fmt.Sprintf("%#v", this.ContainerStatus)+",\n")
+	github_com_gogo_protobuf_sortkeys.Strings(keysForContainerStatuses)
+	mapStringForContainerStatuses := "map[string]*PodStatus_ContainerStatus{"
+	for _, k := range keysForContainerStatuses {
+		mapStringForContainerStatuses += fmt.Sprintf("%#v: %#v,", k, this.ContainerStatuses[k])
+	}
+	mapStringForContainerStatuses += "}"
+	if this.ContainerStatuses != nil {
+		s = append(s, "ContainerStatuses: "+mapStringForContainerStatuses+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Pod_SandboxV1Alpha2) GoString() string {
+func (this *PodStatus_ContainerStatus) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&connectivity.Pod_SandboxV1Alpha2{` +
-		`SandboxV1Alpha2:` + fmt.Sprintf("%#v", this.SandboxV1Alpha2) + `}`}, ", ")
-	return s
+	s := make([]string, 0, 12)
+	s = append(s, "&connectivity.PodStatus_ContainerStatus{")
+	s = append(s, "ContainerId: "+fmt.Sprintf("%#v", this.ContainerId)+",\n")
+	s = append(s, "ImageId: "+fmt.Sprintf("%#v", this.ImageId)+",\n")
+	s = append(s, "CreatedAt: "+fmt.Sprintf("%#v", this.CreatedAt)+",\n")
+	s = append(s, "StartedAt: "+fmt.Sprintf("%#v", this.StartedAt)+",\n")
+	s = append(s, "FinishedAt: "+fmt.Sprintf("%#v", this.FinishedAt)+",\n")
+	s = append(s, "ExitCode: "+fmt.Sprintf("%#v", this.ExitCode)+",\n")
+	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
+	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
 }
-func (this *Pod_ContainerV1Alpha2) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.Pod_ContainerV1Alpha2{` +
-		`ContainerV1Alpha2:` + fmt.Sprintf("%#v", this.ContainerV1Alpha2) + `}`}, ", ")
-	return s
-}
-func (this *Pod_ContainerStatusV1Alpha2) GoString() string {
+func (this *PodStatusList) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&connectivity.Pod_ContainerStatusV1Alpha2{")
-	s = append(s, "V1Alpha2: "+fmt.Sprintf("%#v", this.V1Alpha2)+",\n")
+	s = append(s, "&connectivity.PodStatusList{")
+	if this.Pods != nil {
+		s = append(s, "Pods: "+fmt.Sprintf("%#v", this.Pods)+",\n")
+	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1445,53 +1071,16 @@ func (this *Data) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Ack) GoString() string {
+func (this *Error) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&connectivity.Ack{")
-	if this.Value != nil {
-		s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
-	}
+	s = append(s, "&connectivity.Error{")
+	s = append(s, "Kind: "+fmt.Sprintf("%#v", this.Kind)+",\n")
+	s = append(s, "Description: "+fmt.Sprintf("%#v", this.Description)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
-}
-func (this *Ack_Hash_) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.Ack_Hash_{` +
-		`Hash:` + fmt.Sprintf("%#v", this.Hash) + `}`}, ", ")
-	return s
-}
-func (this *Ack_Error) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.Ack_Error{` +
-		`Error:` + fmt.Sprintf("%#v", this.Error) + `}`}, ", ")
-	return s
-}
-func (this *Ack_Hash) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&connectivity.Ack_Hash{")
-	if this.Hash != nil {
-		s = append(s, "Hash: "+fmt.Sprintf("%#v", this.Hash)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Ack_Hash_Sha256) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.Ack_Hash_Sha256{` +
-		`Sha256:` + fmt.Sprintf("%#v", this.Sha256) + `}`}, ", ")
-	return s
 }
 func valueToGoStringMsgDetail(v interface{}, typ string) string {
 	rv := reflect.ValueOf(v)
@@ -1501,7 +1090,7 @@ func valueToGoStringMsgDetail(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *Node) Marshal() (dAtA []byte, err error) {
+func (m *NodeStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1511,7 +1100,7 @@ func (m *Node) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Node) MarshalTo(dAtA []byte) (int, error) {
+func (m *NodeStatus) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1545,7 +1134,7 @@ func (m *Node) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Node_Resource) Marshal() (dAtA []byte, err error) {
+func (m *NodeStatus_Resource) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1555,7 +1144,7 @@ func (m *Node_Resource) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Node_Resource) MarshalTo(dAtA []byte) (int, error) {
+func (m *NodeStatus_Resource) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1609,7 +1198,7 @@ func (m *Node_Resource) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Node_Condition) Marshal() (dAtA []byte, err error) {
+func (m *NodeStatus_Condition) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1619,7 +1208,7 @@ func (m *Node_Condition) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Node_Condition) MarshalTo(dAtA []byte) (int, error) {
+func (m *NodeStatus_Condition) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1635,7 +1224,7 @@ func (m *Node_Condition) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Image) Marshal() (dAtA []byte, err error) {
+func (m *PodStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1645,45 +1234,7 @@ func (m *Image) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Image) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.Names) > 0 {
-		for _, s := range m.Names {
-			dAtA[i] = 0xa
-			i++
-			l = len(s)
-			for l >= 1<<7 {
-				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
-				l >>= 7
-				i++
-			}
-			dAtA[i] = uint8(l)
-			i++
-			i += copy(dAtA[i:], s)
-		}
-	}
-	if m.SizeBytes != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(m.SizeBytes))
-	}
-	return i, nil
-}
-
-func (m *Pod) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Pod) MarshalTo(dAtA []byte) (int, error) {
+func (m *PodStatus) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1694,56 +1245,38 @@ func (m *Pod) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Uid)))
 		i += copy(dAtA[i:], m.Uid)
 	}
-	if len(m.Ip) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Ip)))
-		i += copy(dAtA[i:], m.Ip)
-	}
-	if m.SandboxStatus != nil {
-		nn3, err := m.SandboxStatus.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+	if len(m.ContainerStatuses) > 0 {
+		for k, _ := range m.ContainerStatuses {
+			dAtA[i] = 0x12
+			i++
+			v := m.ContainerStatuses[k]
+			msgSize := 0
+			if v != nil {
+				msgSize = v.Size()
+				msgSize += 1 + sovMsgDetail(uint64(msgSize))
+			}
+			mapSize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + msgSize
+			i = encodeVarintMsgDetail(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintMsgDetail(dAtA, i, uint64(len(k)))
+			i += copy(dAtA[i:], k)
+			if v != nil {
+				dAtA[i] = 0x12
+				i++
+				i = encodeVarintMsgDetail(dAtA, i, uint64(v.Size()))
+				n3, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
+				}
+				i += n3
+			}
 		}
-		i += nn3
-	}
-	if m.ContainerStatus != nil {
-		nn4, err := m.ContainerStatus.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn4
 	}
 	return i, nil
 }
 
-func (m *Pod_SandboxV1Alpha2) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.SandboxV1Alpha2 != nil {
-		dAtA[i] = 0x5a
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.SandboxV1Alpha2)))
-		i += copy(dAtA[i:], m.SandboxV1Alpha2)
-	}
-	return i, nil
-}
-func (m *Pod_ContainerV1Alpha2) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.ContainerV1Alpha2 != nil {
-		dAtA[i] = 0xaa
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(m.ContainerV1Alpha2.Size()))
-		n5, err := m.ContainerV1Alpha2.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n5
-	}
-	return i, nil
-}
-func (m *Pod_ContainerStatusV1Alpha2) Marshal() (dAtA []byte, err error) {
+func (m *PodStatus_ContainerStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1753,17 +1286,83 @@ func (m *Pod_ContainerStatusV1Alpha2) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Pod_ContainerStatusV1Alpha2) MarshalTo(dAtA []byte) (int, error) {
+func (m *PodStatus_ContainerStatus) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
-	if len(m.V1Alpha2) > 0 {
-		for _, b := range m.V1Alpha2 {
+	if len(m.ContainerId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.ContainerId)))
+		i += copy(dAtA[i:], m.ContainerId)
+	}
+	if len(m.ImageId) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.ImageId)))
+		i += copy(dAtA[i:], m.ImageId)
+	}
+	if m.CreatedAt != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.CreatedAt))
+	}
+	if m.StartedAt != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.StartedAt))
+	}
+	if m.FinishedAt != 0 {
+		dAtA[i] = 0x30
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.FinishedAt))
+	}
+	if m.ExitCode != 0 {
+		dAtA[i] = 0x38
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.ExitCode))
+	}
+	if len(m.Reason) > 0 {
+		dAtA[i] = 0x5a
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Reason)))
+		i += copy(dAtA[i:], m.Reason)
+	}
+	if len(m.Message) > 0 {
+		dAtA[i] = 0x62
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Message)))
+		i += copy(dAtA[i:], m.Message)
+	}
+	return i, nil
+}
+
+func (m *PodStatusList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PodStatusList) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Pods) > 0 {
+		for _, msg := range m.Pods {
 			dAtA[i] = 0xa
 			i++
-			i = encodeVarintMsgDetail(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
+			i = encodeVarintMsgDetail(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
 	return i, nil
@@ -1790,7 +1389,7 @@ func (m *Data) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Kind))
 	}
 	if len(m.Data) > 0 {
-		dAtA[i] = 0x5a
+		dAtA[i] = 0x12
 		i++
 		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Data)))
 		i += copy(dAtA[i:], m.Data)
@@ -1798,7 +1397,7 @@ func (m *Data) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Ack) Marshal() (dAtA []byte, err error) {
+func (m *Error) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1808,76 +1407,25 @@ func (m *Ack) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Ack) MarshalTo(dAtA []byte) (int, error) {
+func (m *Error) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.Value != nil {
-		nn6, err := m.Value.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn6
-	}
-	return i, nil
-}
-
-func (m *Ack_Hash_) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Hash != nil {
-		dAtA[i] = 0xa
+	if m.Kind != 0 {
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Hash.Size()))
-		n7, err := m.Hash.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n7
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Kind))
 	}
-	return i, nil
-}
-func (m *Ack_Error) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	dAtA[i] = 0x12
-	i++
-	i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Error)))
-	i += copy(dAtA[i:], m.Error)
-	return i, nil
-}
-func (m *Ack_Hash) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Ack_Hash) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Hash != nil {
-		nn8, err := m.Hash.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn8
+	if len(m.Description) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Description)))
+		i += copy(dAtA[i:], m.Description)
 	}
 	return i, nil
 }
 
-func (m *Ack_Hash_Sha256) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Sha256)))
-	i += copy(dAtA[i:], m.Sha256)
-	return i, nil
-}
 func encodeVarintMsgDetail(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -1887,7 +1435,7 @@ func encodeVarintMsgDetail(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *Node) Size() (n int) {
+func (m *NodeStatus) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1908,7 +1456,7 @@ func (m *Node) Size() (n int) {
 	return n
 }
 
-func (m *Node_Resource) Size() (n int) {
+func (m *NodeStatus_Resource) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1941,7 +1489,7 @@ func (m *Node_Resource) Size() (n int) {
 	return n
 }
 
-func (m *Node_Condition) Size() (n int) {
+func (m *NodeStatus_Condition) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1956,25 +1504,7 @@ func (m *Node_Condition) Size() (n int) {
 	return n
 }
 
-func (m *Image) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Names) > 0 {
-		for _, s := range m.Names {
-			l = len(s)
-			n += 1 + l + sovMsgDetail(uint64(l))
-		}
-	}
-	if m.SizeBytes != 0 {
-		n += 1 + sovMsgDetail(uint64(m.SizeBytes))
-	}
-	return n
-}
-
-func (m *Pod) Size() (n int) {
+func (m *PodStatus) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1984,52 +1514,68 @@ func (m *Pod) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovMsgDetail(uint64(l))
 	}
-	l = len(m.Ip)
-	if l > 0 {
-		n += 1 + l + sovMsgDetail(uint64(l))
-	}
-	if m.SandboxStatus != nil {
-		n += m.SandboxStatus.Size()
-	}
-	if m.ContainerStatus != nil {
-		n += m.ContainerStatus.Size()
+	if len(m.ContainerStatuses) > 0 {
+		for k, v := range m.ContainerStatuses {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovMsgDetail(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovMsgDetail(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
 
-func (m *Pod_SandboxV1Alpha2) Size() (n int) {
+func (m *PodStatus_ContainerStatus) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.SandboxV1Alpha2 != nil {
-		l = len(m.SandboxV1Alpha2)
+	l = len(m.ContainerId)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.ImageId)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	if m.CreatedAt != 0 {
+		n += 1 + sovMsgDetail(uint64(m.CreatedAt))
+	}
+	if m.StartedAt != 0 {
+		n += 1 + sovMsgDetail(uint64(m.StartedAt))
+	}
+	if m.FinishedAt != 0 {
+		n += 1 + sovMsgDetail(uint64(m.FinishedAt))
+	}
+	if m.ExitCode != 0 {
+		n += 1 + sovMsgDetail(uint64(m.ExitCode))
+	}
+	l = len(m.Reason)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.Message)
+	if l > 0 {
 		n += 1 + l + sovMsgDetail(uint64(l))
 	}
 	return n
 }
-func (m *Pod_ContainerV1Alpha2) Size() (n int) {
+
+func (m *PodStatusList) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.ContainerV1Alpha2 != nil {
-		l = m.ContainerV1Alpha2.Size()
-		n += 2 + l + sovMsgDetail(uint64(l))
-	}
-	return n
-}
-func (m *Pod_ContainerStatusV1Alpha2) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.V1Alpha2) > 0 {
-		for _, b := range m.V1Alpha2 {
-			l = len(b)
+	if len(m.Pods) > 0 {
+		for _, e := range m.Pods {
+			l = e.Size()
 			n += 1 + l + sovMsgDetail(uint64(l))
 		}
 	}
@@ -2052,60 +1598,19 @@ func (m *Data) Size() (n int) {
 	return n
 }
 
-func (m *Ack) Size() (n int) {
+func (m *Error) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Value != nil {
-		n += m.Value.Size()
+	if m.Kind != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Kind))
 	}
-	return n
-}
-
-func (m *Ack_Hash_) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Hash != nil {
-		l = m.Hash.Size()
+	l = len(m.Description)
+	if l > 0 {
 		n += 1 + l + sovMsgDetail(uint64(l))
 	}
-	return n
-}
-func (m *Ack_Error) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Error)
-	n += 1 + l + sovMsgDetail(uint64(l))
-	return n
-}
-func (m *Ack_Hash) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Hash != nil {
-		n += m.Hash.Size()
-	}
-	return n
-}
-
-func (m *Ack_Hash_Sha256) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Sha256)
-	n += 1 + l + sovMsgDetail(uint64(l))
 	return n
 }
 
@@ -2122,19 +1627,19 @@ func sovMsgDetail(x uint64) (n int) {
 func sozMsgDetail(x uint64) (n int) {
 	return sovMsgDetail(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *Node) String() string {
+func (this *NodeStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Node{`,
+	s := strings.Join([]string{`&NodeStatus{`,
 		`SystemInfo:` + fmt.Sprintf("%v", this.SystemInfo) + `,`,
-		`Resources:` + strings.Replace(fmt.Sprintf("%v", this.Resources), "Node_Resource", "Node_Resource", 1) + `,`,
-		`Conditions:` + strings.Replace(fmt.Sprintf("%v", this.Conditions), "Node_Condition", "Node_Condition", 1) + `,`,
+		`Resources:` + strings.Replace(fmt.Sprintf("%v", this.Resources), "NodeStatus_Resource", "NodeStatus_Resource", 1) + `,`,
+		`Conditions:` + strings.Replace(fmt.Sprintf("%v", this.Conditions), "NodeStatus_Condition", "NodeStatus_Condition", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Node_Resource) String() string {
+func (this *NodeStatus_Resource) String() string {
 	if this == nil {
 		return "nil"
 	}
@@ -2158,73 +1663,67 @@ func (this *Node_Resource) String() string {
 		mapStringForAllocatable += fmt.Sprintf("%v: %v,", k, this.Allocatable[k])
 	}
 	mapStringForAllocatable += "}"
-	s := strings.Join([]string{`&Node_Resource{`,
+	s := strings.Join([]string{`&NodeStatus_Resource{`,
 		`Capacity:` + mapStringForCapacity + `,`,
 		`Allocatable:` + mapStringForAllocatable + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Node_Condition) String() string {
+func (this *NodeStatus_Condition) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Node_Condition{`,
+	s := strings.Join([]string{`&NodeStatus_Condition{`,
 		`Conditions:` + fmt.Sprintf("%v", this.Conditions) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Image) String() string {
+func (this *PodStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Image{`,
-		`Names:` + fmt.Sprintf("%v", this.Names) + `,`,
-		`SizeBytes:` + fmt.Sprintf("%v", this.SizeBytes) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Pod) String() string {
-	if this == nil {
-		return "nil"
+	keysForContainerStatuses := make([]string, 0, len(this.ContainerStatuses))
+	for k, _ := range this.ContainerStatuses {
+		keysForContainerStatuses = append(keysForContainerStatuses, k)
 	}
-	s := strings.Join([]string{`&Pod{`,
+	github_com_gogo_protobuf_sortkeys.Strings(keysForContainerStatuses)
+	mapStringForContainerStatuses := "map[string]*PodStatus_ContainerStatus{"
+	for _, k := range keysForContainerStatuses {
+		mapStringForContainerStatuses += fmt.Sprintf("%v: %v,", k, this.ContainerStatuses[k])
+	}
+	mapStringForContainerStatuses += "}"
+	s := strings.Join([]string{`&PodStatus{`,
 		`Uid:` + fmt.Sprintf("%v", this.Uid) + `,`,
-		`Ip:` + fmt.Sprintf("%v", this.Ip) + `,`,
-		`SandboxStatus:` + fmt.Sprintf("%v", this.SandboxStatus) + `,`,
-		`ContainerStatus:` + fmt.Sprintf("%v", this.ContainerStatus) + `,`,
+		`ContainerStatuses:` + mapStringForContainerStatuses + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Pod_SandboxV1Alpha2) String() string {
+func (this *PodStatus_ContainerStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Pod_SandboxV1Alpha2{`,
-		`SandboxV1Alpha2:` + fmt.Sprintf("%v", this.SandboxV1Alpha2) + `,`,
+	s := strings.Join([]string{`&PodStatus_ContainerStatus{`,
+		`ContainerId:` + fmt.Sprintf("%v", this.ContainerId) + `,`,
+		`ImageId:` + fmt.Sprintf("%v", this.ImageId) + `,`,
+		`CreatedAt:` + fmt.Sprintf("%v", this.CreatedAt) + `,`,
+		`StartedAt:` + fmt.Sprintf("%v", this.StartedAt) + `,`,
+		`FinishedAt:` + fmt.Sprintf("%v", this.FinishedAt) + `,`,
+		`ExitCode:` + fmt.Sprintf("%v", this.ExitCode) + `,`,
+		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
+		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Pod_ContainerV1Alpha2) String() string {
+func (this *PodStatusList) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Pod_ContainerV1Alpha2{`,
-		`ContainerV1Alpha2:` + strings.Replace(fmt.Sprintf("%v", this.ContainerV1Alpha2), "Pod_ContainerStatusV1Alpha2", "Pod_ContainerStatusV1Alpha2", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Pod_ContainerStatusV1Alpha2) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Pod_ContainerStatusV1Alpha2{`,
-		`V1Alpha2:` + fmt.Sprintf("%v", this.V1Alpha2) + `,`,
+	s := strings.Join([]string{`&PodStatusList{`,
+		`Pods:` + strings.Replace(fmt.Sprintf("%v", this.Pods), "PodStatus", "PodStatus", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -2240,52 +1739,13 @@ func (this *Data) String() string {
 	}, "")
 	return s
 }
-func (this *Ack) String() string {
+func (this *Error) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Ack{`,
-		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Ack_Hash_) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Ack_Hash_{`,
-		`Hash:` + strings.Replace(fmt.Sprintf("%v", this.Hash), "Ack_Hash", "Ack_Hash", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Ack_Error) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Ack_Error{`,
-		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Ack_Hash) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Ack_Hash{`,
-		`Hash:` + fmt.Sprintf("%v", this.Hash) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Ack_Hash_Sha256) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Ack_Hash_Sha256{`,
-		`Sha256:` + fmt.Sprintf("%v", this.Sha256) + `,`,
+	s := strings.Join([]string{`&Error{`,
+		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Description:` + fmt.Sprintf("%v", this.Description) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -2298,7 +1758,7 @@ func valueToStringMsgDetail(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *Node) Unmarshal(dAtA []byte) error {
+func (m *NodeStatus) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2321,10 +1781,10 @@ func (m *Node) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Node: wiretype end group for non-group")
+			return fmt.Errorf("proto: NodeStatus: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Node: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: NodeStatus: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2391,7 +1851,7 @@ func (m *Node) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Resources == nil {
-				m.Resources = &Node_Resource{}
+				m.Resources = &NodeStatus_Resource{}
 			}
 			if err := m.Resources.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2427,7 +1887,7 @@ func (m *Node) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Conditions == nil {
-				m.Conditions = &Node_Condition{}
+				m.Conditions = &NodeStatus_Condition{}
 			}
 			if err := m.Conditions.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2457,7 +1917,7 @@ func (m *Node) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Node_Resource) Unmarshal(dAtA []byte) error {
+func (m *NodeStatus_Resource) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2766,7 +2226,7 @@ func (m *Node_Resource) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Node_Condition) Unmarshal(dAtA []byte) error {
+func (m *NodeStatus_Condition) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2851,7 +2311,7 @@ func (m *Node_Condition) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Image) Unmarshal(dAtA []byte) error {
+func (m *PodStatus) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2874,114 +2334,10 @@ func (m *Image) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Image: wiretype end group for non-group")
+			return fmt.Errorf("proto: PodStatus: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Image: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Names", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Names = append(m.Names, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SizeBytes", wireType)
-			}
-			m.SizeBytes = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SizeBytes |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgDetail(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Pod) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Pod: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Pod: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PodStatus: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3018,7 +2374,189 @@ func (m *Pod) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ip", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ContainerStatuses", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ContainerStatuses == nil {
+				m.ContainerStatuses = make(map[string]*PodStatus_ContainerStatus)
+			}
+			var mapkey string
+			var mapvalue *PodStatus_ContainerStatus
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMsgDetail
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMsgDetail
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthMsgDetail
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthMsgDetail
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMsgDetail
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthMsgDetail
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthMsgDetail
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &PodStatus_ContainerStatus{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMsgDetail(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthMsgDetail
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.ContainerStatuses[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PodStatus_ContainerStatus) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContainerStatus: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContainerStatus: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ContainerId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3046,13 +2584,13 @@ func (m *Pod) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Ip = string(dAtA[iNdEx:postIndex])
+			m.ContainerId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 11:
+		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SandboxV1Alpha2", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ImageId", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMsgDetail
@@ -3062,28 +2600,220 @@ func (m *Pod) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := make([]byte, postIndex-iNdEx)
-			copy(v, dAtA[iNdEx:postIndex])
-			m.SandboxStatus = &Pod_SandboxV1Alpha2{v}
+			m.ImageId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 21:
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CreatedAt", wireType)
+			}
+			m.CreatedAt = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CreatedAt |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartedAt", wireType)
+			}
+			m.StartedAt = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.StartedAt |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FinishedAt", wireType)
+			}
+			m.FinishedAt = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FinishedAt |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExitCode", wireType)
+			}
+			m.ExitCode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ExitCode |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ContainerV1Alpha2", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Reason = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Message = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PodStatusList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PodStatusList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PodStatusList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pods", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3110,96 +2840,10 @@ func (m *Pod) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &Pod_ContainerStatusV1Alpha2{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			m.Pods = append(m.Pods, &PodStatus{})
+			if err := m.Pods[len(m.Pods)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.ContainerStatus = &Pod_ContainerV1Alpha2{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgDetail(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Pod_ContainerStatusV1Alpha2) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ContainerStatusV1alpha2: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContainerStatusV1alpha2: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field V1Alpha2", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.V1Alpha2 = append(m.V1Alpha2, make([]byte, postIndex-iNdEx))
-			copy(m.V1Alpha2[len(m.V1Alpha2)-1], dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3273,7 +2917,7 @@ func (m *Data) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 11:
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
 			}
@@ -3331,7 +2975,7 @@ func (m *Data) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Ack) Unmarshal(dAtA []byte) error {
+func (m *Error) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3354,17 +2998,17 @@ func (m *Ack) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Ack: wiretype end group for non-group")
+			return fmt.Errorf("proto: Error: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Ack: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Error: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Hash", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
 			}
-			var msglen int
+			m.Kind = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMsgDetail
@@ -3374,30 +3018,14 @@ func (m *Ack) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= int(b&0x7F) << shift
+				m.Kind |= Error_Kind(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Ack_Hash{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Value = &Ack_Hash_{v}
-			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3425,92 +3053,7 @@ func (m *Ack) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Value = &Ack_Error{string(dAtA[iNdEx:postIndex])}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgDetail(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Ack_Hash) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Hash: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Hash: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sha256", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Hash = &Ack_Hash_Sha256{string(dAtA[iNdEx:postIndex])}
+			m.Description = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

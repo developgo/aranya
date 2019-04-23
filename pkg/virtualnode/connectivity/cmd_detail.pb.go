@@ -27,80 +27,86 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type NodeCmd_NodeAction int32
+type ImagePullPolicy int32
 
 const (
-	GetInfoAll    NodeCmd_NodeAction = 0
-	GetSystemInfo NodeCmd_NodeAction = 1
-	GetResources  NodeCmd_NodeAction = 2
-	GetConditions NodeCmd_NodeAction = 3
+	ImagePullAlways       ImagePullPolicy = 0
+	ImagePullIfNotPresent ImagePullPolicy = 1
+	ImagePullNever        ImagePullPolicy = 2
 )
 
-var NodeCmd_NodeAction_name = map[int32]string{
+var ImagePullPolicy_name = map[int32]string{
+	0: "ImagePullAlways",
+	1: "ImagePullIfNotPresent",
+	2: "ImagePullNever",
+}
+
+var ImagePullPolicy_value = map[string]int32{
+	"ImagePullAlways":       0,
+	"ImagePullIfNotPresent": 1,
+	"ImagePullNever":        2,
+}
+
+func (ImagePullPolicy) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_1571bcd24e248579, []int{0}
+}
+
+type NodeCmd_Action int32
+
+const (
+	GetInfoAll    NodeCmd_Action = 0
+	GetSystemInfo NodeCmd_Action = 1
+	GetResources  NodeCmd_Action = 2
+	GetConditions NodeCmd_Action = 3
+)
+
+var NodeCmd_Action_name = map[int32]string{
 	0: "GetInfoAll",
 	1: "GetSystemInfo",
 	2: "GetResources",
 	3: "GetConditions",
 }
 
-var NodeCmd_NodeAction_value = map[string]int32{
+var NodeCmd_Action_value = map[string]int32{
 	"GetInfoAll":    0,
 	"GetSystemInfo": 1,
 	"GetResources":  2,
 	"GetConditions": 3,
 }
 
-func (NodeCmd_NodeAction) EnumDescriptor() ([]byte, []int) {
+func (NodeCmd_Action) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_1571bcd24e248579, []int{0, 0}
 }
 
-type ImageCmd_ImageAction int32
-
-const (
-	ListImages ImageCmd_ImageAction = 0
-)
-
-var ImageCmd_ImageAction_name = map[int32]string{
-	0: "ListImages",
-}
-
-var ImageCmd_ImageAction_value = map[string]int32{
-	"ListImages": 0,
-}
-
-func (ImageCmd_ImageAction) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{1, 0}
-}
-
-type PodCmd_PodAction int32
+type PodCmd_Action int32
 
 const (
 	// Create a new pod in device
-	CreatePod PodCmd_PodAction = 0
+	CreatePod PodCmd_Action = 0
 	// Delete a existing pod in device
-	DeletePod PodCmd_PodAction = 1
+	DeletePod PodCmd_Action = 1
 	// List all managed pod in device
-	ListPods PodCmd_PodAction = 3
+	ListPods PodCmd_Action = 2
 	// Execute commands in existing container
-	Exec PodCmd_PodAction = 11
+	Exec PodCmd_Action = 11
 	// Attach to existing container
-	Attach PodCmd_PodAction = 12
+	Attach PodCmd_Action = 12
 	// Get container/node log
-	Log PodCmd_PodAction = 13
+	Log PodCmd_Action = 13
 	// Port forward in pod
-	PortForward PodCmd_PodAction = 14
+	PortForward PodCmd_Action = 14
 	// user input or application data to
 	// usually this action happens in Exec, Attach, PortForward session
-	Input PodCmd_PodAction = 15
+	Input PodCmd_Action = 15
 	// user tty resize
 	// usually this action happens in Exec, Attach session when tty is enabled
-	ResizeTty PodCmd_PodAction = 16
+	ResizeTty PodCmd_Action = 16
 )
 
-var PodCmd_PodAction_name = map[int32]string{
+var PodCmd_Action_name = map[int32]string{
 	0:  "CreatePod",
 	1:  "DeletePod",
-	3:  "ListPods",
+	2:  "ListPods",
 	11: "Exec",
 	12: "Attach",
 	13: "Log",
@@ -109,10 +115,10 @@ var PodCmd_PodAction_name = map[int32]string{
 	16: "ResizeTty",
 }
 
-var PodCmd_PodAction_value = map[string]int32{
+var PodCmd_Action_value = map[string]int32{
 	"CreatePod":   0,
 	"DeletePod":   1,
-	"ListPods":    3,
+	"ListPods":    2,
 	"Exec":        11,
 	"Attach":      12,
 	"Log":         13,
@@ -121,12 +127,12 @@ var PodCmd_PodAction_value = map[string]int32{
 	"ResizeTty":   16,
 }
 
-func (PodCmd_PodAction) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{2, 0}
+func (PodCmd_Action) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_1571bcd24e248579, []int{1, 0}
 }
 
 type NodeCmd struct {
-	Action NodeCmd_NodeAction `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.NodeCmd_NodeAction" json:"action,omitempty"`
+	Action NodeCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.NodeCmd_Action" json:"action,omitempty"`
 }
 
 func (m *NodeCmd) Reset()      { *m = NodeCmd{} }
@@ -161,7 +167,7 @@ func (m *NodeCmd) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_NodeCmd proto.InternalMessageInfo
 
-func (m *NodeCmd) GetAction() NodeCmd_NodeAction {
+func (m *NodeCmd) GetAction() NodeCmd_Action {
 	if m != nil {
 		return m.Action
 	}
@@ -172,56 +178,9 @@ func (*NodeCmd) XXX_MessageName() string {
 	return "connectivity.NodeCmd"
 }
 
-type ImageCmd struct {
-	Action ImageCmd_ImageAction `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.ImageCmd_ImageAction" json:"action,omitempty"`
-}
-
-func (m *ImageCmd) Reset()      { *m = ImageCmd{} }
-func (*ImageCmd) ProtoMessage() {}
-func (*ImageCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{1}
-}
-func (m *ImageCmd) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ImageCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ImageCmd.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ImageCmd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ImageCmd.Merge(m, src)
-}
-func (m *ImageCmd) XXX_Size() int {
-	return m.Size()
-}
-func (m *ImageCmd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ImageCmd.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ImageCmd proto.InternalMessageInfo
-
-func (m *ImageCmd) GetAction() ImageCmd_ImageAction {
-	if m != nil {
-		return m.Action
-	}
-	return ListImages
-}
-
-func (*ImageCmd) XXX_MessageName() string {
-	return "connectivity.ImageCmd"
-}
-
 type PodCmd struct {
 	// action type
-	Action PodCmd_PodAction `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.PodCmd_PodAction" json:"action,omitempty"`
+	Action PodCmd_Action `protobuf:"varint,1,opt,name=action,proto3,enum=connectivity.PodCmd_Action" json:"action,omitempty"`
 	// options for action
 	//
 	// Types that are valid to be assigned to Options:
@@ -239,7 +198,7 @@ type PodCmd struct {
 func (m *PodCmd) Reset()      { *m = PodCmd{} }
 func (*PodCmd) ProtoMessage() {}
 func (*PodCmd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{2}
+	return fileDescriptor_1571bcd24e248579, []int{1}
 }
 func (m *PodCmd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -316,7 +275,7 @@ func (m *PodCmd) GetOptions() isPodCmd_Options {
 	return nil
 }
 
-func (m *PodCmd) GetAction() PodCmd_PodAction {
+func (m *PodCmd) GetAction() PodCmd_Action {
 	if m != nil {
 		return m.Action
 	}
@@ -572,13 +531,13 @@ func (*PodCmd) XXX_MessageName() string {
 }
 
 type NamedData struct {
-	Data map[string][]byte `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	DataMap map[string][]byte `protobuf:"bytes,1,rep,name=data_map,json=dataMap,proto3" json:"data_map,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *NamedData) Reset()      { *m = NamedData{} }
 func (*NamedData) ProtoMessage() {}
 func (*NamedData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{3}
+	return fileDescriptor_1571bcd24e248579, []int{2}
 }
 func (m *NamedData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -607,9 +566,9 @@ func (m *NamedData) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_NamedData proto.InternalMessageInfo
 
-func (m *NamedData) GetData() map[string][]byte {
+func (m *NamedData) GetDataMap() map[string][]byte {
 	if m != nil {
-		return m.Data
+		return m.DataMap
 	}
 	return nil
 }
@@ -628,7 +587,7 @@ type ContainerPort struct {
 func (m *ContainerPort) Reset()      { *m = ContainerPort{} }
 func (*ContainerPort) ProtoMessage() {}
 func (*ContainerPort) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{4}
+	return fileDescriptor_1571bcd24e248579, []int{3}
 }
 func (m *ContainerPort) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -700,7 +659,7 @@ type VolumeMount struct {
 func (m *VolumeMount) Reset()      { *m = VolumeMount{} }
 func (*VolumeMount) ProtoMessage() {}
 func (*VolumeMount) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{5}
+	return fileDescriptor_1571bcd24e248579, []int{4}
 }
 func (m *VolumeMount) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -770,8 +729,8 @@ func (*VolumeMount) XXX_MessageName() string {
 
 type ContainerSpec struct {
 	// container image name to pull
-	Image           string `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
-	ImagePullPolicy string `protobuf:"bytes,2,opt,name=image_pull_policy,json=imagePullPolicy,proto3" json:"image_pull_policy,omitempty"`
+	Image           string          `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	ImagePullPolicy ImagePullPolicy `protobuf:"varint,2,opt,name=image_pull_policy,json=imagePullPolicy,proto3,enum=connectivity.ImagePullPolicy" json:"image_pull_policy,omitempty"`
 	// Command (ENTRYPOINT in Dockerfile)
 	Command []string `protobuf:"bytes,3,rep,name=command,proto3" json:"command,omitempty"`
 	// Args (CMD in Dockerfile)
@@ -798,7 +757,7 @@ type ContainerSpec struct {
 func (m *ContainerSpec) Reset()      { *m = ContainerSpec{} }
 func (*ContainerSpec) ProtoMessage() {}
 func (*ContainerSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_1571bcd24e248579, []int{6}
+	return fileDescriptor_1571bcd24e248579, []int{5}
 }
 func (m *ContainerSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -834,11 +793,11 @@ func (m *ContainerSpec) GetImage() string {
 	return ""
 }
 
-func (m *ContainerSpec) GetImagePullPolicy() string {
+func (m *ContainerSpec) GetImagePullPolicy() ImagePullPolicy {
 	if m != nil {
 		return m.ImagePullPolicy
 	}
-	return ""
+	return ImagePullAlways
 }
 
 func (m *ContainerSpec) GetCommand() []string {
@@ -915,6 +874,97 @@ func (*ContainerSpec) XXX_MessageName() string {
 	return "connectivity.ContainerSpec"
 }
 
+// A cri/runtime/v1alpah2/.AuthConfig replacement
+type AuthConfig struct {
+	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	Auth          string `protobuf:"bytes,3,opt,name=auth,proto3" json:"auth,omitempty"`
+	ServerAddress string `protobuf:"bytes,4,opt,name=server_address,json=serverAddress,proto3" json:"server_address,omitempty"`
+	// IdentityToken is used to authenticate the user and get
+	// an access token for the registry.
+	IdentityToken string `protobuf:"bytes,5,opt,name=identity_token,json=identityToken,proto3" json:"identity_token,omitempty"`
+	// RegistryToken is a bearer token to be sent to a registry
+	RegistryToken string `protobuf:"bytes,6,opt,name=registry_token,json=registryToken,proto3" json:"registry_token,omitempty"`
+}
+
+func (m *AuthConfig) Reset()      { *m = AuthConfig{} }
+func (*AuthConfig) ProtoMessage() {}
+func (*AuthConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1571bcd24e248579, []int{6}
+}
+func (m *AuthConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AuthConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AuthConfig.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AuthConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuthConfig.Merge(m, src)
+}
+func (m *AuthConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *AuthConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuthConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuthConfig proto.InternalMessageInfo
+
+func (m *AuthConfig) GetUsername() string {
+	if m != nil {
+		return m.Username
+	}
+	return ""
+}
+
+func (m *AuthConfig) GetPassword() string {
+	if m != nil {
+		return m.Password
+	}
+	return ""
+}
+
+func (m *AuthConfig) GetAuth() string {
+	if m != nil {
+		return m.Auth
+	}
+	return ""
+}
+
+func (m *AuthConfig) GetServerAddress() string {
+	if m != nil {
+		return m.ServerAddress
+	}
+	return ""
+}
+
+func (m *AuthConfig) GetIdentityToken() string {
+	if m != nil {
+		return m.IdentityToken
+	}
+	return ""
+}
+
+func (m *AuthConfig) GetRegistryToken() string {
+	if m != nil {
+		return m.RegistryToken
+	}
+	return ""
+}
+
+func (*AuthConfig) XXX_MessageName() string {
+	return "connectivity.AuthConfig"
+}
+
 type CreateOptions struct {
 	// kubernetes pod uid
 	PodUid    string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
@@ -924,9 +974,9 @@ type CreateOptions struct {
 	// value: container creation spec
 	Containers map[string]*ContainerSpec `protobuf:"bytes,11,rep,name=containers,proto3" json:"containers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// key: image name
-	// value: bytes of criRuntime.AuthConfig
+	// value: auth config
 	// used to pull private images
-	ImagePullAuthConfig map[string][]byte `protobuf:"bytes,12,rep,name=image_pull_auth_config,json=imagePullAuthConfig,proto3" json:"image_pull_auth_config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ImagePullAuthConfig map[string]*AuthConfig `protobuf:"bytes,12,rep,name=image_pull_auth_config,json=imagePullAuthConfig,proto3" json:"image_pull_auth_config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// key: volume name
 	// value: host path
 	HostVolumes map[string]string `protobuf:"bytes,21,rep,name=host_volumes,json=hostVolumes,proto3" json:"host_volumes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -1001,7 +1051,7 @@ func (m *CreateOptions) GetContainers() map[string]*ContainerSpec {
 	return nil
 }
 
-func (m *CreateOptions) GetImagePullAuthConfig() map[string][]byte {
+func (m *CreateOptions) GetImagePullAuthConfig() map[string]*AuthConfig {
 	if m != nil {
 		return m.ImagePullAuthConfig
 	}
@@ -1177,10 +1227,13 @@ func (*ListOptions) XXX_MessageName() string {
 }
 
 type LogOptions struct {
-	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*LogOptions_OptionsV1
-	Options isLogOptions_Options `protobuf_oneof:"options"`
+	PodUid     string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
+	Container  string `protobuf:"bytes,2,opt,name=container,proto3" json:"container,omitempty"`
+	Follow     bool   `protobuf:"varint,3,opt,name=follow,proto3" json:"follow,omitempty"`
+	Timestamp  bool   `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Since      int64  `protobuf:"varint,5,opt,name=since,proto3" json:"since,omitempty"`
+	TailLines  int64  `protobuf:"varint,6,opt,name=tail_lines,json=tailLines,proto3" json:"tail_lines,omitempty"`
+	BytesLimit int64  `protobuf:"varint,7,opt,name=bytes_limit,json=bytesLimit,proto3" json:"bytes_limit,omitempty"`
 }
 
 func (m *LogOptions) Reset()      { *m = LogOptions{} }
@@ -1215,26 +1268,6 @@ func (m *LogOptions) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_LogOptions proto.InternalMessageInfo
 
-type isLogOptions_Options interface {
-	isLogOptions_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type LogOptions_OptionsV1 struct {
-	OptionsV1 []byte `protobuf:"bytes,10,opt,name=options_v1,json=optionsV1,proto3,oneof"`
-}
-
-func (*LogOptions_OptionsV1) isLogOptions_Options() {}
-
-func (m *LogOptions) GetOptions() isLogOptions_Options {
-	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
 func (m *LogOptions) GetPodUid() string {
 	if m != nil {
 		return m.PodUid
@@ -1242,62 +1275,46 @@ func (m *LogOptions) GetPodUid() string {
 	return ""
 }
 
-func (m *LogOptions) GetOptionsV1() []byte {
-	if x, ok := m.GetOptions().(*LogOptions_OptionsV1); ok {
-		return x.OptionsV1
+func (m *LogOptions) GetContainer() string {
+	if m != nil {
+		return m.Container
 	}
-	return nil
+	return ""
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*LogOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _LogOptions_OneofMarshaler, _LogOptions_OneofUnmarshaler, _LogOptions_OneofSizer, []interface{}{
-		(*LogOptions_OptionsV1)(nil),
+func (m *LogOptions) GetFollow() bool {
+	if m != nil {
+		return m.Follow
 	}
+	return false
 }
 
-func _LogOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*LogOptions)
-	// options
-	switch x := m.Options.(type) {
-	case *LogOptions_OptionsV1:
-		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
-		_ = b.EncodeRawBytes(x.OptionsV1)
-	case nil:
-	default:
-		return fmt.Errorf("LogOptions.Options has unexpected type %T", x)
+func (m *LogOptions) GetTimestamp() bool {
+	if m != nil {
+		return m.Timestamp
 	}
-	return nil
+	return false
 }
 
-func _LogOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*LogOptions)
-	switch tag {
-	case 10: // options.options_v1
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Options = &LogOptions_OptionsV1{x}
-		return true, err
-	default:
-		return false, nil
+func (m *LogOptions) GetSince() int64 {
+	if m != nil {
+		return m.Since
 	}
+	return 0
 }
 
-func _LogOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*LogOptions)
-	// options
-	switch x := m.Options.(type) {
-	case *LogOptions_OptionsV1:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.OptionsV1)))
-		n += len(x.OptionsV1)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+func (m *LogOptions) GetTailLines() int64 {
+	if m != nil {
+		return m.TailLines
 	}
-	return n
+	return 0
+}
+
+func (m *LogOptions) GetBytesLimit() int64 {
+	if m != nil {
+		return m.BytesLimit
+	}
+	return 0
 }
 
 func (*LogOptions) XXX_MessageName() string {
@@ -1305,10 +1322,13 @@ func (*LogOptions) XXX_MessageName() string {
 }
 
 type ExecOptions struct {
-	PodUid string `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
-	// Types that are valid to be assigned to Options:
-	//	*ExecOptions_OptionsV1
-	Options isExecOptions_Options `protobuf_oneof:"options"`
+	PodUid    string   `protobuf:"bytes,1,opt,name=pod_uid,json=podUid,proto3" json:"pod_uid,omitempty"`
+	Container string   `protobuf:"bytes,2,opt,name=container,proto3" json:"container,omitempty"`
+	Command   []string `protobuf:"bytes,3,rep,name=command,proto3" json:"command,omitempty"`
+	Stdin     bool     `protobuf:"varint,4,opt,name=stdin,proto3" json:"stdin,omitempty"`
+	Stdout    bool     `protobuf:"varint,5,opt,name=stdout,proto3" json:"stdout,omitempty"`
+	Stderr    bool     `protobuf:"varint,6,opt,name=stderr,proto3" json:"stderr,omitempty"`
+	Tty       bool     `protobuf:"varint,7,opt,name=tty,proto3" json:"tty,omitempty"`
 }
 
 func (m *ExecOptions) Reset()      { *m = ExecOptions{} }
@@ -1343,26 +1363,6 @@ func (m *ExecOptions) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ExecOptions proto.InternalMessageInfo
 
-type isExecOptions_Options interface {
-	isExecOptions_Options()
-	Equal(interface{}) bool
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type ExecOptions_OptionsV1 struct {
-	OptionsV1 []byte `protobuf:"bytes,10,opt,name=options_v1,json=optionsV1,proto3,oneof"`
-}
-
-func (*ExecOptions_OptionsV1) isExecOptions_Options() {}
-
-func (m *ExecOptions) GetOptions() isExecOptions_Options {
-	if m != nil {
-		return m.Options
-	}
-	return nil
-}
-
 func (m *ExecOptions) GetPodUid() string {
 	if m != nil {
 		return m.PodUid
@@ -1370,62 +1370,46 @@ func (m *ExecOptions) GetPodUid() string {
 	return ""
 }
 
-func (m *ExecOptions) GetOptionsV1() []byte {
-	if x, ok := m.GetOptions().(*ExecOptions_OptionsV1); ok {
-		return x.OptionsV1
+func (m *ExecOptions) GetContainer() string {
+	if m != nil {
+		return m.Container
+	}
+	return ""
+}
+
+func (m *ExecOptions) GetCommand() []string {
+	if m != nil {
+		return m.Command
 	}
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*ExecOptions) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _ExecOptions_OneofMarshaler, _ExecOptions_OneofUnmarshaler, _ExecOptions_OneofSizer, []interface{}{
-		(*ExecOptions_OptionsV1)(nil),
+func (m *ExecOptions) GetStdin() bool {
+	if m != nil {
+		return m.Stdin
 	}
+	return false
 }
 
-func _ExecOptions_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*ExecOptions)
-	// options
-	switch x := m.Options.(type) {
-	case *ExecOptions_OptionsV1:
-		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
-		_ = b.EncodeRawBytes(x.OptionsV1)
-	case nil:
-	default:
-		return fmt.Errorf("ExecOptions.Options has unexpected type %T", x)
+func (m *ExecOptions) GetStdout() bool {
+	if m != nil {
+		return m.Stdout
 	}
-	return nil
+	return false
 }
 
-func _ExecOptions_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*ExecOptions)
-	switch tag {
-	case 10: // options.options_v1
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeRawBytes(true)
-		m.Options = &ExecOptions_OptionsV1{x}
-		return true, err
-	default:
-		return false, nil
+func (m *ExecOptions) GetStderr() bool {
+	if m != nil {
+		return m.Stderr
 	}
+	return false
 }
 
-func _ExecOptions_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*ExecOptions)
-	// options
-	switch x := m.Options.(type) {
-	case *ExecOptions_OptionsV1:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.OptionsV1)))
-		n += len(x.OptionsV1)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+func (m *ExecOptions) GetTty() bool {
+	if m != nil {
+		return m.Tty
 	}
-	return n
+	return false
 }
 
 func (*ExecOptions) XXX_MessageName() string {
@@ -1597,24 +1581,24 @@ func (*TtyResizeOptions) XXX_MessageName() string {
 	return "connectivity.TtyResizeOptions"
 }
 func init() {
-	proto.RegisterEnum("connectivity.NodeCmd_NodeAction", NodeCmd_NodeAction_name, NodeCmd_NodeAction_value)
-	proto.RegisterEnum("connectivity.ImageCmd_ImageAction", ImageCmd_ImageAction_name, ImageCmd_ImageAction_value)
-	proto.RegisterEnum("connectivity.PodCmd_PodAction", PodCmd_PodAction_name, PodCmd_PodAction_value)
+	proto.RegisterEnum("connectivity.ImagePullPolicy", ImagePullPolicy_name, ImagePullPolicy_value)
+	proto.RegisterEnum("connectivity.NodeCmd_Action", NodeCmd_Action_name, NodeCmd_Action_value)
+	proto.RegisterEnum("connectivity.PodCmd_Action", PodCmd_Action_name, PodCmd_Action_value)
 	proto.RegisterType((*NodeCmd)(nil), "connectivity.NodeCmd")
-	proto.RegisterType((*ImageCmd)(nil), "connectivity.ImageCmd")
 	proto.RegisterType((*PodCmd)(nil), "connectivity.PodCmd")
 	proto.RegisterType((*NamedData)(nil), "connectivity.NamedData")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NamedData.DataEntry")
+	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NamedData.DataMapEntry")
 	proto.RegisterType((*ContainerPort)(nil), "connectivity.ContainerPort")
 	proto.RegisterType((*VolumeMount)(nil), "connectivity.VolumeMount")
 	proto.RegisterType((*ContainerSpec)(nil), "connectivity.ContainerSpec")
 	proto.RegisterMapType((map[string]string)(nil), "connectivity.ContainerSpec.EnvsEntry")
 	proto.RegisterMapType((map[string]*ContainerPort)(nil), "connectivity.ContainerSpec.PortsEntry")
 	proto.RegisterMapType((map[string]*VolumeMount)(nil), "connectivity.ContainerSpec.VolumeMountsEntry")
+	proto.RegisterType((*AuthConfig)(nil), "connectivity.AuthConfig")
 	proto.RegisterType((*CreateOptions)(nil), "connectivity.CreateOptions")
 	proto.RegisterMapType((map[string]*ContainerSpec)(nil), "connectivity.CreateOptions.ContainersEntry")
 	proto.RegisterMapType((map[string]string)(nil), "connectivity.CreateOptions.HostVolumesEntry")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.CreateOptions.ImagePullAuthConfigEntry")
+	proto.RegisterMapType((map[string]*AuthConfig)(nil), "connectivity.CreateOptions.ImagePullAuthConfigEntry")
 	proto.RegisterMapType((map[string]*NamedData)(nil), "connectivity.CreateOptions.VolumeDataEntry")
 	proto.RegisterType((*DeleteOptions)(nil), "connectivity.DeleteOptions")
 	proto.RegisterType((*ListOptions)(nil), "connectivity.ListOptions")
@@ -1628,118 +1612,132 @@ func init() {
 func init() { proto.RegisterFile("cmd_detail.proto", fileDescriptor_1571bcd24e248579) }
 
 var fileDescriptor_1571bcd24e248579 = []byte{
-	// 1476 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0xcb, 0x6f, 0xdb, 0x46,
-	0x13, 0x17, 0x2d, 0x4b, 0x16, 0x47, 0x92, 0x4d, 0xef, 0x97, 0x07, 0xe3, 0x7c, 0x61, 0x14, 0x01,
-	0x09, 0x8c, 0xb6, 0x71, 0x9a, 0xf4, 0x95, 0xa6, 0x45, 0x00, 0xc7, 0x4e, 0x1c, 0xa3, 0xa9, 0xa3,
-	0x30, 0x4e, 0x0e, 0x01, 0x0a, 0x82, 0x26, 0xd7, 0xd2, 0x22, 0x14, 0x97, 0x20, 0x57, 0x72, 0xd4,
-	0x5e, 0xda, 0x5b, 0x8f, 0xbd, 0xf6, 0xd4, 0x6b, 0xff, 0x94, 0x1c, 0x03, 0xf4, 0x92, 0x63, 0x23,
-	0x5f, 0x7a, 0xcc, 0xb9, 0xa7, 0x62, 0x87, 0x34, 0xb9, 0x92, 0x1f, 0x41, 0x8a, 0x5e, 0xa4, 0x99,
-	0x1f, 0x67, 0x7e, 0x3b, 0xbb, 0xf3, 0xd8, 0x05, 0xc3, 0xeb, 0xfb, 0x8e, 0x4f, 0x85, 0xcb, 0x82,
-	0x95, 0x28, 0xe6, 0x82, 0x93, 0x86, 0xc7, 0xc3, 0x90, 0x7a, 0x82, 0x0d, 0x99, 0x18, 0x2d, 0x5d,
-	0xed, 0x32, 0xd1, 0x1b, 0xec, 0xac, 0x78, 0xbc, 0x7f, 0xad, 0xcb, 0xbb, 0xfc, 0x1a, 0x1a, 0xed,
-	0x0c, 0x76, 0x51, 0x43, 0x05, 0xa5, 0xd4, 0xb9, 0xfd, 0xab, 0x06, 0x73, 0x5b, 0xdc, 0xa7, 0x6b,
-	0x7d, 0x9f, 0xdc, 0x84, 0xaa, 0xeb, 0x09, 0xc6, 0x43, 0x53, 0x6b, 0x69, 0xcb, 0xf3, 0x37, 0x5a,
-	0x2b, 0x2a, 0xf3, 0x4a, 0x66, 0x86, 0xff, 0xab, 0x68, 0x67, 0x67, 0xf6, 0xed, 0x6d, 0x80, 0x02,
-	0x25, 0xf3, 0x00, 0x1b, 0x54, 0x6c, 0x86, 0xbb, 0x7c, 0x35, 0x08, 0x8c, 0x12, 0x59, 0x84, 0xe6,
-	0x06, 0x15, 0x8f, 0x47, 0x89, 0xa0, 0x7d, 0x89, 0x1a, 0x1a, 0x31, 0xa0, 0xb1, 0x41, 0x85, 0x4d,
-	0x13, 0x3e, 0x88, 0x3d, 0x9a, 0x18, 0x33, 0x99, 0xd1, 0x1a, 0x0f, 0x7d, 0x26, 0x49, 0x12, 0xa3,
-	0xdc, 0xa6, 0x50, 0xdb, 0xec, 0xbb, 0x5d, 0x8c, 0xed, 0xd6, 0x54, 0x6c, 0xed, 0xc9, 0xd8, 0x0e,
-	0xec, 0x52, 0x61, 0x2a, 0xba, 0x0b, 0x50, 0x57, 0x60, 0x19, 0xde, 0x03, 0x96, 0x08, 0x84, 0x12,
-	0xa3, 0xd4, 0xfe, 0xbb, 0x02, 0xd5, 0x0e, 0xf7, 0xe5, 0x2a, 0x9f, 0x4f, 0xad, 0x62, 0x4d, 0xae,
-	0x92, 0x5a, 0xc9, 0xbf, 0xc9, 0x15, 0xc8, 0x3a, 0xcc, 0x7b, 0x31, 0x75, 0x05, 0x75, 0x78, 0x84,
-	0xd1, 0x9b, 0xf5, 0x96, 0xb6, 0x5c, 0xbf, 0x71, 0x7e, 0xd2, 0x7f, 0x0d, 0x6d, 0x1e, 0xa6, 0x26,
-	0xf7, 0x4b, 0x76, 0xd3, 0x53, 0x01, 0xc9, 0xe2, 0xd3, 0x80, 0x2a, 0x2c, 0x8d, 0xa3, 0x58, 0xd6,
-	0xd1, 0x46, 0x61, 0xf1, 0x55, 0x80, 0xdc, 0x86, 0x46, 0xc0, 0x12, 0x91, 0x73, 0x34, 0x91, 0xe3,
-	0xdc, 0x24, 0x87, 0x3c, 0x80, 0x82, 0xa1, 0x1e, 0x14, 0x2a, 0xf9, 0x0a, 0xea, 0x01, 0xef, 0xe6,
-	0xee, 0xf3, 0xe8, 0x6e, 0x4e, 0xb9, 0xf3, 0x6e, 0xe1, 0x0d, 0x41, 0xae, 0xc9, 0xc5, 0xe9, 0x0b,
-	0xea, 0xe5, 0xde, 0x0b, 0x47, 0x2d, 0x7e, 0xf7, 0x05, 0xf5, 0x94, 0xc5, 0x69, 0xa1, 0x92, 0x6d,
-	0x38, 0x15, 0xf1, 0x58, 0x38, 0xbb, 0x3c, 0xde, 0x73, 0x63, 0x3f, 0xe7, 0x31, 0x90, 0xa7, 0x35,
-	0x9d, 0x8e, 0x58, 0xdc, 0x4b, 0x0d, 0x0b, 0x3a, 0x12, 0x1d, 0x42, 0xc9, 0x2a, 0x34, 0x59, 0x18,
-	0x0d, 0x8a, 0x33, 0x59, 0x44, 0xba, 0xa5, 0xa9, 0x1a, 0x92, 0x26, 0x05, 0x51, 0x83, 0x29, 0x3a,
-	0xd9, 0x80, 0xf9, 0x98, 0x26, 0xec, 0xfb, 0x22, 0x37, 0x04, 0x39, 0xa6, 0x2a, 0x64, 0x5b, 0x8c,
-	0x6c, 0x34, 0x53, 0xd2, 0x13, 0xab, 0x40, 0xfb, 0x27, 0x0d, 0xf4, 0xbc, 0x80, 0x48, 0x13, 0xf4,
-	0xb4, 0x28, 0x3a, 0xdc, 0x37, 0x4a, 0x52, 0x4d, 0xb3, 0x2b, 0x55, 0x8d, 0x34, 0xa0, 0x26, 0x13,
-	0xd5, 0xe1, 0x7e, 0x62, 0x94, 0x49, 0x0d, 0x66, 0xe5, 0xc9, 0x19, 0x75, 0x02, 0x50, 0x5d, 0x15,
-	0xc2, 0xf5, 0x7a, 0x46, 0x83, 0xcc, 0x41, 0xf9, 0x01, 0xef, 0x1a, 0x4d, 0xb2, 0x00, 0x75, 0xe5,
-	0x40, 0x8c, 0x79, 0xa2, 0x43, 0x05, 0xb7, 0x64, 0x2c, 0x48, 0xde, 0x34, 0xac, 0x6d, 0x31, 0x32,
-	0x8c, 0x3b, 0x3a, 0xcc, 0x65, 0xbb, 0x68, 0xff, 0x00, 0xfa, 0x96, 0xdb, 0xa7, 0xfe, 0xba, 0x2b,
-	0x5c, 0xf2, 0x19, 0xcc, 0xfa, 0xae, 0x70, 0x4d, 0xad, 0x55, 0x5e, 0xae, 0xdf, 0xb8, 0x34, 0xd5,
-	0xfe, 0x07, 0x66, 0x2b, 0xf2, 0xe7, 0x6e, 0x28, 0xe2, 0x91, 0x8d, 0xe6, 0x4b, 0x5f, 0x80, 0x9e,
-	0x43, 0xc4, 0x80, 0xf2, 0x73, 0x3a, 0xc2, 0xfe, 0xd1, 0x6d, 0x29, 0x92, 0x53, 0x50, 0x19, 0xba,
-	0xc1, 0x80, 0x9a, 0x33, 0x2d, 0x6d, 0xb9, 0x61, 0xa7, 0xca, 0xad, 0x99, 0x9b, 0x5a, 0xfb, 0x67,
-	0x0d, 0x9a, 0x6b, 0x3c, 0x14, 0x2e, 0x0b, 0x69, 0x2c, 0x83, 0x27, 0x4b, 0x50, 0xc3, 0xb9, 0xe4,
-	0xf1, 0x20, 0xa3, 0xc8, 0x75, 0x72, 0x1e, 0xf4, 0x1e, 0x4f, 0x84, 0x23, 0x13, 0x8c, 0x5c, 0x15,
-	0xbb, 0x26, 0x01, 0x74, 0xbc, 0x0c, 0xf3, 0xde, 0x01, 0x53, 0x6a, 0x51, 0x46, 0x8b, 0xa6, 0x37,
-	0xc1, 0x7f, 0x16, 0xe6, 0x90, 0x83, 0x45, 0xe6, 0x2c, 0xd2, 0x57, 0xa5, 0xba, 0x19, 0xb5, 0x7f,
-	0xd3, 0xa0, 0xfe, 0x94, 0x07, 0x83, 0x3e, 0xfd, 0x96, 0x0f, 0x42, 0x41, 0x2e, 0x00, 0xf4, 0xa5,
-	0xe0, 0x44, 0xae, 0xe8, 0x65, 0xa1, 0xe8, 0x88, 0x74, 0x5c, 0xd1, 0x23, 0x57, 0x60, 0x61, 0x88,
-	0xd6, 0x4e, 0x32, 0xd8, 0x49, 0x6d, 0x66, 0xd0, 0xa6, 0x99, 0xc2, 0x8f, 0x07, 0x3b, 0x68, 0x77,
-	0x1e, 0xf4, 0x98, 0xba, 0xbe, 0xc3, 0xc3, 0x60, 0x84, 0x11, 0xd5, 0xec, 0x9a, 0x04, 0x1e, 0x86,
-	0xc1, 0x88, 0x10, 0x98, 0x15, 0xa3, 0x88, 0x66, 0x91, 0xa0, 0x4c, 0xcc, 0x3c, 0x35, 0x66, 0xa5,
-	0x55, 0x5e, 0xd6, 0xed, 0x3c, 0x53, 0x7f, 0x54, 0x94, 0xc3, 0x7a, 0x1c, 0x51, 0x4f, 0x1e, 0x2c,
-	0x93, 0x43, 0x2c, 0x0b, 0x2f, 0x55, 0xc8, 0x07, 0xb0, 0x88, 0x82, 0x13, 0x0d, 0x82, 0xc0, 0x89,
-	0x78, 0xc0, 0xbc, 0x51, 0x16, 0xdc, 0x02, 0x7e, 0xe8, 0x0c, 0x82, 0xa0, 0x83, 0xb0, 0x5c, 0xcd,
-	0xe3, 0xfd, 0xbe, 0x1b, 0xfa, 0x66, 0x39, 0x5d, 0x2d, 0x53, 0x65, 0x6c, 0x6e, 0xdc, 0x4d, 0xcc,
-	0x59, 0x84, 0x51, 0x26, 0x17, 0xa1, 0xbe, 0xc7, 0xe3, 0xe7, 0x2c, 0xec, 0x3a, 0x3e, 0x8b, 0xcd,
-	0x0a, 0x72, 0x42, 0x06, 0xad, 0xb3, 0x58, 0x06, 0x94, 0x08, 0x9f, 0x85, 0x66, 0x15, 0x77, 0x9a,
-	0x2a, 0xb2, 0x22, 0x84, 0x18, 0x99, 0x73, 0x88, 0x49, 0x91, 0x7c, 0x0d, 0x15, 0x99, 0x22, 0x39,
-	0x25, 0x65, 0xa1, 0x5d, 0x99, 0x9a, 0x92, 0xea, 0x26, 0xb1, 0xc9, 0x93, 0xb4, 0xda, 0x52, 0x27,
-	0xf2, 0x25, 0xcc, 0xd2, 0x70, 0x28, 0x87, 0xa3, 0x74, 0xbe, 0x7c, 0x92, 0xf3, 0xdd, 0x70, 0x98,
-	0xf9, 0xa2, 0x0b, 0xb1, 0x21, 0xcb, 0x8f, 0x83, 0xa9, 0x94, 0xc3, 0x51, 0x72, 0x5c, 0x3d, 0x89,
-	0x43, 0xa9, 0x8a, 0x8c, 0xab, 0x31, 0x54, 0x20, 0x62, 0x01, 0x44, 0x31, 0x1b, 0xb2, 0x80, 0x76,
-	0xa9, 0x6f, 0x9e, 0xc6, 0x5d, 0x2a, 0x08, 0xf9, 0x18, 0x4e, 0xb9, 0x41, 0xc0, 0xf7, 0x9c, 0x90,
-	0xee, 0x39, 0x39, 0x9e, 0x98, 0x67, 0xd0, 0x92, 0xe0, 0xb7, 0x2d, 0xba, 0xd7, 0xc9, 0xbf, 0x2c,
-	0x3d, 0x01, 0x28, 0x76, 0x7d, 0x44, 0x43, 0x5d, 0x57, 0x1b, 0xea, 0xf0, 0x25, 0xa3, 0x16, 0xbc,
-	0xd2, 0x6d, 0xb2, 0x4d, 0xf3, 0xf3, 0x78, 0x57, 0x9b, 0xea, 0xaa, 0xe3, 0x33, 0x58, 0x3c, 0x74,
-	0x08, 0x47, 0x10, 0x5c, 0x9b, 0x0c, 0x6b, 0x6a, 0xe8, 0x2b, 0x0c, 0xea, 0x08, 0x18, 0x57, 0xa1,
-	0x39, 0x71, 0x2d, 0xca, 0x16, 0x8d, 0xb8, 0xef, 0x0c, 0x98, 0x9f, 0x91, 0x57, 0x23, 0xee, 0x3f,
-	0x61, 0x3e, 0xf9, 0x3f, 0xe8, 0xa1, 0xdb, 0xa7, 0x49, 0xe4, 0x7a, 0x07, 0x41, 0x16, 0x80, 0x2c,
-	0x58, 0xa9, 0x60, 0x93, 0xe9, 0x36, 0xca, 0xe4, 0x1b, 0x80, 0xbc, 0xfd, 0x0f, 0x8a, 0xed, 0xc3,
-	0x13, 0xae, 0xe4, 0xe2, 0xec, 0xb2, 0x4c, 0x2b, 0xee, 0x84, 0xc1, 0x19, 0xa5, 0xaf, 0xdc, 0x81,
-	0xe8, 0x39, 0x1e, 0x0f, 0x77, 0x59, 0x37, 0x2b, 0xc4, 0x4f, 0x4f, 0x22, 0xde, 0x3c, 0x68, 0xbc,
-	0xd5, 0x81, 0xe8, 0xad, 0xa1, 0x5b, 0xba, 0xc2, 0xff, 0xd8, 0xe1, 0x2f, 0xe4, 0x21, 0x34, 0x70,
-	0x4a, 0xa5, 0x75, 0x96, 0x98, 0xa7, 0x71, 0x81, 0x8f, 0x4e, 0x5a, 0xe0, 0x3e, 0x4f, 0x44, 0x7a,
-	0xc4, 0x59, 0xe8, 0xf5, 0x5e, 0x81, 0x90, 0x07, 0x50, 0xcf, 0xea, 0x1e, 0xe7, 0xfb, 0x99, 0x77,
-	0x9f, 0x44, 0xea, 0x59, 0x4c, 0x7a, 0x18, 0xe6, 0x00, 0x39, 0x07, 0xb5, 0x6c, 0x88, 0x7a, 0xe6,
-	0x45, 0xac, 0xe2, 0xb9, 0x74, 0x8a, 0x7a, 0xe4, 0x52, 0x16, 0x79, 0x48, 0x85, 0x9c, 0x0b, 0x66,
-	0x0b, 0x3f, 0x63, 0x2c, 0x5b, 0x29, 0x94, 0x7b, 0x47, 0xcc, 0x37, 0x2f, 0x15, 0xde, 0x1d, 0xe6,
-	0xcb, 0xe9, 0x2f, 0x45, 0xcc, 0x63, 0x3b, 0x9d, 0xfe, 0x07, 0xfa, 0xd2, 0x33, 0x58, 0x98, 0xca,
-	0xce, 0xbf, 0xef, 0x0c, 0xd9, 0xd7, 0x6a, 0x81, 0xdf, 0x03, 0xf3, 0xb8, 0x04, 0xbd, 0xcf, 0x7d,
-	0xb6, 0x74, 0x1b, 0x8c, 0xe9, 0x3c, 0xbc, 0x57, 0xa3, 0x3d, 0x85, 0x85, 0xa9, 0x73, 0x3f, 0xc2,
-	0xfd, 0xea, 0xe4, 0x1e, 0xcf, 0x1e, 0x73, 0x4b, 0xab, 0x4d, 0xb6, 0x01, 0xcd, 0x89, 0x47, 0xe3,
-	0xf1, 0x3d, 0x76, 0x01, 0xa0, 0x1b, 0xbb, 0x1e, 0x75, 0x04, 0xeb, 0x53, 0x13, 0x5a, 0xda, 0x72,
-	0xd9, 0xd6, 0x11, 0xd9, 0x66, 0x7d, 0xda, 0x7e, 0x04, 0x75, 0xe5, 0xe5, 0x38, 0xd9, 0x91, 0xda,
-	0x71, 0x1d, 0x39, 0xa3, 0x74, 0xa4, 0x01, 0x65, 0x37, 0x08, 0xb2, 0x9b, 0x50, 0x8a, 0xed, 0x47,
-	0x00, 0xc5, 0x6b, 0xf2, 0xf8, 0xc0, 0x2e, 0x02, 0x64, 0x17, 0xa1, 0x33, 0xbc, 0x8e, 0x81, 0x35,
-	0xee, 0x97, 0x6c, 0x3d, 0xc3, 0x9e, 0x5e, 0x57, 0xdf, 0x34, 0x36, 0xd4, 0x95, 0x27, 0xe6, 0x7f,
-	0xc3, 0xf9, 0x1d, 0x90, 0xc3, 0xcf, 0xcd, 0xe3, 0xa9, 0x09, 0xcc, 0x2a, 0xcf, 0x14, 0x94, 0x27,
-	0xde, 0x36, 0xe5, 0xc9, 0xb7, 0x4d, 0xbb, 0x0d, 0x0d, 0xf5, 0xf9, 0x29, 0xfd, 0xb3, 0x97, 0x98,
-	0x2c, 0x31, 0x94, 0xdb, 0xb7, 0xc0, 0x98, 0x7e, 0x5e, 0x4a, 0x3b, 0x8f, 0x07, 0x09, 0xda, 0x35,
-	0x6d, 0x94, 0x25, 0x16, 0xf3, 0xbd, 0x04, 0xd7, 0x6e, 0xda, 0x28, 0xdf, 0xb9, 0xf9, 0xea, 0x8d,
-	0x55, 0x7a, 0xfd, 0xc6, 0x2a, 0xbd, 0x7d, 0x63, 0x69, 0x3f, 0x8e, 0x2d, 0xed, 0xf7, 0xb1, 0xa5,
-	0xbd, 0x1c, 0x5b, 0xda, 0xab, 0xb1, 0xa5, 0xfd, 0x39, 0xb6, 0xb4, 0xbf, 0xc6, 0x56, 0xe9, 0xed,
-	0xd8, 0xd2, 0x7e, 0xd9, 0xb7, 0x4a, 0x2f, 0xf7, 0x2d, 0xed, 0xd5, 0xbe, 0x55, 0x7a, 0xbd, 0x6f,
-	0x95, 0x76, 0xaa, 0x18, 0xe3, 0x27, 0xff, 0x04, 0x00, 0x00, 0xff, 0xff, 0x2e, 0xa8, 0xba, 0xc6,
-	0x78, 0x0e, 0x00, 0x00,
+	// 1700 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x57, 0x4f, 0x73, 0xdb, 0xc6,
+	0x15, 0x27, 0x44, 0x89, 0x22, 0x1f, 0xff, 0x08, 0xde, 0xd8, 0x0a, 0x2c, 0xc7, 0x8c, 0xc2, 0x69,
+	0x32, 0x9a, 0xb6, 0x96, 0x5b, 0x27, 0x33, 0x4d, 0xdd, 0x4e, 0x3a, 0x8a, 0xec, 0x2a, 0x9a, 0x2a,
+	0x32, 0x0b, 0xcb, 0x39, 0x64, 0xa6, 0x83, 0x42, 0xc0, 0x8a, 0xdc, 0x31, 0x80, 0xc5, 0x00, 0x0b,
+	0x32, 0xec, 0xa1, 0xd3, 0x63, 0x8f, 0xed, 0x27, 0xe8, 0xb5, 0x9f, 0xa0, 0x9f, 0x21, 0x97, 0x4e,
+	0x7d, 0xcc, 0xb1, 0x96, 0x2e, 0x3d, 0x66, 0xda, 0x6b, 0x0f, 0x9d, 0xf7, 0x00, 0x02, 0x4b, 0xea,
+	0x4f, 0xa6, 0xbe, 0x70, 0xf6, 0xfd, 0xf0, 0xde, 0x6f, 0xdf, 0xee, 0xfb, 0xb3, 0x8f, 0x60, 0x7a,
+	0xa1, 0xef, 0xf8, 0x5c, 0xb9, 0x22, 0xd8, 0x8d, 0x13, 0xa9, 0x24, 0xeb, 0x78, 0x32, 0x8a, 0xb8,
+	0xa7, 0xc4, 0x44, 0xa8, 0xd9, 0xd6, 0x83, 0x91, 0x50, 0xe3, 0xec, 0x74, 0xd7, 0x93, 0xe1, 0xc3,
+	0x91, 0x1c, 0xc9, 0x87, 0xa4, 0x74, 0x9a, 0x9d, 0x91, 0x44, 0x02, 0xad, 0x72, 0xe3, 0xc1, 0x9f,
+	0x0d, 0x58, 0x3f, 0x96, 0x3e, 0xdf, 0x0f, 0x7d, 0xf6, 0x11, 0x34, 0x5c, 0x4f, 0x09, 0x19, 0x59,
+	0xc6, 0xb6, 0xb1, 0xd3, 0x7b, 0xf4, 0xce, 0xae, 0xce, 0xbc, 0x5b, 0xa8, 0xed, 0xee, 0x91, 0x8e,
+	0x5d, 0xe8, 0x0e, 0x86, 0xd0, 0xc8, 0x11, 0xd6, 0x03, 0x38, 0xe0, 0xea, 0x30, 0x3a, 0x93, 0x7b,
+	0x41, 0x60, 0xd6, 0xd8, 0x2d, 0xe8, 0x1e, 0x70, 0xf5, 0x7c, 0x96, 0x2a, 0x1e, 0x22, 0x6a, 0x1a,
+	0xcc, 0x84, 0xce, 0x01, 0x57, 0x36, 0x4f, 0x65, 0x96, 0x78, 0x3c, 0x35, 0x57, 0x0a, 0xa5, 0x7d,
+	0x19, 0xf9, 0x02, 0x49, 0x52, 0xb3, 0x3e, 0xf8, 0xcf, 0x1a, 0x34, 0x86, 0xd2, 0x47, 0x97, 0x3e,
+	0x5c, 0x72, 0xe9, 0xde, 0xa2, 0x4b, 0xb9, 0xd6, 0x92, 0x47, 0xec, 0x09, 0xf4, 0xbc, 0x84, 0xbb,
+	0x8a, 0x3b, 0x32, 0x26, 0x4e, 0xab, 0xbd, 0x6d, 0xec, 0xb4, 0x97, 0x8d, 0xf7, 0x49, 0xe7, 0x59,
+	0xae, 0xf2, 0x59, 0xcd, 0xee, 0x7a, 0x3a, 0x80, 0x2c, 0x3e, 0x0f, 0xb8, 0xc6, 0xd2, 0xb9, 0x8a,
+	0xe5, 0x09, 0xe9, 0x68, 0x2c, 0xbe, 0x0e, 0xb0, 0x4f, 0xa0, 0x13, 0x88, 0x54, 0x95, 0x1c, 0x5d,
+	0xe2, 0xb8, 0xbb, 0xc8, 0x71, 0x24, 0x52, 0x55, 0x31, 0xb4, 0x83, 0x4a, 0x64, 0x3f, 0x83, 0x76,
+	0x20, 0x47, 0xa5, 0x79, 0x8f, 0xcc, 0xad, 0x25, 0x73, 0x39, 0xaa, 0xac, 0x21, 0x28, 0x25, 0xdc,
+	0x9c, 0x7f, 0xc5, 0xbd, 0xd2, 0x7a, 0xe3, 0xaa, 0xcd, 0x9f, 0x7e, 0xc5, 0x3d, 0x6d, 0x73, 0x5e,
+	0x89, 0xec, 0x04, 0x6e, 0xc7, 0x32, 0x51, 0xce, 0x99, 0x4c, 0xa6, 0x6e, 0xe2, 0x97, 0x3c, 0x26,
+	0xf1, 0x6c, 0x2f, 0xc7, 0x22, 0x51, 0xbf, 0xcc, 0x15, 0x2b, 0x3a, 0x16, 0x5f, 0x42, 0xd9, 0x1e,
+	0x74, 0x45, 0x14, 0x67, 0xd5, 0x9d, 0xdc, 0x22, 0xba, 0xad, 0x45, 0xba, 0x43, 0x54, 0xa9, 0x88,
+	0x3a, 0x42, 0x93, 0xd9, 0x01, 0xf4, 0x12, 0x9e, 0x8a, 0xdf, 0x55, 0xb1, 0x61, 0xc4, 0xd1, 0x5f,
+	0xe4, 0x38, 0x51, 0x33, 0x9b, 0xd4, 0xb4, 0xf0, 0x24, 0x3a, 0x30, 0xf8, 0x7d, 0x99, 0xbc, 0x5d,
+	0x68, 0xe5, 0x09, 0x31, 0x94, 0xbe, 0x59, 0x43, 0x31, 0x8f, 0x2c, 0x8a, 0x06, 0xeb, 0x40, 0x13,
+	0x83, 0x34, 0x94, 0x3e, 0xe6, 0x6c, 0x13, 0x56, 0xf1, 0xd6, 0xcc, 0x36, 0x03, 0x68, 0xec, 0x29,
+	0xe5, 0x7a, 0x63, 0xb3, 0xc3, 0xd6, 0xa1, 0x7e, 0x24, 0x47, 0x66, 0x97, 0x6d, 0x40, 0x5b, 0xbb,
+	0x0c, 0xb3, 0xc7, 0x5a, 0xb0, 0x46, 0xc7, 0x31, 0x37, 0x90, 0x37, 0x77, 0xe9, 0x44, 0xcd, 0x4c,
+	0xf3, 0xd3, 0x16, 0xac, 0x17, 0x27, 0x18, 0xfc, 0xd1, 0x80, 0xd6, 0xb1, 0x1b, 0x72, 0xff, 0x89,
+	0xab, 0x5c, 0xf6, 0x0b, 0x68, 0xfa, 0xae, 0x72, 0x9d, 0xd0, 0x8d, 0x2d, 0x63, 0xbb, 0xbe, 0xd3,
+	0x7e, 0xf4, 0xbd, 0xa5, 0x6a, 0x9c, 0xab, 0xee, 0xe2, 0xcf, 0xe7, 0x6e, 0xfc, 0x34, 0x52, 0xc9,
+	0xcc, 0x5e, 0xf7, 0x73, 0x69, 0xeb, 0x31, 0x74, 0xf4, 0x0f, 0xcc, 0x84, 0xfa, 0x4b, 0x3e, 0xa3,
+	0x32, 0x6a, 0xd9, 0xb8, 0x64, 0xb7, 0x61, 0x6d, 0xe2, 0x06, 0x19, 0xb7, 0x56, 0xb6, 0x8d, 0x9d,
+	0x8e, 0x9d, 0x0b, 0x8f, 0x57, 0x3e, 0x36, 0xd0, 0x95, 0xee, 0xbe, 0x8c, 0x94, 0x2b, 0x22, 0x9e,
+	0xe0, 0x51, 0xd8, 0x16, 0x34, 0xa9, 0x5f, 0x78, 0x32, 0x28, 0x28, 0x4a, 0x99, 0xdd, 0x83, 0xd6,
+	0x58, 0xa6, 0xca, 0xc1, 0x50, 0x13, 0xd7, 0x9a, 0xdd, 0x44, 0x80, 0x0c, 0xdf, 0x87, 0x9e, 0x37,
+	0x67, 0xca, 0x35, 0xea, 0xa4, 0xd1, 0xf5, 0x16, 0xf8, 0xdf, 0x86, 0x75, 0xe2, 0x10, 0xb1, 0xb5,
+	0x4a, 0xf4, 0x0d, 0x14, 0x0f, 0xe3, 0xc1, 0x5f, 0x0c, 0x68, 0x7f, 0x21, 0x83, 0x2c, 0xe4, 0x9f,
+	0xcb, 0x2c, 0x52, 0xec, 0x3e, 0x40, 0x88, 0x0b, 0x27, 0x76, 0xd5, 0xb8, 0x70, 0xa5, 0x45, 0xc8,
+	0xd0, 0x55, 0x63, 0xf6, 0x01, 0x6c, 0x4c, 0x48, 0xdb, 0x49, 0xb3, 0xd3, 0x5c, 0x67, 0x85, 0x74,
+	0xba, 0x39, 0xfc, 0x3c, 0x3b, 0x25, 0xbd, 0x7b, 0xd0, 0x4a, 0xb8, 0xeb, 0x3b, 0x32, 0x0a, 0x66,
+	0xe4, 0x51, 0xd3, 0x6e, 0x22, 0xf0, 0x2c, 0x0a, 0x66, 0x8c, 0xc1, 0xaa, 0x9a, 0xc5, 0xbc, 0xf0,
+	0x84, 0xd6, 0xcc, 0x2a, 0x03, 0x65, 0xad, 0x6d, 0xd7, 0x77, 0x5a, 0x76, 0x19, 0xb7, 0x7f, 0xaf,
+	0x69, 0x97, 0xf5, 0x3c, 0xe6, 0x1e, 0x5e, 0xac, 0x08, 0xdd, 0x11, 0x2f, 0xdc, 0xcb, 0x05, 0x76,
+	0x08, 0xb7, 0x68, 0xe1, 0xc4, 0x59, 0x10, 0x38, 0xb1, 0x0c, 0x84, 0x37, 0x23, 0xe7, 0x7a, 0x8f,
+	0xee, 0x2f, 0xa5, 0x3e, 0xaa, 0x0d, 0xb3, 0x20, 0x18, 0x92, 0x92, 0xbd, 0x21, 0x16, 0x01, 0x74,
+	0xc6, 0x93, 0x61, 0xe8, 0x46, 0xbe, 0x55, 0xcf, 0x9d, 0x29, 0x44, 0x74, 0xdd, 0x4d, 0x46, 0xa9,
+	0xb5, 0x4a, 0x30, 0xad, 0xd9, 0xbb, 0xd0, 0x9e, 0xca, 0xe4, 0xa5, 0x88, 0x46, 0x8e, 0x2f, 0x12,
+	0x6b, 0x8d, 0x9c, 0x82, 0x02, 0x7a, 0x22, 0x12, 0xf4, 0x37, 0x55, 0xbe, 0x88, 0xac, 0x06, 0x5d,
+	0x44, 0x2e, 0x60, 0xc2, 0x28, 0x35, 0xb3, 0xd6, 0x09, 0xc3, 0x25, 0xfb, 0x39, 0xac, 0x61, 0x04,
+	0xb1, 0x9d, 0x62, 0x42, 0x7e, 0xb0, 0xd4, 0x4e, 0xf5, 0x3b, 0xa0, 0x6e, 0x90, 0xe6, 0x29, 0x99,
+	0x1b, 0xb1, 0x9f, 0xc2, 0x2a, 0x8f, 0x26, 0xd8, 0x45, 0xd1, 0xf8, 0xfd, 0x9b, 0x8c, 0x9f, 0x46,
+	0x93, 0xc2, 0x96, 0x4c, 0x98, 0x0d, 0x45, 0xf8, 0x1c, 0x8a, 0x34, 0x76, 0x51, 0xe4, 0x78, 0x70,
+	0x13, 0x87, 0x96, 0x34, 0x05, 0x57, 0x67, 0xa2, 0x41, 0xac, 0x0f, 0x10, 0x27, 0x62, 0x22, 0x02,
+	0x3e, 0xe2, 0xbe, 0x75, 0x87, 0x4e, 0xa9, 0x21, 0xec, 0x47, 0x70, 0xdb, 0x0d, 0x02, 0x39, 0x75,
+	0x22, 0x3e, 0x75, 0x4a, 0x3c, 0xb5, 0x36, 0x49, 0x93, 0xd1, 0xb7, 0x63, 0x3e, 0x1d, 0x96, 0x5f,
+	0xb6, 0x5e, 0x00, 0x54, 0xa7, 0xbe, 0xa2, 0xde, 0x7e, 0xac, 0xd7, 0xdb, 0xe5, 0xd7, 0x48, 0xaf,
+	0x07, 0xad, 0x18, 0xb7, 0x7e, 0x02, 0xad, 0xf2, 0x3e, 0xbe, 0xab, 0x8a, 0x5b, 0xba, 0xe1, 0x97,
+	0x70, 0xeb, 0xd2, 0x25, 0x5c, 0x41, 0xf0, 0x70, 0xd1, 0xad, 0xa5, 0xd7, 0x41, 0x63, 0xd0, 0x3b,
+	0xc4, 0xdf, 0x0d, 0x80, 0xbd, 0x4c, 0x8d, 0xf7, 0x65, 0x74, 0x26, 0x46, 0xd8, 0x1e, 0xb2, 0x94,
+	0x27, 0x91, 0x1b, 0xce, 0x93, 0xbe, 0x94, 0xa9, 0x75, 0xb8, 0x69, 0x3a, 0x95, 0x89, 0x5f, 0xf8,
+	0x58, 0xca, 0x94, 0xae, 0x99, 0x1a, 0x53, 0x05, 0x62, 0xba, 0x66, 0x6a, 0x8c, 0x1d, 0x23, 0xe5,
+	0xc9, 0x84, 0x27, 0x8e, 0xeb, 0xfb, 0x09, 0x4f, 0xd3, 0xa2, 0x0e, 0xbb, 0x39, 0xba, 0x97, 0x83,
+	0xa8, 0x26, 0x7c, 0x1e, 0x29, 0xa1, 0x66, 0x8e, 0x92, 0x2f, 0x79, 0x54, 0x24, 0x76, 0x77, 0x8e,
+	0x9e, 0x20, 0x88, 0x6a, 0x09, 0x1f, 0x89, 0x54, 0x25, 0x73, 0xb5, 0x46, 0xae, 0x36, 0x47, 0x49,
+	0x6d, 0xf0, 0xdf, 0x06, 0x74, 0x17, 0xe6, 0x01, 0xec, 0x48, 0xb1, 0xf4, 0x9d, 0x4c, 0xf8, 0xc5,
+	0x89, 0x1a, 0xb1, 0xf4, 0x5f, 0x08, 0x9f, 0xbd, 0x03, 0x2d, 0x3c, 0x57, 0x1a, 0xbb, 0xde, 0xfc,
+	0xd2, 0x2b, 0x00, 0x4f, 0x44, 0xb7, 0x50, 0x9c, 0x88, 0x6e, 0xe0, 0x57, 0x00, 0x65, 0xb7, 0x9b,
+	0x17, 0xcf, 0x0f, 0x6e, 0x98, 0x45, 0xaa, 0x5c, 0x28, 0x32, 0x57, 0x33, 0x67, 0x02, 0x36, 0xb5,
+	0x36, 0x82, 0x37, 0xe6, 0x78, 0x14, 0x84, 0xa2, 0xb0, 0x3e, 0xba, 0x89, 0xb8, 0xec, 0x2c, 0x55,
+	0xec, 0xf2, 0x1d, 0xde, 0x12, 0x97, 0xbf, 0xb0, 0x67, 0xd0, 0xa1, 0xa6, 0x9c, 0xd7, 0x4d, 0x6a,
+	0xdd, 0xa1, 0x0d, 0x7e, 0x78, 0xd3, 0x06, 0x9f, 0xc9, 0x54, 0xe5, 0x29, 0x53, 0xb8, 0xde, 0x1e,
+	0x57, 0x08, 0x3b, 0x82, 0x76, 0x51, 0xc7, 0xf8, 0x4a, 0x59, 0x9b, 0xdf, 0x7d, 0x13, 0xb9, 0x25,
+	0x3e, 0x64, 0xc5, 0x4d, 0x4c, 0x4a, 0x80, 0xdd, 0x85, 0x66, 0xf1, 0x66, 0x78, 0xd6, 0xbb, 0x54,
+	0x95, 0xeb, 0xf9, 0xa3, 0xe1, 0xb1, 0xf7, 0x0a, 0xcf, 0x23, 0xae, 0xb0, 0xcf, 0x59, 0xdb, 0xf4,
+	0x99, 0x7c, 0x39, 0xce, 0xa1, 0xd2, 0x3a, 0x16, 0xbe, 0xf5, 0x5e, 0x65, 0x3d, 0x14, 0x3e, 0x66,
+	0x2c, 0x2e, 0x29, 0x8e, 0x83, 0x3c, 0x63, 0xe7, 0xf2, 0xd6, 0x97, 0xb0, 0xb1, 0x14, 0x9d, 0x37,
+	0xaf, 0x74, 0xec, 0x53, 0x7a, 0xc1, 0xfe, 0x16, 0xac, 0xeb, 0x02, 0x74, 0xc5, 0x26, 0xbb, 0x8b,
+	0x9b, 0x2c, 0xcd, 0x84, 0x95, 0xbd, 0xbe, 0xc3, 0x27, 0x60, 0x2e, 0x47, 0xe8, 0xff, 0x6a, 0x29,
+	0x5f, 0xc0, 0xc6, 0x52, 0x44, 0xae, 0x30, 0x7f, 0xb0, 0xe8, 0xd8, 0xdb, 0xd7, 0xcc, 0x2d, 0x7a,
+	0x3b, 0x39, 0x80, 0xee, 0xc2, 0x1c, 0x7d, 0x7d, 0xf5, 0xdd, 0x07, 0x18, 0x25, 0xae, 0xc7, 0x1d,
+	0x25, 0x42, 0x6e, 0xc1, 0xb6, 0xb1, 0x53, 0xb7, 0x5b, 0x84, 0x9c, 0x88, 0x90, 0x0f, 0x7e, 0x0d,
+	0x6d, 0x6d, 0x98, 0x5e, 0xac, 0x55, 0xe3, 0xba, 0x5a, 0x5d, 0xd1, 0x6a, 0xd5, 0x84, 0xba, 0x1b,
+	0x04, 0xc5, 0x48, 0x80, 0xcb, 0xc1, 0x3f, 0x0c, 0x80, 0x6a, 0xc2, 0xbe, 0xb1, 0x2f, 0x94, 0x65,
+	0x3a, 0xef, 0x0b, 0x25, 0xc0, 0x36, 0xa1, 0x71, 0x26, 0xf1, 0xcd, 0x28, 0xa8, 0x0b, 0x09, 0xad,
+	0xf0, 0x24, 0xa9, 0x72, 0xc3, 0x7c, 0xf4, 0x69, 0xda, 0x15, 0x40, 0x2f, 0xb3, 0x88, 0x3c, 0x4e,
+	0xbd, 0xad, 0x6e, 0xe7, 0x02, 0xde, 0x01, 0xfe, 0xfd, 0x73, 0x02, 0x11, 0xf1, 0x94, 0xfa, 0x59,
+	0xdd, 0x6e, 0x21, 0x72, 0x84, 0x00, 0xbe, 0xf7, 0xa7, 0x33, 0xc5, 0x53, 0x27, 0x10, 0xa1, 0x50,
+	0xf4, 0x80, 0xd7, 0x6d, 0x20, 0xe8, 0x08, 0x91, 0xc1, 0xdf, 0x0c, 0x68, 0x6b, 0x53, 0xff, 0x9b,
+	0x1e, 0xe9, 0xfa, 0x29, 0xa4, 0x1c, 0x28, 0x56, 0xf5, 0x81, 0x62, 0x13, 0x1a, 0xa9, 0xf2, 0x65,
+	0xa6, 0xe8, 0x34, 0x4d, 0xbb, 0x90, 0x0a, 0x9c, 0x27, 0x49, 0x31, 0x7f, 0x14, 0xd2, 0xe5, 0x01,
+	0x64, 0xf0, 0x1b, 0x60, 0x97, 0xff, 0x65, 0x5c, 0xef, 0x3e, 0x83, 0x55, 0x6d, 0x26, 0xa5, 0xf5,
+	0xc2, 0x20, 0x5b, 0x5f, 0x1c, 0x64, 0x07, 0x03, 0xe8, 0xe8, 0xff, 0x3a, 0xd0, 0x9e, 0xfa, 0x94,
+	0x41, 0xf3, 0x31, 0xad, 0x07, 0x8f, 0xc1, 0x5c, 0xfe, 0x57, 0x81, 0x7a, 0x9e, 0x0c, 0x52, 0xd2,
+	0xeb, 0xda, 0xb4, 0x46, 0x2c, 0x91, 0xd3, 0x94, 0xf6, 0xee, 0xda, 0xb4, 0xfe, 0xfe, 0x0b, 0xd8,
+	0x58, 0x1a, 0xed, 0xd8, 0x5b, 0x1a, 0xb4, 0x17, 0x4c, 0xdd, 0x59, 0x6a, 0xd6, 0xd8, 0x5d, 0xb8,
+	0x53, 0x82, 0x87, 0x67, 0xc7, 0x52, 0x0d, 0x13, 0x9e, 0xf2, 0x48, 0x99, 0x06, 0x63, 0xd0, 0x2b,
+	0x3f, 0x1d, 0xf3, 0x09, 0x4f, 0xcc, 0x95, 0x4f, 0x3f, 0x7e, 0xf5, 0xba, 0x5f, 0xfb, 0xe6, 0x75,
+	0xbf, 0xf6, 0xed, 0xeb, 0xbe, 0xf1, 0x87, 0xf3, 0xbe, 0xf1, 0xd7, 0xf3, 0xbe, 0xf1, 0xf5, 0x79,
+	0xdf, 0x78, 0x75, 0xde, 0x37, 0xfe, 0x79, 0xde, 0x37, 0xfe, 0x75, 0xde, 0xaf, 0x7d, 0x7b, 0xde,
+	0x37, 0xfe, 0x74, 0xd1, 0xaf, 0x7d, 0x7d, 0xd1, 0x37, 0x5e, 0x5d, 0xf4, 0x6b, 0xdf, 0x5c, 0xf4,
+	0x6b, 0xa7, 0x0d, 0x3a, 0xfa, 0x87, 0xff, 0x0b, 0x00, 0x00, 0xff, 0xff, 0xa5, 0x19, 0xc1, 0xa2,
+	0x54, 0x10, 0x00, 0x00,
 }
 
-func (x NodeCmd_NodeAction) String() string {
-	s, ok := NodeCmd_NodeAction_name[int32(x)]
+func (x ImagePullPolicy) String() string {
+	s, ok := ImagePullPolicy_name[int32(x)]
 	if ok {
 		return s
 	}
 	return strconv.Itoa(int(x))
 }
-func (x ImageCmd_ImageAction) String() string {
-	s, ok := ImageCmd_ImageAction_name[int32(x)]
+func (x NodeCmd_Action) String() string {
+	s, ok := NodeCmd_Action_name[int32(x)]
 	if ok {
 		return s
 	}
 	return strconv.Itoa(int(x))
 }
-func (x PodCmd_PodAction) String() string {
-	s, ok := PodCmd_PodAction_name[int32(x)]
+func (x PodCmd_Action) String() string {
+	s, ok := PodCmd_Action_name[int32(x)]
 	if ok {
 		return s
 	}
@@ -1753,30 +1751,6 @@ func (this *NodeCmd) Equal(that interface{}) bool {
 	that1, ok := that.(*NodeCmd)
 	if !ok {
 		that2, ok := that.(NodeCmd)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.Action != that1.Action {
-		return false
-	}
-	return true
-}
-func (this *ImageCmd) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*ImageCmd)
-	if !ok {
-		that2, ok := that.(ImageCmd)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2037,11 +2011,11 @@ func (this *NamedData) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if len(this.Data) != len(that1.Data) {
+	if len(this.DataMap) != len(that1.DataMap) {
 		return false
 	}
-	for i := range this.Data {
-		if !bytes.Equal(this.Data[i], that1.Data[i]) {
+	for i := range this.DataMap {
+		if !bytes.Equal(this.DataMap[i], that1.DataMap[i]) {
 			return false
 		}
 	}
@@ -2203,6 +2177,45 @@ func (this *ContainerSpec) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *AuthConfig) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*AuthConfig)
+	if !ok {
+		that2, ok := that.(AuthConfig)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Username != that1.Username {
+		return false
+	}
+	if this.Password != that1.Password {
+		return false
+	}
+	if this.Auth != that1.Auth {
+		return false
+	}
+	if this.ServerAddress != that1.ServerAddress {
+		return false
+	}
+	if this.IdentityToken != that1.IdentityToken {
+		return false
+	}
+	if this.RegistryToken != that1.RegistryToken {
+		return false
+	}
+	return true
+}
 func (this *CreateOptions) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2243,7 +2256,7 @@ func (this *CreateOptions) Equal(that interface{}) bool {
 		return false
 	}
 	for i := range this.ImagePullAuthConfig {
-		if !bytes.Equal(this.ImagePullAuthConfig[i], that1.ImagePullAuthConfig[i]) {
+		if !this.ImagePullAuthConfig[i].Equal(that1.ImagePullAuthConfig[i]) {
 			return false
 		}
 	}
@@ -2356,37 +2369,22 @@ func (this *LogOptions) Equal(that interface{}) bool {
 	if this.PodUid != that1.PodUid {
 		return false
 	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
+	if this.Container != that1.Container {
 		return false
 	}
-	return true
-}
-func (this *LogOptions_OptionsV1) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*LogOptions_OptionsV1)
-	if !ok {
-		that2, ok := that.(LogOptions_OptionsV1)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
+	if this.Follow != that1.Follow {
 		return false
 	}
-	if !bytes.Equal(this.OptionsV1, that1.OptionsV1) {
+	if this.Timestamp != that1.Timestamp {
+		return false
+	}
+	if this.Since != that1.Since {
+		return false
+	}
+	if this.TailLines != that1.TailLines {
+		return false
+	}
+	if this.BytesLimit != that1.BytesLimit {
 		return false
 	}
 	return true
@@ -2413,37 +2411,27 @@ func (this *ExecOptions) Equal(that interface{}) bool {
 	if this.PodUid != that1.PodUid {
 		return false
 	}
-	if that1.Options == nil {
-		if this.Options != nil {
-			return false
-		}
-	} else if this.Options == nil {
-		return false
-	} else if !this.Options.Equal(that1.Options) {
+	if this.Container != that1.Container {
 		return false
 	}
-	return true
-}
-func (this *ExecOptions_OptionsV1) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
+	if len(this.Command) != len(that1.Command) {
+		return false
 	}
-
-	that1, ok := that.(*ExecOptions_OptionsV1)
-	if !ok {
-		that2, ok := that.(ExecOptions_OptionsV1)
-		if ok {
-			that1 = &that2
-		} else {
+	for i := range this.Command {
+		if this.Command[i] != that1.Command[i] {
 			return false
 		}
 	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
+	if this.Stdin != that1.Stdin {
 		return false
 	}
-	if !bytes.Equal(this.OptionsV1, that1.OptionsV1) {
+	if this.Stdout != that1.Stdout {
+		return false
+	}
+	if this.Stderr != that1.Stderr {
+		return false
+	}
+	if this.Tty != that1.Tty {
 		return false
 	}
 	return true
@@ -2539,16 +2527,6 @@ func (this *NodeCmd) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ImageCmd) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 5)
-	s = append(s, "&connectivity.ImageCmd{")
-	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
 func (this *PodCmd) GoString() string {
 	if this == nil {
 		return "nil"
@@ -2632,18 +2610,18 @@ func (this *NamedData) GoString() string {
 	}
 	s := make([]string, 0, 5)
 	s = append(s, "&connectivity.NamedData{")
-	keysForData := make([]string, 0, len(this.Data))
-	for k, _ := range this.Data {
-		keysForData = append(keysForData, k)
+	keysForDataMap := make([]string, 0, len(this.DataMap))
+	for k, _ := range this.DataMap {
+		keysForDataMap = append(keysForDataMap, k)
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForData)
-	mapStringForData := "map[string][]byte{"
-	for _, k := range keysForData {
-		mapStringForData += fmt.Sprintf("%#v: %#v,", k, this.Data[k])
+	github_com_gogo_protobuf_sortkeys.Strings(keysForDataMap)
+	mapStringForDataMap := "map[string][]byte{"
+	for _, k := range keysForDataMap {
+		mapStringForDataMap += fmt.Sprintf("%#v: %#v,", k, this.DataMap[k])
 	}
-	mapStringForData += "}"
-	if this.Data != nil {
-		s = append(s, "Data: "+mapStringForData+",\n")
+	mapStringForDataMap += "}"
+	if this.DataMap != nil {
+		s = append(s, "DataMap: "+mapStringForDataMap+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2732,6 +2710,21 @@ func (this *ContainerSpec) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *AuthConfig) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 10)
+	s = append(s, "&connectivity.AuthConfig{")
+	s = append(s, "Username: "+fmt.Sprintf("%#v", this.Username)+",\n")
+	s = append(s, "Password: "+fmt.Sprintf("%#v", this.Password)+",\n")
+	s = append(s, "Auth: "+fmt.Sprintf("%#v", this.Auth)+",\n")
+	s = append(s, "ServerAddress: "+fmt.Sprintf("%#v", this.ServerAddress)+",\n")
+	s = append(s, "IdentityToken: "+fmt.Sprintf("%#v", this.IdentityToken)+",\n")
+	s = append(s, "RegistryToken: "+fmt.Sprintf("%#v", this.RegistryToken)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *CreateOptions) GoString() string {
 	if this == nil {
 		return "nil"
@@ -2759,7 +2752,7 @@ func (this *CreateOptions) GoString() string {
 		keysForImagePullAuthConfig = append(keysForImagePullAuthConfig, k)
 	}
 	github_com_gogo_protobuf_sortkeys.Strings(keysForImagePullAuthConfig)
-	mapStringForImagePullAuthConfig := "map[string][]byte{"
+	mapStringForImagePullAuthConfig := "map[string]*AuthConfig{"
 	for _, k := range keysForImagePullAuthConfig {
 		mapStringForImagePullAuthConfig += fmt.Sprintf("%#v: %#v,", k, this.ImagePullAuthConfig[k])
 	}
@@ -2827,43 +2820,33 @@ func (this *LogOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
+	s := make([]string, 0, 11)
 	s = append(s, "&connectivity.LogOptions{")
 	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
+	s = append(s, "Container: "+fmt.Sprintf("%#v", this.Container)+",\n")
+	s = append(s, "Follow: "+fmt.Sprintf("%#v", this.Follow)+",\n")
+	s = append(s, "Timestamp: "+fmt.Sprintf("%#v", this.Timestamp)+",\n")
+	s = append(s, "Since: "+fmt.Sprintf("%#v", this.Since)+",\n")
+	s = append(s, "TailLines: "+fmt.Sprintf("%#v", this.TailLines)+",\n")
+	s = append(s, "BytesLimit: "+fmt.Sprintf("%#v", this.BytesLimit)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
-}
-func (this *LogOptions_OptionsV1) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.LogOptions_OptionsV1{` +
-		`OptionsV1:` + fmt.Sprintf("%#v", this.OptionsV1) + `}`}, ", ")
-	return s
 }
 func (this *ExecOptions) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
+	s := make([]string, 0, 11)
 	s = append(s, "&connectivity.ExecOptions{")
 	s = append(s, "PodUid: "+fmt.Sprintf("%#v", this.PodUid)+",\n")
-	if this.Options != nil {
-		s = append(s, "Options: "+fmt.Sprintf("%#v", this.Options)+",\n")
-	}
+	s = append(s, "Container: "+fmt.Sprintf("%#v", this.Container)+",\n")
+	s = append(s, "Command: "+fmt.Sprintf("%#v", this.Command)+",\n")
+	s = append(s, "Stdin: "+fmt.Sprintf("%#v", this.Stdin)+",\n")
+	s = append(s, "Stdout: "+fmt.Sprintf("%#v", this.Stdout)+",\n")
+	s = append(s, "Stderr: "+fmt.Sprintf("%#v", this.Stderr)+",\n")
+	s = append(s, "Tty: "+fmt.Sprintf("%#v", this.Tty)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
-}
-func (this *ExecOptions_OptionsV1) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&connectivity.ExecOptions_OptionsV1{` +
-		`OptionsV1:` + fmt.Sprintf("%#v", this.OptionsV1) + `}`}, ", ")
-	return s
 }
 func (this *PortForwardOptions) GoString() string {
 	if this == nil {
@@ -2917,29 +2900,6 @@ func (m *NodeCmd) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *NodeCmd) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Action != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(m.Action))
-	}
-	return i, nil
-}
-
-func (m *ImageCmd) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ImageCmd) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -3115,11 +3075,11 @@ func (m *NamedData) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Data) > 0 {
-		for k, _ := range m.Data {
+	if len(m.DataMap) > 0 {
+		for k, _ := range m.DataMap {
 			dAtA[i] = 0xa
 			i++
-			v := m.Data[k]
+			v := m.DataMap[k]
 			byteSize := 0
 			if len(v) > 0 {
 				byteSize = 1 + len(v) + sovCmdDetail(uint64(len(v)))
@@ -3263,11 +3223,10 @@ func (m *ContainerSpec) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Image)))
 		i += copy(dAtA[i:], m.Image)
 	}
-	if len(m.ImagePullPolicy) > 0 {
-		dAtA[i] = 0x12
+	if m.ImagePullPolicy != 0 {
+		dAtA[i] = 0x10
 		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.ImagePullPolicy)))
-		i += copy(dAtA[i:], m.ImagePullPolicy)
+		i = encodeVarintCmdDetail(dAtA, i, uint64(m.ImagePullPolicy))
 	}
 	if len(m.Command) > 0 {
 		for _, s := range m.Command {
@@ -3425,6 +3384,60 @@ func (m *ContainerSpec) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *AuthConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AuthConfig) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Username) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Username)))
+		i += copy(dAtA[i:], m.Username)
+	}
+	if len(m.Password) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Password)))
+		i += copy(dAtA[i:], m.Password)
+	}
+	if len(m.Auth) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Auth)))
+		i += copy(dAtA[i:], m.Auth)
+	}
+	if len(m.ServerAddress) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.ServerAddress)))
+		i += copy(dAtA[i:], m.ServerAddress)
+	}
+	if len(m.IdentityToken) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.IdentityToken)))
+		i += copy(dAtA[i:], m.IdentityToken)
+	}
+	if len(m.RegistryToken) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.RegistryToken)))
+		i += copy(dAtA[i:], m.RegistryToken)
+	}
+	return i, nil
+}
+
 func (m *CreateOptions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3491,21 +3504,26 @@ func (m *CreateOptions) MarshalTo(dAtA []byte) (int, error) {
 			dAtA[i] = 0x62
 			i++
 			v := m.ImagePullAuthConfig[k]
-			byteSize := 0
-			if len(v) > 0 {
-				byteSize = 1 + len(v) + sovCmdDetail(uint64(len(v)))
+			msgSize := 0
+			if v != nil {
+				msgSize = v.Size()
+				msgSize += 1 + sovCmdDetail(uint64(msgSize))
 			}
-			mapSize := 1 + len(k) + sovCmdDetail(uint64(len(k))) + byteSize
+			mapSize := 1 + len(k) + sovCmdDetail(uint64(len(k))) + msgSize
 			i = encodeVarintCmdDetail(dAtA, i, uint64(mapSize))
 			dAtA[i] = 0xa
 			i++
 			i = encodeVarintCmdDetail(dAtA, i, uint64(len(k)))
 			i += copy(dAtA[i:], k)
-			if len(v) > 0 {
+			if v != nil {
 				dAtA[i] = 0x12
 				i++
-				i = encodeVarintCmdDetail(dAtA, i, uint64(len(v)))
-				i += copy(dAtA[i:], v)
+				i = encodeVarintCmdDetail(dAtA, i, uint64(v.Size()))
+				n13, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
+				}
+				i += n13
 			}
 		}
 	}
@@ -3550,11 +3568,11 @@ func (m *CreateOptions) MarshalTo(dAtA []byte) (int, error) {
 				dAtA[i] = 0x12
 				i++
 				i = encodeVarintCmdDetail(dAtA, i, uint64(v.Size()))
-				n13, err := v.MarshalTo(dAtA[i:])
+				n14, err := v.MarshalTo(dAtA[i:])
 				if err != nil {
 					return 0, err
 				}
-				i += n13
+				i += n14
 			}
 		}
 	}
@@ -3695,26 +3713,50 @@ func (m *LogOptions) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
 		i += copy(dAtA[i:], m.PodUid)
 	}
-	if m.Options != nil {
-		nn14, err := m.Options.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+	if len(m.Container) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Container)))
+		i += copy(dAtA[i:], m.Container)
+	}
+	if m.Follow {
+		dAtA[i] = 0x18
+		i++
+		if m.Follow {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
 		}
-		i += nn14
+		i++
+	}
+	if m.Timestamp {
+		dAtA[i] = 0x20
+		i++
+		if m.Timestamp {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.Since != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(m.Since))
+	}
+	if m.TailLines != 0 {
+		dAtA[i] = 0x30
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(m.TailLines))
+	}
+	if m.BytesLimit != 0 {
+		dAtA[i] = 0x38
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(m.BytesLimit))
 	}
 	return i, nil
 }
 
-func (m *LogOptions_OptionsV1) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.OptionsV1 != nil {
-		dAtA[i] = 0x52
-		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.OptionsV1)))
-		i += copy(dAtA[i:], m.OptionsV1)
-	}
-	return i, nil
-}
 func (m *ExecOptions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3736,26 +3778,70 @@ func (m *ExecOptions) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.PodUid)))
 		i += copy(dAtA[i:], m.PodUid)
 	}
-	if m.Options != nil {
-		nn15, err := m.Options.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+	if len(m.Container) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.Container)))
+		i += copy(dAtA[i:], m.Container)
+	}
+	if len(m.Command) > 0 {
+		for _, s := range m.Command {
+			dAtA[i] = 0x1a
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
 		}
-		i += nn15
+	}
+	if m.Stdin {
+		dAtA[i] = 0x20
+		i++
+		if m.Stdin {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.Stdout {
+		dAtA[i] = 0x28
+		i++
+		if m.Stdout {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.Stderr {
+		dAtA[i] = 0x30
+		i++
+		if m.Stderr {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.Tty {
+		dAtA[i] = 0x38
+		i++
+		if m.Tty {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
 	}
 	return i, nil
 }
 
-func (m *ExecOptions_OptionsV1) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.OptionsV1 != nil {
-		dAtA[i] = 0x52
-		i++
-		i = encodeVarintCmdDetail(dAtA, i, uint64(len(m.OptionsV1)))
-		i += copy(dAtA[i:], m.OptionsV1)
-	}
-	return i, nil
-}
 func (m *PortForwardOptions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3853,18 +3939,6 @@ func encodeVarintCmdDetail(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *NodeCmd) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Action != 0 {
-		n += 1 + sovCmdDetail(uint64(m.Action))
-	}
-	return n
-}
-
-func (m *ImageCmd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3993,8 +4067,8 @@ func (m *NamedData) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if len(m.Data) > 0 {
-		for k, v := range m.Data {
+	if len(m.DataMap) > 0 {
+		for k, v := range m.DataMap {
 			_ = k
 			_ = v
 			l = 0
@@ -4071,9 +4145,8 @@ func (m *ContainerSpec) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCmdDetail(uint64(l))
 	}
-	l = len(m.ImagePullPolicy)
-	if l > 0 {
-		n += 1 + l + sovCmdDetail(uint64(l))
+	if m.ImagePullPolicy != 0 {
+		n += 1 + sovCmdDetail(uint64(m.ImagePullPolicy))
 	}
 	if len(m.Command) > 0 {
 		for _, s := range m.Command {
@@ -4140,6 +4213,39 @@ func (m *ContainerSpec) Size() (n int) {
 	return n
 }
 
+func (m *AuthConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Username)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.Password)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.Auth)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.ServerAddress)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.IdentityToken)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	l = len(m.RegistryToken)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	return n
+}
+
 func (m *CreateOptions) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4176,8 +4282,9 @@ func (m *CreateOptions) Size() (n int) {
 			_ = k
 			_ = v
 			l = 0
-			if len(v) > 0 {
-				l = 1 + len(v) + sovCmdDetail(uint64(len(v)))
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovCmdDetail(uint64(l))
 			}
 			mapEntrySize := 1 + len(k) + sovCmdDetail(uint64(len(k))) + l
 			n += mapEntrySize + 1 + sovCmdDetail(uint64(mapEntrySize))
@@ -4266,24 +4373,28 @@ func (m *LogOptions) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCmdDetail(uint64(l))
 	}
-	if m.Options != nil {
-		n += m.Options.Size()
+	l = len(m.Container)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	if m.Follow {
+		n += 2
+	}
+	if m.Timestamp {
+		n += 2
+	}
+	if m.Since != 0 {
+		n += 1 + sovCmdDetail(uint64(m.Since))
+	}
+	if m.TailLines != 0 {
+		n += 1 + sovCmdDetail(uint64(m.TailLines))
+	}
+	if m.BytesLimit != 0 {
+		n += 1 + sovCmdDetail(uint64(m.BytesLimit))
 	}
 	return n
 }
 
-func (m *LogOptions_OptionsV1) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.OptionsV1 != nil {
-		l = len(m.OptionsV1)
-		n += 1 + l + sovCmdDetail(uint64(l))
-	}
-	return n
-}
 func (m *ExecOptions) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4294,24 +4405,31 @@ func (m *ExecOptions) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCmdDetail(uint64(l))
 	}
-	if m.Options != nil {
-		n += m.Options.Size()
+	l = len(m.Container)
+	if l > 0 {
+		n += 1 + l + sovCmdDetail(uint64(l))
+	}
+	if len(m.Command) > 0 {
+		for _, s := range m.Command {
+			l = len(s)
+			n += 1 + l + sovCmdDetail(uint64(l))
+		}
+	}
+	if m.Stdin {
+		n += 2
+	}
+	if m.Stdout {
+		n += 2
+	}
+	if m.Stderr {
+		n += 2
+	}
+	if m.Tty {
+		n += 2
 	}
 	return n
 }
 
-func (m *ExecOptions_OptionsV1) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.OptionsV1 != nil {
-		l = len(m.OptionsV1)
-		n += 1 + l + sovCmdDetail(uint64(l))
-	}
-	return n
-}
 func (m *PortForwardOptions) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4378,16 +4496,6 @@ func (this *NodeCmd) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&NodeCmd{`,
-		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ImageCmd) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ImageCmd{`,
 		`Action:` + fmt.Sprintf("%v", this.Action) + `,`,
 		`}`,
 	}, "")
@@ -4488,18 +4596,18 @@ func (this *NamedData) String() string {
 	if this == nil {
 		return "nil"
 	}
-	keysForData := make([]string, 0, len(this.Data))
-	for k, _ := range this.Data {
-		keysForData = append(keysForData, k)
+	keysForDataMap := make([]string, 0, len(this.DataMap))
+	for k, _ := range this.DataMap {
+		keysForDataMap = append(keysForDataMap, k)
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForData)
-	mapStringForData := "map[string][]byte{"
-	for _, k := range keysForData {
-		mapStringForData += fmt.Sprintf("%v: %v,", k, this.Data[k])
+	github_com_gogo_protobuf_sortkeys.Strings(keysForDataMap)
+	mapStringForDataMap := "map[string][]byte{"
+	for _, k := range keysForDataMap {
+		mapStringForDataMap += fmt.Sprintf("%v: %v,", k, this.DataMap[k])
 	}
-	mapStringForData += "}"
+	mapStringForDataMap += "}"
 	s := strings.Join([]string{`&NamedData{`,
-		`Data:` + mapStringForData + `,`,
+		`DataMap:` + mapStringForDataMap + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4582,6 +4690,21 @@ func (this *ContainerSpec) String() string {
 	}, "")
 	return s
 }
+func (this *AuthConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&AuthConfig{`,
+		`Username:` + fmt.Sprintf("%v", this.Username) + `,`,
+		`Password:` + fmt.Sprintf("%v", this.Password) + `,`,
+		`Auth:` + fmt.Sprintf("%v", this.Auth) + `,`,
+		`ServerAddress:` + fmt.Sprintf("%v", this.ServerAddress) + `,`,
+		`IdentityToken:` + fmt.Sprintf("%v", this.IdentityToken) + `,`,
+		`RegistryToken:` + fmt.Sprintf("%v", this.RegistryToken) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *CreateOptions) String() string {
 	if this == nil {
 		return "nil"
@@ -4601,7 +4724,7 @@ func (this *CreateOptions) String() string {
 		keysForImagePullAuthConfig = append(keysForImagePullAuthConfig, k)
 	}
 	github_com_gogo_protobuf_sortkeys.Strings(keysForImagePullAuthConfig)
-	mapStringForImagePullAuthConfig := "map[string][]byte{"
+	mapStringForImagePullAuthConfig := "map[string]*AuthConfig{"
 	for _, k := range keysForImagePullAuthConfig {
 		mapStringForImagePullAuthConfig += fmt.Sprintf("%v: %v,", k, this.ImagePullAuthConfig[k])
 	}
@@ -4671,17 +4794,12 @@ func (this *LogOptions) String() string {
 	}
 	s := strings.Join([]string{`&LogOptions{`,
 		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *LogOptions_OptionsV1) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&LogOptions_OptionsV1{`,
-		`OptionsV1:` + fmt.Sprintf("%v", this.OptionsV1) + `,`,
+		`Container:` + fmt.Sprintf("%v", this.Container) + `,`,
+		`Follow:` + fmt.Sprintf("%v", this.Follow) + `,`,
+		`Timestamp:` + fmt.Sprintf("%v", this.Timestamp) + `,`,
+		`Since:` + fmt.Sprintf("%v", this.Since) + `,`,
+		`TailLines:` + fmt.Sprintf("%v", this.TailLines) + `,`,
+		`BytesLimit:` + fmt.Sprintf("%v", this.BytesLimit) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4692,17 +4810,12 @@ func (this *ExecOptions) String() string {
 	}
 	s := strings.Join([]string{`&ExecOptions{`,
 		`PodUid:` + fmt.Sprintf("%v", this.PodUid) + `,`,
-		`Options:` + fmt.Sprintf("%v", this.Options) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ExecOptions_OptionsV1) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ExecOptions_OptionsV1{`,
-		`OptionsV1:` + fmt.Sprintf("%v", this.OptionsV1) + `,`,
+		`Container:` + fmt.Sprintf("%v", this.Container) + `,`,
+		`Command:` + fmt.Sprintf("%v", this.Command) + `,`,
+		`Stdin:` + fmt.Sprintf("%v", this.Stdin) + `,`,
+		`Stdout:` + fmt.Sprintf("%v", this.Stdout) + `,`,
+		`Stderr:` + fmt.Sprintf("%v", this.Stderr) + `,`,
+		`Tty:` + fmt.Sprintf("%v", this.Tty) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4791,79 +4904,7 @@ func (m *NodeCmd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Action |= NodeCmd_NodeAction(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCmdDetail(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ImageCmd) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCmdDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ImageCmd: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ImageCmd: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Action", wireType)
-			}
-			m.Action = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCmdDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Action |= ImageCmd_ImageAction(b&0x7F) << shift
+				m.Action |= NodeCmd_Action(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -4935,7 +4976,7 @@ func (m *PodCmd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Action |= PodCmd_PodAction(b&0x7F) << shift
+				m.Action |= PodCmd_Action(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -5275,7 +5316,7 @@ func (m *NamedData) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DataMap", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -5302,8 +5343,8 @@ func (m *NamedData) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Data == nil {
-				m.Data = make(map[string][]byte)
+			if m.DataMap == nil {
+				m.DataMap = make(map[string][]byte)
 			}
 			var mapkey string
 			mapvalue := []byte{}
@@ -5399,7 +5440,7 @@ func (m *NamedData) Unmarshal(dAtA []byte) error {
 					iNdEx += skippy
 				}
 			}
-			m.Data[mapkey] = mapvalue
+			m.DataMap[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -5843,10 +5884,10 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 			m.Image = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
+			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ImagePullPolicy", wireType)
 			}
-			var stringLen uint64
+			m.ImagePullPolicy = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdDetail
@@ -5856,24 +5897,11 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				m.ImagePullPolicy |= ImagePullPolicy(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCmdDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ImagePullPolicy = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Command", wireType)
@@ -6459,6 +6487,251 @@ func (m *ContainerSpec) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *AuthConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCmdDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AuthConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AuthConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Username", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Username = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Password", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Password = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Auth", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Auth = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ServerAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ServerAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IdentityToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.IdentityToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RegistryToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RegistryToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCmdDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -6743,10 +7016,10 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ImagePullAuthConfig == nil {
-				m.ImagePullAuthConfig = make(map[string][]byte)
+				m.ImagePullAuthConfig = make(map[string]*AuthConfig)
 			}
 			var mapkey string
-			mapvalue := []byte{}
+			var mapvalue *AuthConfig
 			for iNdEx < postIndex {
 				entryPreIndex := iNdEx
 				var wire uint64
@@ -6795,7 +7068,7 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
 					iNdEx = postStringIndexmapkey
 				} else if fieldNum == 2 {
-					var mapbyteLen uint64
+					var mapmsglen int
 					for shift := uint(0); ; shift += 7 {
 						if shift >= 64 {
 							return ErrIntOverflowCmdDetail
@@ -6805,25 +7078,26 @@ func (m *CreateOptions) Unmarshal(dAtA []byte) error {
 						}
 						b := dAtA[iNdEx]
 						iNdEx++
-						mapbyteLen |= uint64(b&0x7F) << shift
+						mapmsglen |= int(b&0x7F) << shift
 						if b < 0x80 {
 							break
 						}
 					}
-					intMapbyteLen := int(mapbyteLen)
-					if intMapbyteLen < 0 {
+					if mapmsglen < 0 {
 						return ErrInvalidLengthCmdDetail
 					}
-					postbytesIndex := iNdEx + intMapbyteLen
-					if postbytesIndex < 0 {
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
 						return ErrInvalidLengthCmdDetail
 					}
-					if postbytesIndex > l {
+					if postmsgIndex > l {
 						return io.ErrUnexpectedEOF
 					}
-					mapvalue = make([]byte, mapbyteLen)
-					copy(mapvalue, dAtA[iNdEx:postbytesIndex])
-					iNdEx = postbytesIndex
+					mapvalue = &AuthConfig{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
 				} else {
 					iNdEx = entryPreIndex
 					skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -7515,11 +7789,11 @@ func (m *LogOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.PodUid = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OptionsV1", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Container", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdDetail
@@ -7529,25 +7803,121 @@ func (m *LogOptions) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthCmdDetail
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthCmdDetail
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := make([]byte, postIndex-iNdEx)
-			copy(v, dAtA[iNdEx:postIndex])
-			m.Options = &LogOptions_OptionsV1{v}
+			m.Container = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Follow", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Follow = bool(v != 0)
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Timestamp = bool(v != 0)
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Since", wireType)
+			}
+			m.Since = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Since |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TailLines", wireType)
+			}
+			m.TailLines = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TailLines |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BytesLimit", wireType)
+			}
+			m.BytesLimit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.BytesLimit |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])
@@ -7633,11 +8003,11 @@ func (m *ExecOptions) Unmarshal(dAtA []byte) error {
 			}
 			m.PodUid = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OptionsV1", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Container", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowCmdDetail
@@ -7647,25 +8017,136 @@ func (m *ExecOptions) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthCmdDetail
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthCmdDetail
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := make([]byte, postIndex-iNdEx)
-			copy(v, dAtA[iNdEx:postIndex])
-			m.Options = &ExecOptions_OptionsV1{v}
+			m.Container = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Command", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCmdDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Command = append(m.Command, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Stdin", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Stdin = bool(v != 0)
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Stdout", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Stdout = bool(v != 0)
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Stderr", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Stderr = bool(v != 0)
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Tty", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCmdDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Tty = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCmdDetail(dAtA[iNdEx:])

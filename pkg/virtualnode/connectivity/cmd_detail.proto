@@ -10,26 +10,18 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
 message NodeCmd {
-    enum NodeAction {
+    enum Action {
         GetInfoAll = 0;
         GetSystemInfo = 1;
         GetResources = 2;
         GetConditions = 3;
     }
 
-    NodeAction action = 1;
-}
-
-message ImageCmd {
-    enum ImageAction {
-        ListImages = 0;
-    }
-
-    ImageAction action = 1;
+    Action action = 1;
 }
 
 message PodCmd {
-    enum PodAction {
+    enum Action {
         // We do not have Pod Update action, and we will always
         // recreate the pod when a update required,
         // also, any pod update action will be resolved in aranya to generate
@@ -42,7 +34,7 @@ message PodCmd {
         // Delete a existing pod in device
         DeletePod = 1;
         // List all managed pod in device
-        ListPods = 3;
+        ListPods = 2;
     
         // Execute commands in existing container
         Exec = 11;
@@ -61,7 +53,7 @@ message PodCmd {
     }
 
     // action type
-    PodAction action = 1;
+    Action action = 1;
 
     // options for action
     oneof options {
@@ -85,7 +77,7 @@ message PodCmd {
 }
 
 message NamedData {
-    map<string, bytes> data = 1;
+    map<string, bytes> data_map = 1;
 }
 
 message ContainerPort {
@@ -103,10 +95,16 @@ message VolumeMount {
     repeated string options = 5;
 }
 
+enum ImagePullPolicy {
+    ImagePullAlways = 0;
+    ImagePullIfNotPresent = 1;
+    ImagePullNever = 2;
+}
+
 message ContainerSpec {
     // container image name to pull
     string image = 1;
-    string image_pull_policy = 2;
+    ImagePullPolicy image_pull_policy = 2;
 
     // Command (ENTRYPOINT in Dockerfile)
     repeated string command = 3;
@@ -134,6 +132,19 @@ message ContainerSpec {
     bool allow_new_privileges = 22;
 }
 
+// A cri/runtime/v1alpah2/.AuthConfig replacement
+message AuthConfig {
+    string username = 1;
+	string password = 2;
+	string auth = 3;
+	string server_address = 4;
+	// IdentityToken is used to authenticate the user and get
+	// an access token for the registry.
+	string identity_token = 5;
+	// RegistryToken is a bearer token to be sent to a registry
+	string registry_token = 6;
+}
+
 message CreateOptions {
     // kubernetes pod uid
     string pod_uid = 1;
@@ -145,9 +156,9 @@ message CreateOptions {
     map<string, ContainerSpec> containers = 11;
 
     // key: image name
-    // value: bytes of criRuntime.AuthConfig
+    // value: auth config
     // used to pull private images
-    map<string, bytes> image_pull_auth_config = 12;
+    map<string, AuthConfig> image_pull_auth_config = 12;
 
     //
     // Volumes
@@ -186,20 +197,25 @@ message ListOptions {
 
 message LogOptions {
     string pod_uid = 1;
+    string container = 2;
 
-    oneof options {
-        // protobuf bytes of corev1.LogOptions
-        bytes options_v1 = 10;
-    }
+    bool follow = 3;
+    bool timestamp = 4;
+    
+    int64 since = 5;      // unix nano time
+    int64 tail_lines = 6;
+    int64 bytes_limit = 7;
 }
 
 message ExecOptions {
     string pod_uid = 1;
+    string container = 2;
+    repeated string command = 3;
 
-    oneof options {
-        // protobuf bytes of corev1.ExecOptions
-        bytes options_v1 = 10;
-    }
+    bool stdin = 4;
+    bool stdout = 5;
+    bool stderr = 6;
+    bool tty = 7;
 }
 
 message PortForwardOptions {

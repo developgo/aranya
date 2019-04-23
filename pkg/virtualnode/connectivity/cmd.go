@@ -4,54 +4,23 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func newNodeCmd(action NodeCmd_NodeAction) *Cmd {
+func NewNodeCmd(action NodeCmd_Action) *Cmd {
 	return &Cmd{
-		Cmd: &Cmd_NodeCmd{
-			NodeCmd: &NodeCmd{
+		Cmd: &Cmd_Node{
+			Node: &NodeCmd{
 				Action: action,
 			},
 		},
 	}
 }
 
-func NewNodeGetInfoAllCmd() *Cmd {
-	return newNodeCmd(GetInfoAll)
-}
-
-func NewNodeGetSystemInfoCmd() *Cmd {
-	return newNodeCmd(GetSystemInfo)
-}
-
-func NewNodeGetConditionsCmd() *Cmd {
-	return newNodeCmd(GetConditions)
-}
-
-func NewNodeGetResourcesCmd() *Cmd {
-	return newNodeCmd(GetResources)
-}
-
-func newImageCmd(action ImageCmd_ImageAction) *Cmd {
-	return &Cmd{
-		Cmd: &Cmd_ImageCmd{
-			ImageCmd: &ImageCmd{
-				Action: action,
-			},
-		},
-	}
-}
-
-func NewImageListCmd() *Cmd {
-	return newImageCmd(ListImages)
-}
-
-func newPodCmd(sid uint64, action PodCmd_PodAction, options isPodCmd_Options) *Cmd {
+func newPodCmd(sid uint64, action PodCmd_Action, options isPodCmd_Options) *Cmd {
 	return &Cmd{
 		SessionId: sid,
-		Cmd: &Cmd_PodCmd{
-			PodCmd: &PodCmd{
+		Cmd: &Cmd_Pod{
+			Pod: &PodCmd{
 				Action:  action,
 				Options: options,
 			},
@@ -61,31 +30,32 @@ func newPodCmd(sid uint64, action PodCmd_PodAction, options isPodCmd_Options) *C
 
 func NewPodCreateCmd(
 	pod *corev1.Pod,
-	imagePullSecrets map[string]*criRuntime.AuthConfig,
+	imagePullSecrets map[string]*AuthConfig,
 	containerEnvs map[string]map[string]string,
-	volumeData map[string]map[string][]byte,
+	volumeData map[string]*NamedData,
 	hostVolume map[string]string,
 ) *Cmd {
-	authConfigBytes := make(map[string][]byte, len(imagePullSecrets))
-	for name, authConf := range imagePullSecrets {
-		authConfigBytes[name], _ = authConf.Marshal()
-	}
-
-	actualVolumeData := make(map[string]*NamedData)
-	for k, namedVolumeData := range volumeData {
-		actualVolumeData[k] = &NamedData{Data: namedVolumeData}
-	}
-
 	containers := make(map[string]*ContainerSpec)
 	for _, ctr := range pod.Spec.Containers {
 		containers[ctr.Name] = &ContainerSpec{
-			Image:           ctr.Image,
-			ImagePullPolicy: string(ctr.ImagePullPolicy),
-			Command:         ctr.Command,
-			Args:            ctr.Args,
-			WorkingDir:      ctr.WorkingDir,
-			Stdin:           ctr.Stdin,
-			Tty:             ctr.TTY,
+			Image: ctr.Image,
+			ImagePullPolicy: func() ImagePullPolicy {
+				switch ctr.ImagePullPolicy {
+				case corev1.PullNever:
+					return ImagePullNever
+				case corev1.PullIfNotPresent:
+					return ImagePullIfNotPresent
+				case corev1.PullAlways:
+					return ImagePullAlways
+				default:
+					return ImagePullNever
+				}
+			}(),
+			Command:    ctr.Command,
+			Args:       ctr.Args,
+			WorkingDir: ctr.WorkingDir,
+			Stdin:      ctr.Stdin,
+			Tty:        ctr.TTY,
 
 			Ports: func() map[string]*ContainerPort {
 				m := make(map[string]*ContainerPort)
@@ -109,8 +79,8 @@ func NewPodCreateCmd(
 			Namespace:           pod.Namespace,
 			Name:                pod.Name,
 			Containers:          containers,
-			ImagePullAuthConfig: authConfigBytes,
-			VolumeData:          actualVolumeData,
+			ImagePullAuthConfig: imagePullSecrets,
+			VolumeData:          volumeData,
 			HostVolumes:         hostVolume,
 
 			HostNetwork: pod.Spec.HostNetwork,
@@ -140,41 +110,42 @@ func NewPodListCmd(namespace, name string, all bool) *Cmd {
 	})
 }
 
-func NewContainerExecCmd(podUID string, options corev1.PodExecOptions) *Cmd {
-	optionBytes, _ := options.Marshal()
-
+func NewContainerExecCmd(podUID, container string, command []string, stdin, stdout, stderr, tty bool) *Cmd {
 	return newPodCmd(0, Exec, &PodCmd_ExecOptions{
 		ExecOptions: &ExecOptions{
-			PodUid: podUID,
-			Options: &ExecOptions_OptionsV1{
-				OptionsV1: optionBytes,
-			},
+			PodUid:    podUID,
+			Container: container,
+			Command:   command,
+			Stdin:     stdin,
+			Stderr:    stderr,
+			Stdout:    stdout,
+			Tty:       tty,
 		},
 	})
 }
 
-func NewContainerAttachCmd(podUID string, options corev1.PodExecOptions) *Cmd {
-	optionBytes, _ := options.Marshal()
-
+func NewContainerAttachCmd(podUID, container string, stdin, stdout, stderr, tty bool) *Cmd {
 	return newPodCmd(0, Attach, &PodCmd_ExecOptions{
 		ExecOptions: &ExecOptions{
-			PodUid: podUID,
-			Options: &ExecOptions_OptionsV1{
-				OptionsV1: optionBytes,
-			},
+			PodUid:    podUID,
+			Container: container,
+			Stdin:     stdin,
+			Stderr:    stderr,
+			Stdout:    stdout,
+			Tty:       tty,
 		},
 	})
 }
 
-func NewContainerLogCmd(podUID string, options corev1.PodLogOptions) *Cmd {
-	optionBytes, _ := options.Marshal()
-
+func NewContainerLogCmd(podUID, container string, follow, timestamp bool, since time.Time, tailLines int64) *Cmd {
 	return newPodCmd(0, Log, &PodCmd_LogOptions{
 		LogOptions: &LogOptions{
-			PodUid: podUID,
-			Options: &LogOptions_OptionsV1{
-				OptionsV1: optionBytes,
-			},
+			PodUid:    podUID,
+			Container: container,
+			Follow:    follow,
+			Timestamp: timestamp,
+			Since:     since.UnixNano(),
+			TailLines: tailLines,
 		},
 	})
 }

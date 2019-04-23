@@ -5,9 +5,7 @@ import (
 	"io"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
-	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"arhat.dev/aranya/pkg/virtualnode/agent/runtime"
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -21,54 +19,29 @@ type fakeRuntime struct {
 	faulty bool
 }
 
-// ListImages lists all images on current node
-func (r *fakeRuntime) ListImages() ([]*connectivity.Image, error) {
-	return []*connectivity.Image{{
-		Names:     []string{"docker.io/foo/bar:fake"},
-		SizeBytes: 1024,
-	}}, nil
-}
-
-func (r *fakeRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
+func (r *fakeRuntime) CreatePod(options *connectivity.CreateOptions) (*connectivity.PodStatus, error) {
 
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: create pod")
 	}
 
-	return connectivity.NewPod(options.GetPodUid(), &criRuntime.PodSandboxStatus{
-		Metadata: &criRuntime.PodSandboxMetadata{
-			Namespace: "foo",
-			Name:      "bar",
-		},
-	}, []*criRuntime.ContainerStatus{}), nil
+	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
 }
 
-func (r *fakeRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
+func (r *fakeRuntime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.PodStatus, error) {
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: delete pod")
 	}
 
-	return connectivity.NewPod(options.GetPodUid(), &criRuntime.PodSandboxStatus{
-		Metadata: &criRuntime.PodSandboxMetadata{
-			Namespace: "foo",
-			Name:      "bar",
-		},
-	}, []*criRuntime.ContainerStatus{}), nil
+	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
 }
 
-func (r *fakeRuntime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
+func (r *fakeRuntime) ListPods(options *connectivity.ListOptions) ([]*connectivity.PodStatus, error) {
 	if r.faulty {
 		return nil, fmt.Errorf("faulty: list pod")
 	}
 
-	return []*connectivity.Pod{
-		connectivity.NewPod("", &criRuntime.PodSandboxStatus{
-			Metadata: &criRuntime.PodSandboxMetadata{
-				Namespace: "foo",
-				Name:      "bar",
-			},
-		}, []*criRuntime.ContainerStatus{}),
-	}, nil
+	return []*connectivity.PodStatus{connectivity.NewPodStatus("", nil)}, nil
 }
 
 func (r *fakeRuntime) ExecInContainer(podUID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
@@ -102,7 +75,7 @@ func (r *fakeRuntime) AttachContainer(podUID, container string, stdin io.Reader,
 	return nil
 }
 
-func (r *fakeRuntime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+func (r *fakeRuntime) GetContainerLogs(podUID string, options *connectivity.LogOptions, stdout, stderr io.WriteCloser) error {
 	defer closeIfNotNil(stdout, stderr)
 
 	if r.faulty {

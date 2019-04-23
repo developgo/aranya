@@ -11,14 +11,14 @@ var (
 	ErrNotResolved = errors.New("no field to be resolved")
 )
 
-func (m *Node) HasSystemInfo() bool {
+func (m *NodeStatus) HasSystemInfo() bool {
 	if m.GetSystemInfo() == nil || len(m.GetSystemInfo()) == 0 {
 		return false
 	}
 	return true
 }
 
-func (m *Node) GetResolvedSystemInfo() (*corev1.NodeSystemInfo, error) {
+func (m *NodeStatus) GetResolvedSystemInfo() (*corev1.NodeSystemInfo, error) {
 	if !m.HasSystemInfo() {
 		return nil, ErrNotResolved
 	}
@@ -30,14 +30,14 @@ func (m *Node) GetResolvedSystemInfo() (*corev1.NodeSystemInfo, error) {
 	return info, nil
 }
 
-func (m *Node) HasCapacity() bool {
+func (m *NodeStatus) HasCapacity() bool {
 	if m.GetResources() == nil || len(m.GetResources().GetCapacity()) == 0 {
 		return false
 	}
 	return true
 }
 
-func (m *Node) GetResolvedCapacity() (corev1.ResourceList, error) {
+func (m *NodeStatus) GetResolvedCapacity() (corev1.ResourceList, error) {
 	if !m.HasCapacity() {
 		return nil, ErrNotResolved
 	}
@@ -55,14 +55,14 @@ func (m *Node) GetResolvedCapacity() (corev1.ResourceList, error) {
 	return capacity, nil
 }
 
-func (m *Node) HasAllocatable() bool {
+func (m *NodeStatus) HasAllocatable() bool {
 	if m.GetResources() == nil || len(m.GetResources().GetAllocatable()) == 0 {
 		return false
 	}
 	return true
 }
 
-func (m *Node) GetResolvedAllocatable() (corev1.ResourceList, error) {
+func (m *NodeStatus) GetResolvedAllocatable() (corev1.ResourceList, error) {
 	if !m.HasAllocatable() {
 		return nil, ErrNotResolved
 	}
@@ -80,7 +80,7 @@ func (m *Node) GetResolvedAllocatable() (corev1.ResourceList, error) {
 	return allocatable, nil
 }
 
-func (m *Node) HasConditions() bool {
+func (m *NodeStatus) HasConditions() bool {
 	if m.GetConditions() == nil || len(m.GetConditions().GetConditions()) == 0 {
 		return false
 	}
@@ -88,7 +88,7 @@ func (m *Node) HasConditions() bool {
 	return true
 }
 
-func (m *Node) GetResolvedConditions() ([]corev1.NodeCondition, error) {
+func (m *NodeStatus) GetResolvedConditions() ([]corev1.NodeCondition, error) {
 	if !m.HasConditions() {
 		return nil, ErrNotResolved
 	}

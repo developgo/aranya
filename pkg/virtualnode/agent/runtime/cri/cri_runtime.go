@@ -9,7 +9,6 @@ import (
 	"io"
 	goruntime "runtime"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/flowcontrol"
 	criRuntime "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
@@ -73,19 +72,15 @@ type Runtime struct {
 	containerRefManager *kubeletContainer.RefManager
 }
 
-func (r *Runtime) ListImages() ([]*connectivity.Image, error) {
+func (r *Runtime) CreatePod(options *connectivity.CreateOptions) (*connectivity.PodStatus, error) {
 	return nil, errors.New("method not implemented")
 }
 
-func (r *Runtime) CreatePod(options *connectivity.CreateOptions) (*connectivity.Pod, error) {
+func (r *Runtime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.PodStatus, error) {
 	return nil, errors.New("method not implemented")
 }
 
-func (r *Runtime) DeletePod(options *connectivity.DeleteOptions) (*connectivity.Pod, error) {
-	return nil, errors.New("method not implemented")
-}
-
-func (r *Runtime) ListPod(options *connectivity.ListOptions) ([]*connectivity.Pod, error) {
+func (r *Runtime) ListPods(options *connectivity.ListOptions) ([]*connectivity.PodStatus, error) {
 	return nil, errors.New("method not implemented")
 }
 
@@ -97,7 +92,7 @@ func (r *Runtime) AttachContainer(podUID, container string, stdin io.Reader, std
 	return errors.New("method not implemented")
 }
 
-func (r *Runtime) GetContainerLogs(podUID string, options *corev1.PodLogOptions, stdout, stderr io.WriteCloser) error {
+func (r *Runtime) GetContainerLogs(podUID string, options *connectivity.LogOptions, stdout, stderr io.WriteCloser) error {
 	return errors.New("method not implemented")
 }
 

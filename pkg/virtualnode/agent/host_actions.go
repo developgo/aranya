@@ -1,19 +1,24 @@
 package agent
 
 import (
-	"errors"
 	"io"
 	"log"
 	"os/exec"
 
 	"github.com/kr/pty"
 	"k8s.io/client-go/tools/remotecommand"
+
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) error {
+var (
+	ErrCommandNotProvided = connectivity.NewCommonError("command not provided for exec")
+)
+
+func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remotecommand.TerminalSize, command []string, tty bool) *connectivity.Error {
 	if len(command) == 0 {
 		// impossible for agent exec, but still check
-		return errors.New("command not provided for exec")
+		return ErrCommandNotProvided
 	}
 
 	cmd := exec.Command(command[0], command[1:]...)
@@ -21,7 +26,7 @@ func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remot
 	if tty {
 		f, err := pty.Start(cmd)
 		if err != nil {
-			return err
+			return connectivity.NewCommonError(err.Error())
 		}
 		defer func() { _ = f.Close() }()
 
@@ -63,9 +68,13 @@ func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan remot
 		cmd.Stdin = stdin
 
 		if err := cmd.Start(); err != nil {
-			return err
+			return connectivity.NewCommonError(err.Error())
 		}
 	}
 
-	return cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		return connectivity.NewCommonError(err.Error())
+	}
+
+	return nil
 }

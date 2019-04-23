@@ -120,7 +120,7 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 		ch <- msg
 
 		// close session when error happened on device or session complete
-		if msg.GetCompleted() || msg.Error() != nil {
+		if msg.GetCompleted() || msg.Err() != nil {
 			s.sessions.del(msg.GetSessionId())
 		}
 	} else {
@@ -164,8 +164,8 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 
 	// session id should not be empty if it's a input or resize command
 	switch c := cmd.GetCmd().(type) {
-	case *connectivity.Cmd_PodCmd:
-		switch c.PodCmd.GetAction() {
+	case *connectivity.Cmd_Pod:
+		switch c.Pod.GetAction() {
 		case connectivity.ResizeTty, connectivity.Input:
 			sessionMustPresent = true
 			if cmd.GetSessionId() == 0 {

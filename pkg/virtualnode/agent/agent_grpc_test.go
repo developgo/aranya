@@ -118,15 +118,15 @@ func TestGRPCAgent(t *testing.T) {
 		createCmd := connectivity.NewPodCreateCmd(podReq, nil, nil, nil, nil)
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			createCmd,
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodStatusMsg(0, true, connectivity.NewPodStatus(string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			connectivity.NewPodListCmd(podReq.Namespace, podReq.Name, false),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodStatusMsg(0, true, connectivity.NewPodStatus(string(podReq.UID), podStatus, nil)))
 
 		testOnetimeCmdWithExpectedMsg(t, mgr,
 			connectivity.NewPodDeleteCmd(string(podReq.UID), time.Second),
-			*connectivity.NewPodMsg(0, true, connectivity.NewPod(string(podReq.UID), podStatus, nil)))
+			*connectivity.NewPodStatusMsg(0, true, connectivity.NewPodStatus(string(podReq.UID), podStatus, nil)))
 
 		// TODO: stream test is buggy due to buffered io, need to redesign
 
