@@ -262,7 +262,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// device nil means this function was called for the node only or
 	// the device has been deleted, no more action required
 	if deviceObj == nil {
-		reqLog.Info("finished reconcile for node object")
+		reqLog.V(10).Info("finished reconcile for node object")
 		return nil
 	}
 

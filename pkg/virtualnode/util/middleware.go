@@ -40,7 +40,7 @@ func LogMiddleware(logger logr.Logger) mux.MiddlewareFunc {
 }
 
 func NotFoundHandler(logger logr.Logger) http.Handler {
-	log := logger.WithName("request.notFound")
+	log := logger.WithName("request.notFound").V(10)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Info("request url not handled", "uri", r.URL.RequestURI())
 		http.Error(w, "404 page not found", http.StatusNotFound)
