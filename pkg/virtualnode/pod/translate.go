@@ -207,7 +207,7 @@ func translatePodCreateOptions(
 
 func translateContainerSecOpts(podSecOpts *corev1.PodSecurityContext, ctrSecOpts *corev1.SecurityContext) *connectivity.SecurityOptions {
 	result := resolveCommonSecOpts(podSecOpts, ctrSecOpts)
-	if result == nil {
+	if result == nil || ctrSecOpts == nil {
 		return result
 	}
 
