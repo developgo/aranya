@@ -3,6 +3,25 @@ controller:
     level: 5
     dir: /var/log/aranya/
 
+virtualnode:
+  connectivity:
+    timers:
+      unary_session_timeout: 1m
+      stream_session_timeout: 4h
+      force_node_status_sync_interval: 100m
+      force_pod_status_sync_interval: 10m
+  services:
+    node:
+      timers:
+        status_sync_interval: 10s
+    pod:
+      timers:
+        resync_interval: 60s
+    stream:
+      timers:
+        idle_timeout: 4h
+        creation_timeout: 30s
+
 services:
   metrics:
     address: "0.0.0.0"

@@ -4,11 +4,13 @@ A `Kubernetes` operator for edge devices (including `arhat` the agent)
 
 ## Purpose
 
-Deploy and manage edge devices with ease, integrate them into your `Kubernetes` cluster, remove the boundry between `Edge` and `Cloud`
+- Deploy and manage edge devices with ease.
+- Remove the boundry between `Edge` and `Cloud`.
+- Integrate every device with container runtime into your `Kubernetes` cluster.
 
 ## Non-Purpose
 
-A Customized `Kubernetes`
+A Simplified `Kubernetes`
 
 ## State
 
@@ -17,6 +19,7 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 ## Prerequisites
 
 - `Kubernetes` Cluster with RBAC enabled
+  - Minimum requirements: 1 master with 1 node
 
 ## Features
 
@@ -31,7 +34,7 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
   - `attach`
   - `portforward`
 
-## Workflow
+## Deployment Workflow
 
 1. Deploy `aranya` to your `Kubernetes` cluster with following commands
 
@@ -130,4 +133,4 @@ This project was inspired by [`virtual-kubelet`](https://github.com/virtual-kube
 ## Authors
 
 - [Jeffrey Stoke](https://github.com/jeffreystoke) (project owner)
-  - I'm seeking career opportunities (associate to junior level) in Deutschland
+  - I'm seeking for career opportunities (associate to junior level) in Deutschland

@@ -108,7 +108,7 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 		infraSpecOpts = append(infraSpecOpts, oci.WithHostname(options.GetHostname()))
 	}
 
-	pauseContainerID := runtimeutil.GetContainerName(options.GetNamespace(), options.GetName(), constant.ContainerNamePause)
+	pauseContainerID := runtimeutil.GetContainerName(options.Namespace, options.Name, constant.ContainerNamePause)
 	pauseContainer, err := r.runtimeClient.NewContainer(
 		createCtx,
 		pauseContainerID,
@@ -161,7 +161,7 @@ func (r *containerdRuntime) CreatePod(options *connectivity.CreateOptions) (pod 
 	for ctrName, container := range options.GetContainers() {
 		image := images[container.GetImage()]
 
-		containerID := runtimeutil.GetContainerName(options.GetNamespace(), options.GetName(), ctrName)
+		containerID := runtimeutil.GetContainerName(options.Namespace, options.Name, ctrName)
 		var specOpts []oci.SpecOpts
 
 		if container.GetTty() {

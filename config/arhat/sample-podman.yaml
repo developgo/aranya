@@ -4,27 +4,33 @@ agent:
     dir: /var/log/arhat/
   features:
     allow_host_exec: false
-  timers:
-    node_status_sync_interval: 100m
-    pod_status_sync_interval: 60s
+  node:
+    timers:
+      status_sync_interval: 10m
+  pod:
+    max_pod_count: 10
+    timers:
+      status_sync_interval: 60s
 
 runtime:
   volume_data_dir: /tmp/arhat/data
   management_namespace: container.arhat.dev
 
+  pause_image: k8s.gcr.io/pause:3.1
+  pause_command: /pause
+
+  # runtime with podman doesn't need any endpoints (it's embedded into arhat)
   endpoints:
     image:
-      address: unix:///run/containerd/containerd.sock
       dial_timeout: 10s
       action_timeout: 2m
     runtime:
-      address: unix:///run/containerd/containerd.sock
       dial_timeout: 10s
       action_timeout: 2m
 
 connectivity:
   server:
-    address: aranya.example.com:12443
+    address: arhat-podman.example.com:12443
     dial_timeout: 20s
     tls:
       cert: /etc/arhat/cert.pem

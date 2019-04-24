@@ -1,54 +1,22 @@
 package connectivity
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
 func newMsg(sid uint64, completed bool, m isMsg_Msg) *Msg {
 	return &Msg{SessionId: sid, Completed: completed, Msg: m}
 }
 
 func NewNodeMsg(
 	sid uint64,
-	systemInfo *corev1.NodeSystemInfo,
-	capacity, allocatable corev1.ResourceList,
-	conditions []corev1.NodeCondition,
+	systemInfo *NodeSystemInfo,
+	capacity, allocatable *NodeResources,
+	conditions *NodeConditions,
 ) *Msg {
-	var (
-		systemInfoBytes     []byte
-		conditionBytes      [][]byte
-		capacityBytesMap    = make(map[string][]byte)
-		allocatableBytesMap = make(map[string][]byte)
-	)
-
-	if systemInfo != nil {
-		systemInfoBytes, _ = systemInfo.Marshal()
-	}
-
-	for name, quantity := range capacity {
-		capacityBytesMap[string(name)], _ = quantity.Marshal()
-	}
-
-	for name, quantity := range allocatable {
-		allocatableBytesMap[string(name)], _ = quantity.Marshal()
-	}
-
-	for _, cond := range conditions {
-		condBytes, _ := cond.Marshal()
-		conditionBytes = append(conditionBytes, condBytes)
-	}
-
 	return newMsg(sid, true,
 		&Msg_NodeStatus{
 			NodeStatus: &NodeStatus{
-				SystemInfo: systemInfoBytes,
-				Resources: &NodeStatus_Resource{
-					Capacity:    capacityBytesMap,
-					Allocatable: allocatableBytesMap,
-				},
-				Conditions: &NodeStatus_Condition{
-					Conditions: conditionBytes,
-				},
+				SystemInfo:  systemInfo,
+				Capacity:    capacity,
+				Allocatable: allocatable,
+				Conditions:  conditions,
 			},
 		},
 	)

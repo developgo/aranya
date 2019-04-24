@@ -4,9 +4,13 @@ agent:
     dir: /var/log/arhat/
   features:
     allow_host_exec: false
-  timers:
-    node_status_sync_interval: 100m
-    pod_status_sync_interval: 60s
+  node:
+    timers:
+      status_sync_interval: 10m
+  pod:
+    max_pod_count: 10
+    timers:
+      status_sync_interval: 60s
 
 runtime:
   volume_data_dir: /tmp/arhat/data
@@ -27,7 +31,7 @@ runtime:
 
 connectivity:
   server:
-    address: aranya.example.com:12443
+    address: arhat-docker.example.com:12443
     dial_timeout: 20s
     tls:
       cert: /etc/arhat/cert.pem

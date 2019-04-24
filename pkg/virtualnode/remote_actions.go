@@ -1,7 +1,10 @@
 package virtualnode
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
@@ -65,38 +68,74 @@ func (vn *VirtualNode) updateNodeCache(node *connectivity.NodeStatus) error {
 	nodeStatus := &apiNode.Status
 	nodeStatus.Phase = corev1.NodeRunning
 
-	if node.HasSystemInfo() {
-		systemInfo, err := node.GetResolvedSystemInfo()
-		if err != nil {
-			return err
+	if sysInfo := node.GetSystemInfo(); sysInfo != nil {
+		nodeStatus.NodeInfo = corev1.NodeSystemInfo{
+			OperatingSystem:         sysInfo.GetOs(),
+			Architecture:            sysInfo.GetArch(),
+			OSImage:                 sysInfo.GetOsImage(),
+			KernelVersion:           sysInfo.GetKernelVersion(),
+			MachineID:               sysInfo.GetMachineId(),
+			SystemUUID:              sysInfo.GetSystemUuid(),
+			BootID:                  sysInfo.GetBootId(),
+			ContainerRuntimeVersion: fmt.Sprintf("%s://%s", sysInfo.GetRuntimeInfo().GetName(), sysInfo.GetRuntimeInfo().GetVersion()),
+			// TODO: how we should report kubelet and kube-proxy version?
+			//       be the same with host node?
+			KubeletVersion:   "",
+			KubeProxyVersion: "",
 		}
-		nodeStatus.NodeInfo = *systemInfo
 	}
 
-	if node.HasConditions() {
-		conditions, err := node.GetResolvedConditions()
-		if err != nil {
-			return err
-		}
-		nodeStatus.Conditions = conditions
+	if conditions := node.GetConditions(); conditions != nil {
+		nodeStatus.Conditions = translateDeviceCondition(conditions)
 	}
 
-	if node.HasCapacity() {
-		capacity, err := node.GetResolvedCapacity()
-		if err != nil {
-			return err
-		}
-		nodeStatus.Capacity = capacity
+	if capacity := node.GetCapacity(); capacity != nil {
+		nodeStatus.Capacity = translateDeviceResources(capacity)
 	}
 
-	if node.HasAllocatable() {
-		allocatable, err := node.GetResolvedAllocatable()
-		if err != nil {
-			return err
-		}
-		nodeStatus.Allocatable = allocatable
+	if allocatable := node.GetAllocatable(); allocatable != nil {
+		nodeStatus.Allocatable = translateDeviceResources(allocatable)
 	}
 
 	vn.nodeStatusCache.Update(*nodeStatus)
 	return nil
+}
+
+func translateDeviceResources(res *connectivity.NodeResources) corev1.ResourceList {
+	return corev1.ResourceList{
+		corev1.ResourceCPU:              *resource.NewQuantity(int64(res.GetCpuCount()), resource.DecimalSI),
+		corev1.ResourceMemory:           *resource.NewQuantity(int64(res.GetMemoryBytes()), resource.BinarySI),
+		corev1.ResourcePods:             *resource.NewQuantity(int64(res.GetPodCount()), resource.DecimalSI),
+		corev1.ResourceEphemeralStorage: *resource.NewQuantity(int64(res.GetStorageBytes()), resource.BinarySI),
+	}
+}
+
+func translateDeviceCondition(cond *connectivity.NodeConditions) []corev1.NodeCondition {
+	translate := func(condition connectivity.NodeConditions_Condition) corev1.ConditionStatus {
+		switch condition {
+		case connectivity.Healthy:
+			return corev1.ConditionFalse
+		case connectivity.Unhealthy:
+			return corev1.ConditionTrue
+		default:
+			return corev1.ConditionUnknown
+		}
+	}
+
+	result := []corev1.NodeCondition{
+		{Type: corev1.NodeReady, Status: translate(cond.GetReady())},
+		{Type: corev1.NodeOutOfDisk, Status: translate(cond.GetPod())},
+		{Type: corev1.NodeMemoryPressure, Status: translate(cond.GetMemory())},
+		{Type: corev1.NodeDiskPressure, Status: translate(cond.GetDisk())},
+		{Type: corev1.NodePIDPressure, Status: translate(cond.GetPid())},
+		{Type: corev1.NodeNetworkUnavailable, Status: translate(cond.GetNetwork())},
+	}
+
+	now := metav1.Now()
+	for i := range result {
+		result[i].LastHeartbeatTime = now
+		result[i].LastTransitionTime = now
+	}
+
+	return result
 }

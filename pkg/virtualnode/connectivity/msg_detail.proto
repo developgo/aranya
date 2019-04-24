@@ -9,22 +9,54 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
+message ContainerRuntimeInfo {
+    string name = 1;
+    string version = 2;
+}
+
+// replacement of corev1.NodeSystemInfo
+message NodeSystemInfo {
+
+    string os = 1;
+    string os_image = 2;
+    string arch = 3;
+    string kernel_version = 4;
+
+    string boot_id = 11;
+    string machine_id = 12;
+    string system_uuid = 13;
+
+    ContainerRuntimeInfo runtime_info = 21;
+}
+
+// replacement of corev1.ResourceList
+message NodeResources {
+    uint64 cpu_count = 1;
+    uint64 memory_bytes = 2;
+    uint64 storage_bytes = 3;
+    uint64 pod_count = 4;
+}
+
+message NodeConditions {
+    enum Condition {
+        Unknown = 0;
+        Healthy = 1;
+        Unhealthy = 2;
+    }
+
+    Condition ready = 1;
+    Condition memory = 2;
+    Condition disk = 3;
+    Condition pid = 4;
+    Condition network = 5;
+    Condition pod = 6;
+}
+
 message NodeStatus {
-    message Resource {
-        // protobuf bytes of corev1.ResourceList
-        map<string, bytes> capacity = 1;
-        map<string, bytes> allocatable = 2;
-    }
-
-    message Condition {
-        // protobuf bytes of corev1.NodeCondition
-        repeated bytes conditions = 1;
-    }
-
-    // protobuf bytes of corev1.NodeSystemInfo
-    bytes system_info = 1;
-    Resource resources = 2;
-    Condition conditions = 3;
+    NodeSystemInfo system_info = 1;
+    NodeResources capacity = 2;
+    NodeResources allocatable = 3;
+    NodeConditions conditions = 4;
 }
 
 message PodStatus {
@@ -45,6 +77,7 @@ message PodStatus {
         int64 started_at = 5;
         int64 finished_at = 6;
         int32 exit_code = 7;
+        int32 restart_count = 8;
 
         string reason = 11;
         string message = 12;

@@ -158,8 +158,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 		defer func() {
 			if err != nil {
 				createLog.Info("delete container due to error", "containerID", ctrID)
-				e := r.deleteContainer(ctrID, 0)
-				if e != nil {
+				if e := r.deleteContainer(ctrID, 0); e != nil {
 					createLog.Error(e, "failed to delete container after start failure")
 				}
 			}

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"syscall"
 
-	corev1 "k8s.io/api/core/v1"
+	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func systemInfo() *corev1.NodeSystemInfo {
+func setSystemInfo(info *connectivity.NodeSystemInfo) *connectivity.NodeSystemInfo {
 	bootID, _ := ioutil.ReadFile("/proc/sys/kernel/random/boot_id")
 	osImage, _ := ioutil.ReadFile("/etc/os-release")
 	systemUUID, _ := ioutil.ReadFile("/sys/devices/virtual/dmi/id/product_uuid")
@@ -26,10 +26,10 @@ func systemInfo() *corev1.NodeSystemInfo {
 		kernelVersion = kernelVersion[:i]
 	}
 
-	return &corev1.NodeSystemInfo{
-		SystemUUID:    string(systemUUID),
-		BootID:        string(bootID),
-		KernelVersion: kernelVersion,
-		OSImage:       string(osImage),
-	}
+	info.SystemUuid = string(systemUUID)
+	info.BootId = string(bootID)
+	info.KernelVersion = kernelVersion
+	info.OsImage = string(osImage)
+
+	return info
 }

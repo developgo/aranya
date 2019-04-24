@@ -12,6 +12,7 @@ import (
 	dockerFilter "github.com/docker/docker/api/types/filters"
 	dockerMount "github.com/docker/docker/api/types/mount"
 	dockerNetwork "github.com/docker/docker/api/types/network"
+	dockerClient "github.com/docker/docker/client"
 	dockerNat "github.com/docker/go-connections/nat"
 
 	"arhat.dev/aranya/pkg/constant"
@@ -226,12 +227,11 @@ func (r *dockerRuntime) createContainer(
 func (r *dockerRuntime) deleteContainer(containerID string, timeout time.Duration) *connectivity.Error {
 	// stop with best effort
 	_ = r.runtimeClient.ContainerStop(context.Background(), containerID, &timeout)
-
 	err := r.runtimeClient.ContainerRemove(context.Background(), containerID, dockerType.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	})
-	if err != nil {
+	if err != nil && !dockerClient.IsErrNotFound(err) {
 		return connectivity.NewCommonError(err.Error())
 	}
 

@@ -27,6 +27,30 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+type NodeConditions_Condition int32
+
+const (
+	Unknown   NodeConditions_Condition = 0
+	Healthy   NodeConditions_Condition = 1
+	Unhealthy NodeConditions_Condition = 2
+)
+
+var NodeConditions_Condition_name = map[int32]string{
+	0: "Unknown",
+	1: "Healthy",
+	2: "Unhealthy",
+}
+
+var NodeConditions_Condition_value = map[string]int32{
+	"Unknown":   0,
+	"Healthy":   1,
+	"Unhealthy": 2,
+}
+
+func (NodeConditions_Condition) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{3, 0}
+}
+
 type PodStatus_State int32
 
 const (
@@ -54,7 +78,7 @@ var PodStatus_State_value = map[string]int32{
 }
 
 func (PodStatus_State) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{1, 0}
+	return fileDescriptor_97b3080873330fb4, []int{5, 0}
 }
 
 type Data_Kind int32
@@ -78,7 +102,7 @@ var Data_Kind_value = map[string]int32{
 }
 
 func (Data_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{3, 0}
+	return fileDescriptor_97b3080873330fb4, []int{7, 0}
 }
 
 type Error_Kind int32
@@ -107,20 +131,338 @@ var Error_Kind_value = map[string]int32{
 }
 
 func (Error_Kind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{4, 0}
+	return fileDescriptor_97b3080873330fb4, []int{8, 0}
+}
+
+type ContainerRuntimeInfo struct {
+	Name    string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+}
+
+func (m *ContainerRuntimeInfo) Reset()      { *m = ContainerRuntimeInfo{} }
+func (*ContainerRuntimeInfo) ProtoMessage() {}
+func (*ContainerRuntimeInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{0}
+}
+func (m *ContainerRuntimeInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ContainerRuntimeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ContainerRuntimeInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ContainerRuntimeInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContainerRuntimeInfo.Merge(m, src)
+}
+func (m *ContainerRuntimeInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *ContainerRuntimeInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContainerRuntimeInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ContainerRuntimeInfo proto.InternalMessageInfo
+
+func (m *ContainerRuntimeInfo) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *ContainerRuntimeInfo) GetVersion() string {
+	if m != nil {
+		return m.Version
+	}
+	return ""
+}
+
+func (*ContainerRuntimeInfo) XXX_MessageName() string {
+	return "connectivity.ContainerRuntimeInfo"
+}
+
+// replacement of corev1.NodeSystemInfo
+type NodeSystemInfo struct {
+	Os            string                `protobuf:"bytes,1,opt,name=os,proto3" json:"os,omitempty"`
+	OsImage       string                `protobuf:"bytes,2,opt,name=os_image,json=osImage,proto3" json:"os_image,omitempty"`
+	Arch          string                `protobuf:"bytes,3,opt,name=arch,proto3" json:"arch,omitempty"`
+	KernelVersion string                `protobuf:"bytes,4,opt,name=kernel_version,json=kernelVersion,proto3" json:"kernel_version,omitempty"`
+	BootId        string                `protobuf:"bytes,11,opt,name=boot_id,json=bootId,proto3" json:"boot_id,omitempty"`
+	MachineId     string                `protobuf:"bytes,12,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	SystemUuid    string                `protobuf:"bytes,13,opt,name=system_uuid,json=systemUuid,proto3" json:"system_uuid,omitempty"`
+	RuntimeInfo   *ContainerRuntimeInfo `protobuf:"bytes,21,opt,name=runtime_info,json=runtimeInfo,proto3" json:"runtime_info,omitempty"`
+}
+
+func (m *NodeSystemInfo) Reset()      { *m = NodeSystemInfo{} }
+func (*NodeSystemInfo) ProtoMessage() {}
+func (*NodeSystemInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{1}
+}
+func (m *NodeSystemInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NodeSystemInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NodeSystemInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NodeSystemInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeSystemInfo.Merge(m, src)
+}
+func (m *NodeSystemInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *NodeSystemInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeSystemInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NodeSystemInfo proto.InternalMessageInfo
+
+func (m *NodeSystemInfo) GetOs() string {
+	if m != nil {
+		return m.Os
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetOsImage() string {
+	if m != nil {
+		return m.OsImage
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetArch() string {
+	if m != nil {
+		return m.Arch
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetKernelVersion() string {
+	if m != nil {
+		return m.KernelVersion
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetBootId() string {
+	if m != nil {
+		return m.BootId
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetMachineId() string {
+	if m != nil {
+		return m.MachineId
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetSystemUuid() string {
+	if m != nil {
+		return m.SystemUuid
+	}
+	return ""
+}
+
+func (m *NodeSystemInfo) GetRuntimeInfo() *ContainerRuntimeInfo {
+	if m != nil {
+		return m.RuntimeInfo
+	}
+	return nil
+}
+
+func (*NodeSystemInfo) XXX_MessageName() string {
+	return "connectivity.NodeSystemInfo"
+}
+
+// replacement of corev1.ResourceList
+type NodeResources struct {
+	CpuCount     uint64 `protobuf:"varint,1,opt,name=cpu_count,json=cpuCount,proto3" json:"cpu_count,omitempty"`
+	MemoryBytes  uint64 `protobuf:"varint,2,opt,name=memory_bytes,json=memoryBytes,proto3" json:"memory_bytes,omitempty"`
+	StorageBytes uint64 `protobuf:"varint,3,opt,name=storage_bytes,json=storageBytes,proto3" json:"storage_bytes,omitempty"`
+	PodCount     uint64 `protobuf:"varint,4,opt,name=pod_count,json=podCount,proto3" json:"pod_count,omitempty"`
+}
+
+func (m *NodeResources) Reset()      { *m = NodeResources{} }
+func (*NodeResources) ProtoMessage() {}
+func (*NodeResources) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{2}
+}
+func (m *NodeResources) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NodeResources) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NodeResources.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NodeResources) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeResources.Merge(m, src)
+}
+func (m *NodeResources) XXX_Size() int {
+	return m.Size()
+}
+func (m *NodeResources) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeResources.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NodeResources proto.InternalMessageInfo
+
+func (m *NodeResources) GetCpuCount() uint64 {
+	if m != nil {
+		return m.CpuCount
+	}
+	return 0
+}
+
+func (m *NodeResources) GetMemoryBytes() uint64 {
+	if m != nil {
+		return m.MemoryBytes
+	}
+	return 0
+}
+
+func (m *NodeResources) GetStorageBytes() uint64 {
+	if m != nil {
+		return m.StorageBytes
+	}
+	return 0
+}
+
+func (m *NodeResources) GetPodCount() uint64 {
+	if m != nil {
+		return m.PodCount
+	}
+	return 0
+}
+
+func (*NodeResources) XXX_MessageName() string {
+	return "connectivity.NodeResources"
+}
+
+type NodeConditions struct {
+	Ready   NodeConditions_Condition `protobuf:"varint,1,opt,name=ready,proto3,enum=connectivity.NodeConditions_Condition" json:"ready,omitempty"`
+	Memory  NodeConditions_Condition `protobuf:"varint,2,opt,name=memory,proto3,enum=connectivity.NodeConditions_Condition" json:"memory,omitempty"`
+	Disk    NodeConditions_Condition `protobuf:"varint,3,opt,name=disk,proto3,enum=connectivity.NodeConditions_Condition" json:"disk,omitempty"`
+	Pid     NodeConditions_Condition `protobuf:"varint,4,opt,name=pid,proto3,enum=connectivity.NodeConditions_Condition" json:"pid,omitempty"`
+	Network NodeConditions_Condition `protobuf:"varint,5,opt,name=network,proto3,enum=connectivity.NodeConditions_Condition" json:"network,omitempty"`
+	Pod     NodeConditions_Condition `protobuf:"varint,6,opt,name=pod,proto3,enum=connectivity.NodeConditions_Condition" json:"pod,omitempty"`
+}
+
+func (m *NodeConditions) Reset()      { *m = NodeConditions{} }
+func (*NodeConditions) ProtoMessage() {}
+func (*NodeConditions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_97b3080873330fb4, []int{3}
+}
+func (m *NodeConditions) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NodeConditions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NodeConditions.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NodeConditions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeConditions.Merge(m, src)
+}
+func (m *NodeConditions) XXX_Size() int {
+	return m.Size()
+}
+func (m *NodeConditions) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeConditions.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NodeConditions proto.InternalMessageInfo
+
+func (m *NodeConditions) GetReady() NodeConditions_Condition {
+	if m != nil {
+		return m.Ready
+	}
+	return Unknown
+}
+
+func (m *NodeConditions) GetMemory() NodeConditions_Condition {
+	if m != nil {
+		return m.Memory
+	}
+	return Unknown
+}
+
+func (m *NodeConditions) GetDisk() NodeConditions_Condition {
+	if m != nil {
+		return m.Disk
+	}
+	return Unknown
+}
+
+func (m *NodeConditions) GetPid() NodeConditions_Condition {
+	if m != nil {
+		return m.Pid
+	}
+	return Unknown
+}
+
+func (m *NodeConditions) GetNetwork() NodeConditions_Condition {
+	if m != nil {
+		return m.Network
+	}
+	return Unknown
+}
+
+func (m *NodeConditions) GetPod() NodeConditions_Condition {
+	if m != nil {
+		return m.Pod
+	}
+	return Unknown
+}
+
+func (*NodeConditions) XXX_MessageName() string {
+	return "connectivity.NodeConditions"
 }
 
 type NodeStatus struct {
-	// protobuf bytes of corev1.NodeSystemInfo
-	SystemInfo []byte                `protobuf:"bytes,1,opt,name=system_info,json=systemInfo,proto3" json:"system_info,omitempty"`
-	Resources  *NodeStatus_Resource  `protobuf:"bytes,2,opt,name=resources,proto3" json:"resources,omitempty"`
-	Conditions *NodeStatus_Condition `protobuf:"bytes,3,opt,name=conditions,proto3" json:"conditions,omitempty"`
+	SystemInfo  *NodeSystemInfo `protobuf:"bytes,1,opt,name=system_info,json=systemInfo,proto3" json:"system_info,omitempty"`
+	Capacity    *NodeResources  `protobuf:"bytes,2,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	Allocatable *NodeResources  `protobuf:"bytes,3,opt,name=allocatable,proto3" json:"allocatable,omitempty"`
+	Conditions  *NodeConditions `protobuf:"bytes,4,opt,name=conditions,proto3" json:"conditions,omitempty"`
 }
 
 func (m *NodeStatus) Reset()      { *m = NodeStatus{} }
 func (*NodeStatus) ProtoMessage() {}
 func (*NodeStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{0}
+	return fileDescriptor_97b3080873330fb4, []int{4}
 }
 func (m *NodeStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -149,21 +491,28 @@ func (m *NodeStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_NodeStatus proto.InternalMessageInfo
 
-func (m *NodeStatus) GetSystemInfo() []byte {
+func (m *NodeStatus) GetSystemInfo() *NodeSystemInfo {
 	if m != nil {
 		return m.SystemInfo
 	}
 	return nil
 }
 
-func (m *NodeStatus) GetResources() *NodeStatus_Resource {
+func (m *NodeStatus) GetCapacity() *NodeResources {
 	if m != nil {
-		return m.Resources
+		return m.Capacity
 	}
 	return nil
 }
 
-func (m *NodeStatus) GetConditions() *NodeStatus_Condition {
+func (m *NodeStatus) GetAllocatable() *NodeResources {
+	if m != nil {
+		return m.Allocatable
+	}
+	return nil
+}
+
+func (m *NodeStatus) GetConditions() *NodeConditions {
 	if m != nil {
 		return m.Conditions
 	}
@@ -172,110 +521,6 @@ func (m *NodeStatus) GetConditions() *NodeStatus_Condition {
 
 func (*NodeStatus) XXX_MessageName() string {
 	return "connectivity.NodeStatus"
-}
-
-type NodeStatus_Resource struct {
-	// protobuf bytes of corev1.ResourceList
-	Capacity    map[string][]byte `protobuf:"bytes,1,rep,name=capacity,proto3" json:"capacity,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Allocatable map[string][]byte `protobuf:"bytes,2,rep,name=allocatable,proto3" json:"allocatable,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *NodeStatus_Resource) Reset()      { *m = NodeStatus_Resource{} }
-func (*NodeStatus_Resource) ProtoMessage() {}
-func (*NodeStatus_Resource) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{0, 0}
-}
-func (m *NodeStatus_Resource) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *NodeStatus_Resource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_NodeStatus_Resource.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *NodeStatus_Resource) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NodeStatus_Resource.Merge(m, src)
-}
-func (m *NodeStatus_Resource) XXX_Size() int {
-	return m.Size()
-}
-func (m *NodeStatus_Resource) XXX_DiscardUnknown() {
-	xxx_messageInfo_NodeStatus_Resource.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_NodeStatus_Resource proto.InternalMessageInfo
-
-func (m *NodeStatus_Resource) GetCapacity() map[string][]byte {
-	if m != nil {
-		return m.Capacity
-	}
-	return nil
-}
-
-func (m *NodeStatus_Resource) GetAllocatable() map[string][]byte {
-	if m != nil {
-		return m.Allocatable
-	}
-	return nil
-}
-
-func (*NodeStatus_Resource) XXX_MessageName() string {
-	return "connectivity.NodeStatus.Resource"
-}
-
-type NodeStatus_Condition struct {
-	// protobuf bytes of corev1.NodeCondition
-	Conditions [][]byte `protobuf:"bytes,1,rep,name=conditions,proto3" json:"conditions,omitempty"`
-}
-
-func (m *NodeStatus_Condition) Reset()      { *m = NodeStatus_Condition{} }
-func (*NodeStatus_Condition) ProtoMessage() {}
-func (*NodeStatus_Condition) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{0, 1}
-}
-func (m *NodeStatus_Condition) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *NodeStatus_Condition) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_NodeStatus_Condition.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *NodeStatus_Condition) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NodeStatus_Condition.Merge(m, src)
-}
-func (m *NodeStatus_Condition) XXX_Size() int {
-	return m.Size()
-}
-func (m *NodeStatus_Condition) XXX_DiscardUnknown() {
-	xxx_messageInfo_NodeStatus_Condition.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_NodeStatus_Condition proto.InternalMessageInfo
-
-func (m *NodeStatus_Condition) GetConditions() [][]byte {
-	if m != nil {
-		return m.Conditions
-	}
-	return nil
-}
-
-func (*NodeStatus_Condition) XXX_MessageName() string {
-	return "connectivity.NodeStatus.Condition"
 }
 
 type PodStatus struct {
@@ -288,7 +533,7 @@ type PodStatus struct {
 func (m *PodStatus) Reset()      { *m = PodStatus{} }
 func (*PodStatus) ProtoMessage() {}
 func (*PodStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{1}
+	return fileDescriptor_97b3080873330fb4, []int{5}
 }
 func (m *PodStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -339,18 +584,19 @@ type PodStatus_ContainerStatus struct {
 	ContainerId string `protobuf:"bytes,1,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
 	ImageId     string `protobuf:"bytes,2,opt,name=image_id,json=imageId,proto3" json:"image_id,omitempty"`
 	// time values in unix nano
-	CreatedAt  int64  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	StartedAt  int64  `protobuf:"varint,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
-	FinishedAt int64  `protobuf:"varint,6,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
-	ExitCode   int32  `protobuf:"varint,7,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	Reason     string `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`
-	Message    string `protobuf:"bytes,12,opt,name=message,proto3" json:"message,omitempty"`
+	CreatedAt    int64  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	StartedAt    int64  `protobuf:"varint,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	FinishedAt   int64  `protobuf:"varint,6,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	ExitCode     int32  `protobuf:"varint,7,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	RestartCount int32  `protobuf:"varint,8,opt,name=restart_count,json=restartCount,proto3" json:"restart_count,omitempty"`
+	Reason       string `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message      string `protobuf:"bytes,12,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (m *PodStatus_ContainerStatus) Reset()      { *m = PodStatus_ContainerStatus{} }
 func (*PodStatus_ContainerStatus) ProtoMessage() {}
 func (*PodStatus_ContainerStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{1, 0}
+	return fileDescriptor_97b3080873330fb4, []int{5, 0}
 }
 func (m *PodStatus_ContainerStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -421,6 +667,13 @@ func (m *PodStatus_ContainerStatus) GetExitCode() int32 {
 	return 0
 }
 
+func (m *PodStatus_ContainerStatus) GetRestartCount() int32 {
+	if m != nil {
+		return m.RestartCount
+	}
+	return 0
+}
+
 func (m *PodStatus_ContainerStatus) GetReason() string {
 	if m != nil {
 		return m.Reason
@@ -446,7 +699,7 @@ type PodStatusList struct {
 func (m *PodStatusList) Reset()      { *m = PodStatusList{} }
 func (*PodStatusList) ProtoMessage() {}
 func (*PodStatusList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{2}
+	return fileDescriptor_97b3080873330fb4, []int{6}
 }
 func (m *PodStatusList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -496,7 +749,7 @@ type Data struct {
 func (m *Data) Reset()      { *m = Data{} }
 func (*Data) ProtoMessage() {}
 func (*Data) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{3}
+	return fileDescriptor_97b3080873330fb4, []int{7}
 }
 func (m *Data) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -558,7 +811,7 @@ type Error struct {
 func (m *Error) Reset()      { *m = Error{} }
 func (*Error) ProtoMessage() {}
 func (*Error) Descriptor() ([]byte, []int) {
-	return fileDescriptor_97b3080873330fb4, []int{4}
+	return fileDescriptor_97b3080873330fb4, []int{8}
 }
 func (m *Error) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -605,14 +858,15 @@ func (*Error) XXX_MessageName() string {
 	return "connectivity.Error"
 }
 func init() {
+	proto.RegisterEnum("connectivity.NodeConditions_Condition", NodeConditions_Condition_name, NodeConditions_Condition_value)
 	proto.RegisterEnum("connectivity.PodStatus_State", PodStatus_State_name, PodStatus_State_value)
 	proto.RegisterEnum("connectivity.Data_Kind", Data_Kind_name, Data_Kind_value)
 	proto.RegisterEnum("connectivity.Error_Kind", Error_Kind_name, Error_Kind_value)
+	proto.RegisterType((*ContainerRuntimeInfo)(nil), "connectivity.ContainerRuntimeInfo")
+	proto.RegisterType((*NodeSystemInfo)(nil), "connectivity.NodeSystemInfo")
+	proto.RegisterType((*NodeResources)(nil), "connectivity.NodeResources")
+	proto.RegisterType((*NodeConditions)(nil), "connectivity.NodeConditions")
 	proto.RegisterType((*NodeStatus)(nil), "connectivity.NodeStatus")
-	proto.RegisterType((*NodeStatus_Resource)(nil), "connectivity.NodeStatus.Resource")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NodeStatus.Resource.AllocatableEntry")
-	proto.RegisterMapType((map[string][]byte)(nil), "connectivity.NodeStatus.Resource.CapacityEntry")
-	proto.RegisterType((*NodeStatus_Condition)(nil), "connectivity.NodeStatus.Condition")
 	proto.RegisterType((*PodStatus)(nil), "connectivity.PodStatus")
 	proto.RegisterMapType((map[string]*PodStatus_ContainerStatus)(nil), "connectivity.PodStatus.ContainerStatusesEntry")
 	proto.RegisterType((*PodStatus_ContainerStatus)(nil), "connectivity.PodStatus.ContainerStatus")
@@ -624,62 +878,87 @@ func init() {
 func init() { proto.RegisterFile("msg_detail.proto", fileDescriptor_97b3080873330fb4) }
 
 var fileDescriptor_97b3080873330fb4 = []byte{
-	// 838 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x55, 0xcf, 0x6f, 0x1b, 0x45,
-	0x14, 0xf6, 0xd8, 0xeb, 0x24, 0x7e, 0xeb, 0x34, 0xcb, 0x50, 0x95, 0xc5, 0x88, 0xc5, 0xdd, 0x0b,
-	0x46, 0x05, 0x47, 0x0a, 0x97, 0x8a, 0x9f, 0x72, 0x53, 0x57, 0x44, 0x45, 0x6d, 0x19, 0xa7, 0x47,
-	0x64, 0x8d, 0x77, 0x26, 0xee, 0x28, 0xf6, 0x8c, 0x99, 0x99, 0x2d, 0xf5, 0x8d, 0x03, 0x47, 0x0e,
-	0xfc, 0x19, 0xa8, 0x7f, 0x49, 0x6f, 0xe4, 0xd8, 0x23, 0x71, 0x2e, 0x1c, 0xfb, 0x0f, 0x20, 0xa1,
-	0x99, 0xdd, 0x38, 0xb6, 0xd5, 0xaa, 0x70, 0x7b, 0xef, 0x7b, 0xef, 0xfb, 0xf6, 0xd3, 0x37, 0x33,
-	0x36, 0x44, 0x53, 0x33, 0x1e, 0x32, 0x6e, 0xa9, 0x98, 0x74, 0x67, 0x5a, 0x59, 0x85, 0x9b, 0x99,
-	0x92, 0x92, 0x67, 0x56, 0x3c, 0x15, 0x76, 0xde, 0xfa, 0x6c, 0x2c, 0xec, 0x93, 0x7c, 0xd4, 0xcd,
-	0xd4, 0x74, 0x7f, 0xac, 0xc6, 0x6a, 0xdf, 0x2f, 0x8d, 0xf2, 0x13, 0xdf, 0xf9, 0xc6, 0x57, 0x05,
-	0x39, 0xfd, 0x2d, 0x00, 0x78, 0xa0, 0x18, 0x1f, 0x58, 0x6a, 0x73, 0x83, 0x3f, 0x82, 0xd0, 0xcc,
-	0x8d, 0xe5, 0xd3, 0xa1, 0x90, 0x27, 0x2a, 0x46, 0x6d, 0xd4, 0x69, 0x12, 0x28, 0xa0, 0x23, 0x79,
-	0xa2, 0xf0, 0xb7, 0xd0, 0xd0, 0xdc, 0xa8, 0x5c, 0x67, 0xdc, 0xc4, 0xd5, 0x36, 0xea, 0x84, 0x07,
-	0x37, 0xbb, 0xab, 0x06, 0xba, 0x57, 0x6a, 0x5d, 0x52, 0x6e, 0x92, 0x2b, 0x0e, 0xbe, 0x03, 0x90,
-	0x29, 0xc9, 0x84, 0x15, 0x4a, 0x9a, 0xb8, 0xe6, 0x15, 0xd2, 0x37, 0x2a, 0x1c, 0x5e, 0xae, 0x92,
-	0x15, 0x56, 0xeb, 0x79, 0x15, 0x76, 0x2e, 0xb5, 0xf1, 0x7d, 0xd8, 0xc9, 0xe8, 0x8c, 0x66, 0xc2,
-	0xce, 0x63, 0xd4, 0xae, 0x75, 0xc2, 0x83, 0xfd, 0xb7, 0x1a, 0xea, 0x1e, 0x96, 0x8c, 0xbe, 0xb4,
-	0x7a, 0x4e, 0x96, 0x02, 0xf8, 0x18, 0x42, 0x3a, 0x99, 0xa8, 0x8c, 0x5a, 0x3a, 0x9a, 0xf0, 0xb8,
-	0xea, 0xf5, 0x0e, 0xde, 0xae, 0xd7, 0xbb, 0x22, 0x15, 0x92, 0xab, 0x32, 0xad, 0x2f, 0x61, 0x77,
-	0xed, 0x83, 0x38, 0x82, 0xda, 0x29, 0x9f, 0xfb, 0x78, 0x1b, 0xc4, 0x95, 0xf8, 0x3a, 0xd4, 0x9f,
-	0xd2, 0x49, 0xce, 0x7d, 0xa6, 0x4d, 0x52, 0x34, 0x5f, 0x54, 0x6f, 0xa3, 0xd6, 0x37, 0x10, 0x6d,
-	0xaa, 0xff, 0x2f, 0xfe, 0x2d, 0x68, 0x2c, 0x53, 0xc4, 0xc9, 0x5a, 0xfa, 0x2e, 0xae, 0xe6, 0x6a,
-	0xb2, 0xe9, 0x9f, 0x01, 0x34, 0x1e, 0x29, 0x56, 0xde, 0x86, 0x08, 0x6a, 0xb9, 0x60, 0x97, 0x9f,
-	0xc9, 0x05, 0xc3, 0x3f, 0x02, 0xce, 0x94, 0xb4, 0x54, 0x48, 0xae, 0x87, 0xc6, 0x6f, 0xf9, 0x7b,
-	0xe0, 0x62, 0xea, 0xae, 0xc7, 0xb4, 0x94, 0x71, 0x87, 0x58, 0x30, 0x06, 0x25, 0xa1, 0x88, 0xe8,
-	0x9d, 0x6c, 0x13, 0x6f, 0xfd, 0x83, 0x60, 0x6f, 0x63, 0x1b, 0xdf, 0x84, 0xe6, 0xd5, 0x27, 0x97,
-	0x6e, 0xc2, 0x25, 0x76, 0xc4, 0xf0, 0xfb, 0xb0, 0x23, 0xa6, 0x74, 0xcc, 0xdd, 0xb8, 0xea, 0xc7,
-	0xdb, 0xbe, 0x3f, 0x62, 0xf8, 0x43, 0x80, 0x4c, 0x73, 0x6a, 0x39, 0x1b, 0x52, 0x1b, 0x07, 0x6d,
-	0xd4, 0xa9, 0x91, 0x46, 0x89, 0xf4, 0xac, 0x1b, 0x1b, 0x4b, 0x75, 0x39, 0xae, 0x17, 0xe3, 0x12,
-	0xe9, 0x59, 0xf7, 0x1c, 0x4e, 0x84, 0x14, 0xe6, 0x49, 0x31, 0xdf, 0xf2, 0x73, 0xb8, 0x84, 0x7a,
-	0x16, 0x7f, 0x00, 0x0d, 0xfe, 0x4c, 0xd8, 0x61, 0xa6, 0x18, 0x8f, 0xb7, 0xdb, 0xa8, 0x53, 0x27,
-	0x3b, 0x0e, 0x38, 0x54, 0x8c, 0xe3, 0x1b, 0xb0, 0xa5, 0x39, 0x35, 0x4a, 0xc6, 0xa1, 0x37, 0x55,
-	0x76, 0x38, 0x86, 0xed, 0x29, 0x37, 0x86, 0x8e, 0x79, 0xdc, 0x2c, 0xdc, 0x96, 0x6d, 0x6b, 0x0a,
-	0x37, 0x5e, 0x1f, 0xd6, 0x6b, 0x4e, 0xfc, 0xeb, 0xd5, 0x13, 0x0f, 0x0f, 0x3e, 0xfe, 0x8f, 0xe9,
-	0xaf, 0x5c, 0x8d, 0x74, 0x04, 0x75, 0x07, 0x72, 0x1c, 0x41, 0xd3, 0x17, 0x8f, 0xe5, 0xa9, 0x54,
-	0x3f, 0xcb, 0xa8, 0xb2, 0x44, 0x1e, 0x71, 0xc9, 0x84, 0x1c, 0x47, 0x68, 0x89, 0x90, 0x5c, 0x4a,
-	0x87, 0x54, 0x31, 0x86, 0x6b, 0x1e, 0x19, 0xe4, 0x59, 0xc6, 0x39, 0xe3, 0x2c, 0xaa, 0xe1, 0x3d,
-	0x08, 0x3d, 0x76, 0x8f, 0x8a, 0x09, 0x67, 0x51, 0x90, 0x7e, 0x05, 0xbb, 0x4b, 0x2f, 0xdf, 0x0b,
-	0x63, 0xf1, 0x2d, 0x08, 0x66, 0x8a, 0x99, 0xf2, 0xad, 0xbe, 0xf7, 0x06, 0xdb, 0xc4, 0x2f, 0xa5,
-	0xbf, 0x22, 0x08, 0xee, 0x52, 0x4b, 0x1d, 0xeb, 0x54, 0xc8, 0xe2, 0xf4, 0xaf, 0x6d, 0xb2, 0xdc,
-	0x46, 0xf7, 0xbe, 0x90, 0x8c, 0xf8, 0x25, 0x8c, 0x21, 0x60, 0xd4, 0xd2, 0xf2, 0x2d, 0xf8, 0xda,
-	0x05, 0x68, 0xf8, 0x4f, 0xfe, 0x07, 0x27, 0x20, 0xae, 0x4c, 0x3f, 0x81, 0xc0, 0x71, 0x30, 0xc0,
-	0xd6, 0xe0, 0xf8, 0xee, 0xc3, 0xc7, 0xc7, 0x51, 0xa5, 0xac, 0xfb, 0x84, 0x44, 0x08, 0x37, 0xa0,
-	0xfe, 0xf0, 0xf8, 0xbb, 0x3e, 0x89, 0xaa, 0xe9, 0x73, 0x04, 0xf5, 0xbe, 0xd6, 0x4a, 0xe3, 0x4f,
-	0xd7, 0x7c, 0xc4, 0xeb, 0x3e, 0xfc, 0xca, 0xaa, 0x91, 0x36, 0x84, 0x8c, 0x9b, 0x4c, 0x8b, 0x99,
-	0x7b, 0x5e, 0xe5, 0xdd, 0x5c, 0x85, 0xd2, 0x1f, 0x4a, 0x13, 0xbb, 0xd0, 0xe8, 0x6b, 0x7d, 0xa8,
-	0xa6, 0x53, 0xe5, 0xe2, 0xdf, 0x83, 0xb0, 0xaf, 0xf5, 0x03, 0x65, 0xef, 0xa9, 0x5c, 0xb2, 0x08,
-	0xe1, 0xeb, 0x10, 0xf5, 0xb5, 0xee, 0x4d, 0x34, 0xa7, 0x6c, 0xde, 0x7f, 0x26, 0x8c, 0x35, 0x51,
-	0x15, 0xbf, 0x0b, 0x7b, 0xc5, 0xda, 0x20, 0x9f, 0xcd, 0x94, 0xbb, 0xb4, 0x51, 0xed, 0xce, 0xed,
-	0xb3, 0xf3, 0xa4, 0xf2, 0xf2, 0x3c, 0xa9, 0xbc, 0x3a, 0x4f, 0xd0, 0x2f, 0x8b, 0x04, 0xfd, 0xb1,
-	0x48, 0xd0, 0x8b, 0x45, 0x82, 0xce, 0x16, 0x09, 0xfa, 0x6b, 0x91, 0xa0, 0xbf, 0x17, 0x49, 0xe5,
-	0xd5, 0x22, 0x41, 0xbf, 0x5f, 0x24, 0x95, 0x17, 0x17, 0x09, 0x3a, 0xbb, 0x48, 0x2a, 0x2f, 0x2f,
-	0x92, 0xca, 0x68, 0xcb, 0xff, 0x27, 0x7c, 0xfe, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x48, 0xfc,
-	0xf5, 0x35, 0x64, 0x06, 0x00, 0x00,
+	// 1123 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x56, 0x4f, 0x6f, 0x1b, 0x45,
+	0x14, 0xf7, 0xfa, 0x5f, 0xe2, 0xb7, 0x76, 0xb2, 0x0c, 0xa5, 0x35, 0x09, 0x2c, 0x61, 0x11, 0x10,
+	0x04, 0xb8, 0x52, 0x40, 0x22, 0xaa, 0x02, 0x22, 0x4d, 0x5c, 0x35, 0x02, 0xb5, 0x65, 0x93, 0x70,
+	0x43, 0xd6, 0x78, 0x67, 0x62, 0x8f, 0xec, 0x9d, 0x31, 0x33, 0xb3, 0x69, 0x7d, 0x03, 0x89, 0x0f,
+	0x00, 0x17, 0x3e, 0x00, 0x27, 0xc4, 0x07, 0xe0, 0x33, 0xf4, 0x98, 0x63, 0x8f, 0xc4, 0xb9, 0x70,
+	0xec, 0x81, 0x0f, 0x80, 0x66, 0x66, 0x6d, 0x27, 0x69, 0x10, 0xe9, 0x6d, 0xde, 0xef, 0xfd, 0x7e,
+	0x7e, 0x6f, 0xdf, 0xbc, 0xf7, 0xc6, 0x10, 0xa4, 0xaa, 0xd7, 0x21, 0x54, 0x63, 0x36, 0x6c, 0x8d,
+	0xa4, 0xd0, 0x02, 0xd5, 0x13, 0xc1, 0x39, 0x4d, 0x34, 0x3b, 0x66, 0x7a, 0xbc, 0xf2, 0x71, 0x8f,
+	0xe9, 0x7e, 0xd6, 0x6d, 0x25, 0x22, 0xbd, 0xdd, 0x13, 0x3d, 0x71, 0xdb, 0x92, 0xba, 0xd9, 0x91,
+	0xb5, 0xac, 0x61, 0x4f, 0x4e, 0x1c, 0xed, 0xc2, 0x8d, 0x1d, 0xc1, 0x35, 0x66, 0x9c, 0xca, 0x38,
+	0xe3, 0x9a, 0xa5, 0x74, 0x8f, 0x1f, 0x09, 0x84, 0xa0, 0xcc, 0x71, 0x4a, 0x9b, 0xde, 0x9a, 0xb7,
+	0x5e, 0x8b, 0xed, 0x19, 0x35, 0x61, 0xe1, 0x98, 0x4a, 0xc5, 0x04, 0x6f, 0x16, 0x2d, 0x3c, 0x35,
+	0xa3, 0x5f, 0x8b, 0xb0, 0xf4, 0x40, 0x10, 0xba, 0x3f, 0x56, 0x9a, 0xa6, 0xf6, 0x07, 0x96, 0xa0,
+	0x28, 0x54, 0x2e, 0x2f, 0x0a, 0x85, 0x5e, 0x87, 0x45, 0xa1, 0x3a, 0x2c, 0xc5, 0x3d, 0x3a, 0x55,
+	0x0b, 0xb5, 0x67, 0x4c, 0x13, 0x0b, 0xcb, 0xa4, 0xdf, 0x2c, 0xb9, 0x58, 0xe6, 0x8c, 0xde, 0x85,
+	0xa5, 0x01, 0x95, 0x9c, 0x0e, 0x3b, 0xd3, 0x90, 0x65, 0xeb, 0x6d, 0x38, 0xf4, 0x5b, 0x07, 0xa2,
+	0x5b, 0xb0, 0xd0, 0x15, 0x42, 0x77, 0x18, 0x69, 0xfa, 0xd6, 0x5f, 0x35, 0xe6, 0x1e, 0x41, 0x6f,
+	0x02, 0xa4, 0x38, 0xe9, 0x33, 0x4e, 0x8d, 0xaf, 0x6e, 0x7d, 0xb5, 0x1c, 0xd9, 0x23, 0xe8, 0x2d,
+	0xf0, 0x95, 0xcd, 0xb5, 0x93, 0x65, 0x8c, 0x34, 0x1b, 0xd6, 0x0f, 0x0e, 0x3a, 0xcc, 0x18, 0x41,
+	0x6d, 0xa8, 0x4b, 0x57, 0x8e, 0x0e, 0xe3, 0x47, 0xa2, 0xf9, 0xda, 0x9a, 0xb7, 0xee, 0x6f, 0x44,
+	0xad, 0xf3, 0xb5, 0x6e, 0x5d, 0x55, 0xb9, 0xd8, 0x97, 0x73, 0x23, 0xfa, 0xc5, 0x83, 0x86, 0x29,
+	0x4c, 0x4c, 0x95, 0xc8, 0x64, 0x42, 0x15, 0x5a, 0x85, 0x5a, 0x32, 0xca, 0x3a, 0x89, 0xc8, 0xb8,
+	0xb6, 0xe5, 0x29, 0xc7, 0x8b, 0xc9, 0x28, 0xdb, 0x31, 0x36, 0x7a, 0x1b, 0xea, 0x29, 0x4d, 0x85,
+	0x1c, 0x77, 0xba, 0x63, 0x4d, 0x95, 0x2d, 0x54, 0x39, 0xf6, 0x1d, 0x76, 0xd7, 0x40, 0xe8, 0x1d,
+	0x68, 0x28, 0x2d, 0x24, 0xee, 0xd1, 0x9c, 0x53, 0xb2, 0x9c, 0x7a, 0x0e, 0x3a, 0xd2, 0x2a, 0xd4,
+	0x46, 0x82, 0xe4, 0x41, 0xca, 0x2e, 0xc8, 0x48, 0x10, 0x1b, 0x24, 0xfa, 0xb3, 0xe4, 0x2e, 0x6b,
+	0x47, 0x70, 0xc2, 0x34, 0x13, 0x5c, 0xa1, 0x2d, 0xa8, 0x48, 0x8a, 0xc9, 0xd8, 0x26, 0xb4, 0xb4,
+	0xf1, 0xde, 0xc5, 0xcf, 0xbc, 0x48, 0x6e, 0xcd, 0x8e, 0xb1, 0x13, 0xa1, 0x2f, 0xa0, 0xea, 0x32,
+	0xb4, 0xf9, 0x5e, 0x5f, 0x9e, 0xab, 0xd0, 0x1d, 0x28, 0x13, 0xa6, 0x06, 0xf6, 0x4b, 0xae, 0xaf,
+	0xb6, 0x1a, 0xb4, 0x09, 0xa5, 0x11, 0x23, 0xf6, 0x1b, 0xaf, 0x2f, 0x35, 0x12, 0xf4, 0x25, 0x2c,
+	0x70, 0xaa, 0x1f, 0x0b, 0x39, 0x68, 0x56, 0x5e, 0x4a, 0x3d, 0x95, 0xd9, 0xd8, 0x82, 0x34, 0xab,
+	0x2f, 0x19, 0x5b, 0x90, 0xe8, 0x53, 0xa8, 0xcd, 0x10, 0xe4, 0xc3, 0xc2, 0x21, 0x1f, 0x70, 0xf1,
+	0x98, 0x07, 0x05, 0x63, 0xdc, 0xa7, 0x78, 0xa8, 0xfb, 0xe3, 0xc0, 0x43, 0x0d, 0xa8, 0x1d, 0xf2,
+	0x7e, 0x6e, 0x16, 0xa3, 0x1f, 0x8b, 0x00, 0x76, 0xca, 0x34, 0xd6, 0x99, 0x42, 0x9f, 0xcf, 0x7a,
+	0xd8, 0x76, 0xa8, 0x67, 0x3b, 0xf4, 0x8d, 0x17, 0xd3, 0x98, 0x0f, 0xe5, 0xb4, 0xc3, 0xed, 0x80,
+	0x7e, 0x06, 0x8b, 0x09, 0x1e, 0xe1, 0x84, 0x69, 0x77, 0x6f, 0xfe, 0xc6, 0xea, 0x8b, 0xda, 0x59,
+	0xdf, 0xc6, 0x33, 0xb2, 0x89, 0x8b, 0x87, 0x43, 0x91, 0x60, 0x8d, 0xbb, 0x43, 0x6a, 0x6f, 0xed,
+	0x7f, 0xb4, 0xe7, 0xf9, 0x68, 0x0b, 0x20, 0x99, 0x15, 0xc6, 0x5e, 0xdc, 0x95, 0x59, 0xcf, 0x8b,
+	0x17, 0x9f, 0xe3, 0x47, 0xff, 0x94, 0xa1, 0xf6, 0x48, 0x90, 0xbc, 0x04, 0x01, 0x94, 0xcc, 0xf8,
+	0xba, 0x2d, 0x63, 0x8e, 0xe8, 0x3b, 0x40, 0xc9, 0x74, 0x2a, 0x3b, 0xca, 0xb2, 0xec, 0x1c, 0x95,
+	0xd6, 0xfd, 0x8d, 0xd6, 0xc5, 0x28, 0xb3, 0x9f, 0x99, 0xcf, 0xf1, 0x7e, 0x2e, 0x68, 0x73, 0x2d,
+	0xc7, 0xf1, 0x2b, 0xc9, 0x65, 0x7c, 0xe5, 0xb7, 0x22, 0x2c, 0x5f, 0x62, 0x9b, 0xa1, 0x9d, 0x87,
+	0x9c, 0x65, 0xe3, 0xcf, 0xb0, 0x3d, 0x62, 0x96, 0x9f, 0xdd, 0x7c, 0xc6, 0x9d, 0x2f, 0x3f, 0x6b,
+	0xbb, 0x45, 0x95, 0x48, 0x8a, 0x35, 0x25, 0x1d, 0xec, 0x66, 0xb5, 0x14, 0xd7, 0x72, 0x64, 0x5b,
+	0x1b, 0xb7, 0xd2, 0x58, 0xe6, 0xee, 0x8a, 0x73, 0xe7, 0xc8, 0xb6, 0x36, 0x7b, 0xec, 0x88, 0x71,
+	0xa6, 0xfa, 0xce, 0x5f, 0xb5, 0x7e, 0x98, 0x42, 0xdb, 0xda, 0x6c, 0x02, 0xfa, 0x84, 0xe9, 0x4e,
+	0x22, 0x08, 0x6d, 0x2e, 0xac, 0x79, 0xeb, 0x95, 0x78, 0xd1, 0x00, 0x3b, 0x82, 0x50, 0xb3, 0x4b,
+	0x24, 0xb5, 0x3f, 0x96, 0xaf, 0x8a, 0x45, 0x4b, 0xa8, 0xe7, 0xa0, 0xdb, 0x49, 0x37, 0xa1, 0x2a,
+	0x29, 0x56, 0x82, 0x4f, 0x37, 0xac, 0xb3, 0xcc, 0x6b, 0x90, 0x52, 0xa5, 0xcc, 0x3e, 0x77, 0xeb,
+	0x75, 0x6a, 0xae, 0xa4, 0x70, 0xf3, 0xea, 0x8a, 0x9a, 0xfb, 0x1a, 0xd0, 0xf1, 0xf4, 0xbe, 0x06,
+	0xd4, 0x34, 0x53, 0xe5, 0x18, 0x0f, 0x33, 0x9a, 0xb7, 0xe0, 0xfb, 0xd7, 0xbc, 0xa2, 0xd8, 0xa9,
+	0xee, 0x14, 0x37, 0xbd, 0xa8, 0x0b, 0x15, 0x03, 0x52, 0x14, 0x40, 0xdd, 0x1e, 0xe6, 0xd3, 0x34,
+	0x45, 0x1e, 0x51, 0x4e, 0x18, 0xef, 0x05, 0xde, 0x0c, 0x89, 0x33, 0xce, 0x0d, 0x52, 0x44, 0x08,
+	0x96, 0x2c, 0xb2, 0x9f, 0x25, 0x09, 0xa5, 0x84, 0x92, 0xa0, 0x84, 0x96, 0xc1, 0xb7, 0xd8, 0x3d,
+	0xcc, 0x86, 0x94, 0x04, 0xe5, 0x68, 0x0b, 0x1a, 0xb3, 0x5c, 0xbe, 0x66, 0x4a, 0xa3, 0x0f, 0xa1,
+	0x3c, 0x12, 0xc4, 0x3c, 0x70, 0xa6, 0xb3, 0x6e, 0xfd, 0x47, 0xda, 0xb1, 0x25, 0x45, 0x3f, 0x79,
+	0x50, 0xde, 0xc5, 0x1a, 0x1b, 0xd5, 0x80, 0x71, 0x92, 0xaf, 0xd9, 0x4b, 0x2a, 0xc3, 0x68, 0x7d,
+	0xc5, 0x38, 0x89, 0x2d, 0xc9, 0x3c, 0x8b, 0x04, 0x6b, 0x6c, 0x2b, 0x53, 0x8f, 0xed, 0xd9, 0x14,
+	0x50, 0xd1, 0xef, 0xf3, 0x9d, 0x6f, 0x8e, 0xd1, 0x07, 0x50, 0x36, 0x1a, 0x04, 0x50, 0xdd, 0x3f,
+	0xd8, 0x7d, 0x78, 0x78, 0x10, 0x14, 0xf2, 0x73, 0x3b, 0x8e, 0x03, 0x0f, 0xd5, 0xa0, 0xf2, 0xf0,
+	0xe0, 0x7e, 0x3b, 0x0e, 0x8a, 0xd1, 0x1f, 0x1e, 0x54, 0xda, 0x52, 0x0a, 0x89, 0x3e, 0xba, 0x90,
+	0x47, 0xf3, 0x62, 0x1e, 0x96, 0x72, 0x3e, 0x91, 0x35, 0xf0, 0x09, 0x55, 0x89, 0x64, 0x23, 0x3d,
+	0x7f, 0xfb, 0xcf, 0x43, 0xd1, 0x37, 0x79, 0x12, 0x0d, 0xa8, 0xb5, 0xa5, 0xdc, 0x11, 0x69, 0x2a,
+	0x4c, 0xf9, 0x97, 0xc1, 0x6f, 0x4b, 0xf9, 0x40, 0xe8, 0x7b, 0x22, 0xe3, 0x24, 0xf0, 0xd0, 0x0d,
+	0x08, 0xda, 0x52, 0x6e, 0x0f, 0xed, 0xbb, 0xd1, 0x7e, 0xc2, 0x94, 0x56, 0x41, 0x11, 0xbd, 0x0a,
+	0xcb, 0x8e, 0xb6, 0x9f, 0x8d, 0x46, 0xc2, 0x74, 0x76, 0x50, 0xba, 0xbb, 0x79, 0x72, 0x1a, 0x16,
+	0x9e, 0x9d, 0x86, 0x85, 0xe7, 0xa7, 0xa1, 0xf7, 0xc3, 0x24, 0xf4, 0x7e, 0x9f, 0x84, 0xde, 0xd3,
+	0x49, 0xe8, 0x9d, 0x4c, 0x42, 0xef, 0xaf, 0x49, 0xe8, 0xfd, 0x3d, 0x09, 0x0b, 0xcf, 0x27, 0xa1,
+	0xf7, 0xf3, 0x59, 0x58, 0x78, 0x7a, 0x16, 0x7a, 0x27, 0x67, 0x61, 0xe1, 0xd9, 0x59, 0x58, 0xe8,
+	0x56, 0xed, 0x3f, 0x9b, 0x4f, 0xfe, 0x0d, 0x00, 0x00, 0xff, 0xff, 0xa6, 0x87, 0x00, 0x31, 0x2a,
+	0x09, 0x00, 0x00,
 }
 
+func (x NodeConditions_Condition) String() string {
+	s, ok := NodeConditions_Condition_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
 func (x PodStatus_State) String() string {
 	s, ok := PodStatus_State_name[int32(x)]
 	if ok {
@@ -701,6 +980,150 @@ func (x Error_Kind) String() string {
 	}
 	return strconv.Itoa(int(x))
 }
+func (this *ContainerRuntimeInfo) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*ContainerRuntimeInfo)
+	if !ok {
+		that2, ok := that.(ContainerRuntimeInfo)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if this.Version != that1.Version {
+		return false
+	}
+	return true
+}
+func (this *NodeSystemInfo) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*NodeSystemInfo)
+	if !ok {
+		that2, ok := that.(NodeSystemInfo)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Os != that1.Os {
+		return false
+	}
+	if this.OsImage != that1.OsImage {
+		return false
+	}
+	if this.Arch != that1.Arch {
+		return false
+	}
+	if this.KernelVersion != that1.KernelVersion {
+		return false
+	}
+	if this.BootId != that1.BootId {
+		return false
+	}
+	if this.MachineId != that1.MachineId {
+		return false
+	}
+	if this.SystemUuid != that1.SystemUuid {
+		return false
+	}
+	if !this.RuntimeInfo.Equal(that1.RuntimeInfo) {
+		return false
+	}
+	return true
+}
+func (this *NodeResources) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*NodeResources)
+	if !ok {
+		that2, ok := that.(NodeResources)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.CpuCount != that1.CpuCount {
+		return false
+	}
+	if this.MemoryBytes != that1.MemoryBytes {
+		return false
+	}
+	if this.StorageBytes != that1.StorageBytes {
+		return false
+	}
+	if this.PodCount != that1.PodCount {
+		return false
+	}
+	return true
+}
+func (this *NodeConditions) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*NodeConditions)
+	if !ok {
+		that2, ok := that.(NodeConditions)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Ready != that1.Ready {
+		return false
+	}
+	if this.Memory != that1.Memory {
+		return false
+	}
+	if this.Disk != that1.Disk {
+		return false
+	}
+	if this.Pid != that1.Pid {
+		return false
+	}
+	if this.Network != that1.Network {
+		return false
+	}
+	if this.Pod != that1.Pod {
+		return false
+	}
+	return true
+}
 func (this *NodeStatus) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -720,80 +1143,17 @@ func (this *NodeStatus) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !bytes.Equal(this.SystemInfo, that1.SystemInfo) {
+	if !this.SystemInfo.Equal(that1.SystemInfo) {
 		return false
 	}
-	if !this.Resources.Equal(that1.Resources) {
+	if !this.Capacity.Equal(that1.Capacity) {
+		return false
+	}
+	if !this.Allocatable.Equal(that1.Allocatable) {
 		return false
 	}
 	if !this.Conditions.Equal(that1.Conditions) {
 		return false
-	}
-	return true
-}
-func (this *NodeStatus_Resource) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*NodeStatus_Resource)
-	if !ok {
-		that2, ok := that.(NodeStatus_Resource)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Capacity) != len(that1.Capacity) {
-		return false
-	}
-	for i := range this.Capacity {
-		if !bytes.Equal(this.Capacity[i], that1.Capacity[i]) {
-			return false
-		}
-	}
-	if len(this.Allocatable) != len(that1.Allocatable) {
-		return false
-	}
-	for i := range this.Allocatable {
-		if !bytes.Equal(this.Allocatable[i], that1.Allocatable[i]) {
-			return false
-		}
-	}
-	return true
-}
-func (this *NodeStatus_Condition) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*NodeStatus_Condition)
-	if !ok {
-		that2, ok := that.(NodeStatus_Condition)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if len(this.Conditions) != len(that1.Conditions) {
-		return false
-	}
-	for i := range this.Conditions {
-		if !bytes.Equal(this.Conditions[i], that1.Conditions[i]) {
-			return false
-		}
 	}
 	return true
 }
@@ -864,6 +1224,9 @@ func (this *PodStatus_ContainerStatus) Equal(that interface{}) bool {
 		return false
 	}
 	if this.ExitCode != that1.ExitCode {
+		return false
+	}
+	if this.RestartCount != that1.RestartCount {
 		return false
 	}
 	if this.Reason != that1.Reason {
@@ -960,64 +1323,82 @@ func (this *Error) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *NodeStatus) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 7)
-	s = append(s, "&connectivity.NodeStatus{")
-	s = append(s, "SystemInfo: "+fmt.Sprintf("%#v", this.SystemInfo)+",\n")
-	if this.Resources != nil {
-		s = append(s, "Resources: "+fmt.Sprintf("%#v", this.Resources)+",\n")
-	}
-	if this.Conditions != nil {
-		s = append(s, "Conditions: "+fmt.Sprintf("%#v", this.Conditions)+",\n")
-	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *NodeStatus_Resource) GoString() string {
+func (this *ContainerRuntimeInfo) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&connectivity.NodeStatus_Resource{")
-	keysForCapacity := make([]string, 0, len(this.Capacity))
-	for k, _ := range this.Capacity {
-		keysForCapacity = append(keysForCapacity, k)
+	s = append(s, "&connectivity.ContainerRuntimeInfo{")
+	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	s = append(s, "Version: "+fmt.Sprintf("%#v", this.Version)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *NodeSystemInfo) GoString() string {
+	if this == nil {
+		return "nil"
 	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForCapacity)
-	mapStringForCapacity := "map[string][]byte{"
-	for _, k := range keysForCapacity {
-		mapStringForCapacity += fmt.Sprintf("%#v: %#v,", k, this.Capacity[k])
-	}
-	mapStringForCapacity += "}"
-	if this.Capacity != nil {
-		s = append(s, "Capacity: "+mapStringForCapacity+",\n")
-	}
-	keysForAllocatable := make([]string, 0, len(this.Allocatable))
-	for k, _ := range this.Allocatable {
-		keysForAllocatable = append(keysForAllocatable, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForAllocatable)
-	mapStringForAllocatable := "map[string][]byte{"
-	for _, k := range keysForAllocatable {
-		mapStringForAllocatable += fmt.Sprintf("%#v: %#v,", k, this.Allocatable[k])
-	}
-	mapStringForAllocatable += "}"
-	if this.Allocatable != nil {
-		s = append(s, "Allocatable: "+mapStringForAllocatable+",\n")
+	s := make([]string, 0, 12)
+	s = append(s, "&connectivity.NodeSystemInfo{")
+	s = append(s, "Os: "+fmt.Sprintf("%#v", this.Os)+",\n")
+	s = append(s, "OsImage: "+fmt.Sprintf("%#v", this.OsImage)+",\n")
+	s = append(s, "Arch: "+fmt.Sprintf("%#v", this.Arch)+",\n")
+	s = append(s, "KernelVersion: "+fmt.Sprintf("%#v", this.KernelVersion)+",\n")
+	s = append(s, "BootId: "+fmt.Sprintf("%#v", this.BootId)+",\n")
+	s = append(s, "MachineId: "+fmt.Sprintf("%#v", this.MachineId)+",\n")
+	s = append(s, "SystemUuid: "+fmt.Sprintf("%#v", this.SystemUuid)+",\n")
+	if this.RuntimeInfo != nil {
+		s = append(s, "RuntimeInfo: "+fmt.Sprintf("%#v", this.RuntimeInfo)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *NodeStatus_Condition) GoString() string {
+func (this *NodeResources) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
-	s = append(s, "&connectivity.NodeStatus_Condition{")
-	s = append(s, "Conditions: "+fmt.Sprintf("%#v", this.Conditions)+",\n")
+	s := make([]string, 0, 8)
+	s = append(s, "&connectivity.NodeResources{")
+	s = append(s, "CpuCount: "+fmt.Sprintf("%#v", this.CpuCount)+",\n")
+	s = append(s, "MemoryBytes: "+fmt.Sprintf("%#v", this.MemoryBytes)+",\n")
+	s = append(s, "StorageBytes: "+fmt.Sprintf("%#v", this.StorageBytes)+",\n")
+	s = append(s, "PodCount: "+fmt.Sprintf("%#v", this.PodCount)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *NodeConditions) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 10)
+	s = append(s, "&connectivity.NodeConditions{")
+	s = append(s, "Ready: "+fmt.Sprintf("%#v", this.Ready)+",\n")
+	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
+	s = append(s, "Disk: "+fmt.Sprintf("%#v", this.Disk)+",\n")
+	s = append(s, "Pid: "+fmt.Sprintf("%#v", this.Pid)+",\n")
+	s = append(s, "Network: "+fmt.Sprintf("%#v", this.Network)+",\n")
+	s = append(s, "Pod: "+fmt.Sprintf("%#v", this.Pod)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *NodeStatus) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 8)
+	s = append(s, "&connectivity.NodeStatus{")
+	if this.SystemInfo != nil {
+		s = append(s, "SystemInfo: "+fmt.Sprintf("%#v", this.SystemInfo)+",\n")
+	}
+	if this.Capacity != nil {
+		s = append(s, "Capacity: "+fmt.Sprintf("%#v", this.Capacity)+",\n")
+	}
+	if this.Allocatable != nil {
+		s = append(s, "Allocatable: "+fmt.Sprintf("%#v", this.Allocatable)+",\n")
+	}
+	if this.Conditions != nil {
+		s = append(s, "Conditions: "+fmt.Sprintf("%#v", this.Conditions)+",\n")
+	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1048,7 +1429,7 @@ func (this *PodStatus_ContainerStatus) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 12)
+	s := make([]string, 0, 13)
 	s = append(s, "&connectivity.PodStatus_ContainerStatus{")
 	s = append(s, "ContainerId: "+fmt.Sprintf("%#v", this.ContainerId)+",\n")
 	s = append(s, "ImageId: "+fmt.Sprintf("%#v", this.ImageId)+",\n")
@@ -1056,6 +1437,7 @@ func (this *PodStatus_ContainerStatus) GoString() string {
 	s = append(s, "StartedAt: "+fmt.Sprintf("%#v", this.StartedAt)+",\n")
 	s = append(s, "FinishedAt: "+fmt.Sprintf("%#v", this.FinishedAt)+",\n")
 	s = append(s, "ExitCode: "+fmt.Sprintf("%#v", this.ExitCode)+",\n")
+	s = append(s, "RestartCount: "+fmt.Sprintf("%#v", this.RestartCount)+",\n")
 	s = append(s, "Reason: "+fmt.Sprintf("%#v", this.Reason)+",\n")
 	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
 	s = append(s, "}")
@@ -1104,6 +1486,194 @@ func valueToGoStringMsgDetail(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
+func (m *ContainerRuntimeInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ContainerRuntimeInfo) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
+	}
+	if len(m.Version) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Version)))
+		i += copy(dAtA[i:], m.Version)
+	}
+	return i, nil
+}
+
+func (m *NodeSystemInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NodeSystemInfo) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Os) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Os)))
+		i += copy(dAtA[i:], m.Os)
+	}
+	if len(m.OsImage) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.OsImage)))
+		i += copy(dAtA[i:], m.OsImage)
+	}
+	if len(m.Arch) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.Arch)))
+		i += copy(dAtA[i:], m.Arch)
+	}
+	if len(m.KernelVersion) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.KernelVersion)))
+		i += copy(dAtA[i:], m.KernelVersion)
+	}
+	if len(m.BootId) > 0 {
+		dAtA[i] = 0x5a
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.BootId)))
+		i += copy(dAtA[i:], m.BootId)
+	}
+	if len(m.MachineId) > 0 {
+		dAtA[i] = 0x62
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.MachineId)))
+		i += copy(dAtA[i:], m.MachineId)
+	}
+	if len(m.SystemUuid) > 0 {
+		dAtA[i] = 0x6a
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.SystemUuid)))
+		i += copy(dAtA[i:], m.SystemUuid)
+	}
+	if m.RuntimeInfo != nil {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.RuntimeInfo.Size()))
+		n1, err := m.RuntimeInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n1
+	}
+	return i, nil
+}
+
+func (m *NodeResources) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NodeResources) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.CpuCount != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.CpuCount))
+	}
+	if m.MemoryBytes != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.MemoryBytes))
+	}
+	if m.StorageBytes != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.StorageBytes))
+	}
+	if m.PodCount != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.PodCount))
+	}
+	return i, nil
+}
+
+func (m *NodeConditions) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NodeConditions) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Ready != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Ready))
+	}
+	if m.Memory != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Memory))
+	}
+	if m.Disk != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Disk))
+	}
+	if m.Pid != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Pid))
+	}
+	if m.Network != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Network))
+	}
+	if m.Pod != 0 {
+		dAtA[i] = 0x30
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Pod))
+	}
+	return i, nil
+}
+
 func (m *NodeStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1119,121 +1689,45 @@ func (m *NodeStatus) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.SystemInfo) > 0 {
+	if m.SystemInfo != nil {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(len(m.SystemInfo)))
-		i += copy(dAtA[i:], m.SystemInfo)
-	}
-	if m.Resources != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Resources.Size()))
-		n1, err := m.Resources.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n1
-	}
-	if m.Conditions != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Conditions.Size()))
-		n2, err := m.Conditions.MarshalTo(dAtA[i:])
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.SystemInfo.Size()))
+		n2, err := m.SystemInfo.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n2
 	}
-	return i, nil
-}
-
-func (m *NodeStatus_Resource) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *NodeStatus_Resource) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.Capacity) > 0 {
-		for k, _ := range m.Capacity {
-			dAtA[i] = 0xa
-			i++
-			v := m.Capacity[k]
-			byteSize := 0
-			if len(v) > 0 {
-				byteSize = 1 + len(v) + sovMsgDetail(uint64(len(v)))
-			}
-			mapSize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + byteSize
-			i = encodeVarintMsgDetail(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintMsgDetail(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			if len(v) > 0 {
-				dAtA[i] = 0x12
-				i++
-				i = encodeVarintMsgDetail(dAtA, i, uint64(len(v)))
-				i += copy(dAtA[i:], v)
-			}
+	if m.Capacity != nil {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Capacity.Size()))
+		n3, err := m.Capacity.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
+		i += n3
 	}
-	if len(m.Allocatable) > 0 {
-		for k, _ := range m.Allocatable {
-			dAtA[i] = 0x12
-			i++
-			v := m.Allocatable[k]
-			byteSize := 0
-			if len(v) > 0 {
-				byteSize = 1 + len(v) + sovMsgDetail(uint64(len(v)))
-			}
-			mapSize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + byteSize
-			i = encodeVarintMsgDetail(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintMsgDetail(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			if len(v) > 0 {
-				dAtA[i] = 0x12
-				i++
-				i = encodeVarintMsgDetail(dAtA, i, uint64(len(v)))
-				i += copy(dAtA[i:], v)
-			}
+	if m.Allocatable != nil {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Allocatable.Size()))
+		n4, err := m.Allocatable.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
+		i += n4
 	}
-	return i, nil
-}
-
-func (m *NodeStatus_Condition) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *NodeStatus_Condition) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.Conditions) > 0 {
-		for _, b := range m.Conditions {
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintMsgDetail(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
+	if m.Conditions != nil {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.Conditions.Size()))
+		n5, err := m.Conditions.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
+		i += n5
 	}
 	return i, nil
 }
@@ -1279,11 +1773,11 @@ func (m *PodStatus) MarshalTo(dAtA []byte) (int, error) {
 				dAtA[i] = 0x12
 				i++
 				i = encodeVarintMsgDetail(dAtA, i, uint64(v.Size()))
-				n3, err := v.MarshalTo(dAtA[i:])
+				n6, err := v.MarshalTo(dAtA[i:])
 				if err != nil {
 					return 0, err
 				}
-				i += n3
+				i += n6
 			}
 		}
 	}
@@ -1336,6 +1830,11 @@ func (m *PodStatus_ContainerStatus) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x38
 		i++
 		i = encodeVarintMsgDetail(dAtA, i, uint64(m.ExitCode))
+	}
+	if m.RestartCount != 0 {
+		dAtA[i] = 0x40
+		i++
+		i = encodeVarintMsgDetail(dAtA, i, uint64(m.RestartCount))
 	}
 	if len(m.Reason) > 0 {
 		dAtA[i] = 0x5a
@@ -1454,71 +1953,133 @@ func encodeVarintMsgDetail(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
+func (m *ContainerRuntimeInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.Version)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	return n
+}
+
+func (m *NodeSystemInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Os)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.OsImage)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.Arch)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.KernelVersion)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.BootId)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.MachineId)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	l = len(m.SystemUuid)
+	if l > 0 {
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	if m.RuntimeInfo != nil {
+		l = m.RuntimeInfo.Size()
+		n += 2 + l + sovMsgDetail(uint64(l))
+	}
+	return n
+}
+
+func (m *NodeResources) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.CpuCount != 0 {
+		n += 1 + sovMsgDetail(uint64(m.CpuCount))
+	}
+	if m.MemoryBytes != 0 {
+		n += 1 + sovMsgDetail(uint64(m.MemoryBytes))
+	}
+	if m.StorageBytes != 0 {
+		n += 1 + sovMsgDetail(uint64(m.StorageBytes))
+	}
+	if m.PodCount != 0 {
+		n += 1 + sovMsgDetail(uint64(m.PodCount))
+	}
+	return n
+}
+
+func (m *NodeConditions) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Ready != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Ready))
+	}
+	if m.Memory != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Memory))
+	}
+	if m.Disk != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Disk))
+	}
+	if m.Pid != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Pid))
+	}
+	if m.Network != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Network))
+	}
+	if m.Pod != 0 {
+		n += 1 + sovMsgDetail(uint64(m.Pod))
+	}
+	return n
+}
+
 func (m *NodeStatus) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.SystemInfo)
-	if l > 0 {
+	if m.SystemInfo != nil {
+		l = m.SystemInfo.Size()
 		n += 1 + l + sovMsgDetail(uint64(l))
 	}
-	if m.Resources != nil {
-		l = m.Resources.Size()
+	if m.Capacity != nil {
+		l = m.Capacity.Size()
+		n += 1 + l + sovMsgDetail(uint64(l))
+	}
+	if m.Allocatable != nil {
+		l = m.Allocatable.Size()
 		n += 1 + l + sovMsgDetail(uint64(l))
 	}
 	if m.Conditions != nil {
 		l = m.Conditions.Size()
 		n += 1 + l + sovMsgDetail(uint64(l))
-	}
-	return n
-}
-
-func (m *NodeStatus_Resource) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Capacity) > 0 {
-		for k, v := range m.Capacity {
-			_ = k
-			_ = v
-			l = 0
-			if len(v) > 0 {
-				l = 1 + len(v) + sovMsgDetail(uint64(len(v)))
-			}
-			mapEntrySize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + l
-			n += mapEntrySize + 1 + sovMsgDetail(uint64(mapEntrySize))
-		}
-	}
-	if len(m.Allocatable) > 0 {
-		for k, v := range m.Allocatable {
-			_ = k
-			_ = v
-			l = 0
-			if len(v) > 0 {
-				l = 1 + len(v) + sovMsgDetail(uint64(len(v)))
-			}
-			mapEntrySize := 1 + len(k) + sovMsgDetail(uint64(len(k))) + l
-			n += mapEntrySize + 1 + sovMsgDetail(uint64(mapEntrySize))
-		}
-	}
-	return n
-}
-
-func (m *NodeStatus_Condition) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Conditions) > 0 {
-		for _, b := range m.Conditions {
-			l = len(b)
-			n += 1 + l + sovMsgDetail(uint64(l))
-		}
 	}
 	return n
 }
@@ -1574,6 +2135,9 @@ func (m *PodStatus_ContainerStatus) Size() (n int) {
 	}
 	if m.ExitCode != 0 {
 		n += 1 + sovMsgDetail(uint64(m.ExitCode))
+	}
+	if m.RestartCount != 0 {
+		n += 1 + sovMsgDetail(uint64(m.RestartCount))
 	}
 	l = len(m.Reason)
 	if l > 0 {
@@ -1649,55 +2213,71 @@ func sovMsgDetail(x uint64) (n int) {
 func sozMsgDetail(x uint64) (n int) {
 	return sovMsgDetail(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
+func (this *ContainerRuntimeInfo) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ContainerRuntimeInfo{`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *NodeSystemInfo) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&NodeSystemInfo{`,
+		`Os:` + fmt.Sprintf("%v", this.Os) + `,`,
+		`OsImage:` + fmt.Sprintf("%v", this.OsImage) + `,`,
+		`Arch:` + fmt.Sprintf("%v", this.Arch) + `,`,
+		`KernelVersion:` + fmt.Sprintf("%v", this.KernelVersion) + `,`,
+		`BootId:` + fmt.Sprintf("%v", this.BootId) + `,`,
+		`MachineId:` + fmt.Sprintf("%v", this.MachineId) + `,`,
+		`SystemUuid:` + fmt.Sprintf("%v", this.SystemUuid) + `,`,
+		`RuntimeInfo:` + strings.Replace(fmt.Sprintf("%v", this.RuntimeInfo), "ContainerRuntimeInfo", "ContainerRuntimeInfo", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *NodeResources) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&NodeResources{`,
+		`CpuCount:` + fmt.Sprintf("%v", this.CpuCount) + `,`,
+		`MemoryBytes:` + fmt.Sprintf("%v", this.MemoryBytes) + `,`,
+		`StorageBytes:` + fmt.Sprintf("%v", this.StorageBytes) + `,`,
+		`PodCount:` + fmt.Sprintf("%v", this.PodCount) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *NodeConditions) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&NodeConditions{`,
+		`Ready:` + fmt.Sprintf("%v", this.Ready) + `,`,
+		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
+		`Disk:` + fmt.Sprintf("%v", this.Disk) + `,`,
+		`Pid:` + fmt.Sprintf("%v", this.Pid) + `,`,
+		`Network:` + fmt.Sprintf("%v", this.Network) + `,`,
+		`Pod:` + fmt.Sprintf("%v", this.Pod) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *NodeStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&NodeStatus{`,
-		`SystemInfo:` + fmt.Sprintf("%v", this.SystemInfo) + `,`,
-		`Resources:` + strings.Replace(fmt.Sprintf("%v", this.Resources), "NodeStatus_Resource", "NodeStatus_Resource", 1) + `,`,
-		`Conditions:` + strings.Replace(fmt.Sprintf("%v", this.Conditions), "NodeStatus_Condition", "NodeStatus_Condition", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *NodeStatus_Resource) String() string {
-	if this == nil {
-		return "nil"
-	}
-	keysForCapacity := make([]string, 0, len(this.Capacity))
-	for k, _ := range this.Capacity {
-		keysForCapacity = append(keysForCapacity, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForCapacity)
-	mapStringForCapacity := "map[string][]byte{"
-	for _, k := range keysForCapacity {
-		mapStringForCapacity += fmt.Sprintf("%v: %v,", k, this.Capacity[k])
-	}
-	mapStringForCapacity += "}"
-	keysForAllocatable := make([]string, 0, len(this.Allocatable))
-	for k, _ := range this.Allocatable {
-		keysForAllocatable = append(keysForAllocatable, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForAllocatable)
-	mapStringForAllocatable := "map[string][]byte{"
-	for _, k := range keysForAllocatable {
-		mapStringForAllocatable += fmt.Sprintf("%v: %v,", k, this.Allocatable[k])
-	}
-	mapStringForAllocatable += "}"
-	s := strings.Join([]string{`&NodeStatus_Resource{`,
-		`Capacity:` + mapStringForCapacity + `,`,
-		`Allocatable:` + mapStringForAllocatable + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *NodeStatus_Condition) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&NodeStatus_Condition{`,
-		`Conditions:` + fmt.Sprintf("%v", this.Conditions) + `,`,
+		`SystemInfo:` + strings.Replace(fmt.Sprintf("%v", this.SystemInfo), "NodeSystemInfo", "NodeSystemInfo", 1) + `,`,
+		`Capacity:` + strings.Replace(fmt.Sprintf("%v", this.Capacity), "NodeResources", "NodeResources", 1) + `,`,
+		`Allocatable:` + strings.Replace(fmt.Sprintf("%v", this.Allocatable), "NodeResources", "NodeResources", 1) + `,`,
+		`Conditions:` + strings.Replace(fmt.Sprintf("%v", this.Conditions), "NodeConditions", "NodeConditions", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1734,6 +2314,7 @@ func (this *PodStatus_ContainerStatus) String() string {
 		`StartedAt:` + fmt.Sprintf("%v", this.StartedAt) + `,`,
 		`FinishedAt:` + fmt.Sprintf("%v", this.FinishedAt) + `,`,
 		`ExitCode:` + fmt.Sprintf("%v", this.ExitCode) + `,`,
+		`RestartCount:` + fmt.Sprintf("%v", this.RestartCount) + `,`,
 		`Reason:` + fmt.Sprintf("%v", this.Reason) + `,`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
 		`}`,
@@ -1781,6 +2362,732 @@ func valueToStringMsgDetail(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
+func (m *ContainerRuntimeInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContainerRuntimeInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContainerRuntimeInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Version = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NodeSystemInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NodeSystemInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NodeSystemInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Os", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Os = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OsImage", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OsImage = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Arch", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Arch = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field KernelVersion", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.KernelVersion = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 11:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BootId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BootId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MachineId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.MachineId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SystemUuid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SystemUuid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RuntimeInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.RuntimeInfo == nil {
+				m.RuntimeInfo = &ContainerRuntimeInfo{}
+			}
+			if err := m.RuntimeInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NodeResources) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NodeResources: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NodeResources: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CpuCount", wireType)
+			}
+			m.CpuCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CpuCount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MemoryBytes", wireType)
+			}
+			m.MemoryBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.MemoryBytes |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StorageBytes", wireType)
+			}
+			m.StorageBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.StorageBytes |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PodCount", wireType)
+			}
+			m.PodCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PodCount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NodeConditions) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMsgDetail
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NodeConditions: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NodeConditions: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ready", wireType)
+			}
+			m.Ready = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Ready |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Memory", wireType)
+			}
+			m.Memory = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Memory |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Disk", wireType)
+			}
+			m.Disk = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Disk |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pid", wireType)
+			}
+			m.Pid = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Pid |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Network", wireType)
+			}
+			m.Network = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Network |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pod", wireType)
+			}
+			m.Pod = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Pod |= NodeConditions_Condition(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMsgDetail(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthMsgDetail
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *NodeStatus) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1814,7 +3121,7 @@ func (m *NodeStatus) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SystemInfo", wireType)
 			}
-			var byteLen int
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMsgDetail
@@ -1824,152 +3131,29 @@ func (m *NodeStatus) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.SystemInfo = append(m.SystemInfo[:0], dAtA[iNdEx:postIndex]...)
 			if m.SystemInfo == nil {
-				m.SystemInfo = []byte{}
+				m.SystemInfo = &NodeSystemInfo{}
+			}
+			if err := m.SystemInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Resources", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Resources == nil {
-				m.Resources = &NodeStatus_Resource{}
-			}
-			if err := m.Resources.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMsgDetail
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Conditions == nil {
-				m.Conditions = &NodeStatus_Condition{}
-			}
-			if err := m.Conditions.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgDetail(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *NodeStatus_Resource) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Resource: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Resource: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Capacity", wireType)
 			}
@@ -1999,105 +3183,13 @@ func (m *NodeStatus_Resource) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Capacity == nil {
-				m.Capacity = make(map[string][]byte)
+				m.Capacity = &NodeResources{}
 			}
-			var mapkey string
-			mapvalue := []byte{}
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowMsgDetail
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowMsgDetail
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var mapbyteLen uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowMsgDetail
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapbyteLen |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intMapbyteLen := int(mapbyteLen)
-					if intMapbyteLen < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					postbytesIndex := iNdEx + intMapbyteLen
-					if postbytesIndex < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if postbytesIndex > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = make([]byte, mapbyteLen)
-					copy(mapvalue, dAtA[iNdEx:postbytesIndex])
-					iNdEx = postbytesIndex
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipMsgDetail(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
+			if err := m.Capacity.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			m.Capacity[mapkey] = mapvalue
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Allocatable", wireType)
 			}
@@ -2127,162 +3219,17 @@ func (m *NodeStatus_Resource) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Allocatable == nil {
-				m.Allocatable = make(map[string][]byte)
+				m.Allocatable = &NodeResources{}
 			}
-			var mapkey string
-			mapvalue := []byte{}
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowMsgDetail
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowMsgDetail
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var mapbyteLen uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowMsgDetail
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapbyteLen |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intMapbyteLen := int(mapbyteLen)
-					if intMapbyteLen < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					postbytesIndex := iNdEx + intMapbyteLen
-					if postbytesIndex < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if postbytesIndex > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = make([]byte, mapbyteLen)
-					copy(mapvalue, dAtA[iNdEx:postbytesIndex])
-					iNdEx = postbytesIndex
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipMsgDetail(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthMsgDetail
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.Allocatable[mapkey] = mapvalue
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipMsgDetail(dAtA[iNdEx:])
-			if err != nil {
+			if err := m.Allocatable.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthMsgDetail
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *NodeStatus_Condition) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowMsgDetail
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Condition: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Condition: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
+			iNdEx = postIndex
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
 			}
-			var byteLen int
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMsgDetail
@@ -2292,23 +3239,27 @@ func (m *NodeStatus_Condition) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMsgDetail
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Conditions = append(m.Conditions, make([]byte, postIndex-iNdEx))
-			copy(m.Conditions[len(m.Conditions)-1], dAtA[iNdEx:postIndex])
+			if m.Conditions == nil {
+				m.Conditions = &NodeConditions{}
+			}
+			if err := m.Conditions.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2713,6 +3664,25 @@ func (m *PodStatus_ContainerStatus) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.ExitCode |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RestartCount", wireType)
+			}
+			m.RestartCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMsgDetail
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RestartCount |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
