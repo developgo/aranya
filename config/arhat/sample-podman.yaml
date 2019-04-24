@@ -13,7 +13,7 @@ agent:
       status_sync_interval: 60s
 
 runtime:
-  volume_data_dir: /tmp/arhat/data
+  root_dir: /tmp/arhat/data
   management_namespace: container.arhat.dev
 
   pause_image: k8s.gcr.io/pause:3.1

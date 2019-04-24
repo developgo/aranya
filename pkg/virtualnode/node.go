@@ -121,10 +121,11 @@ func (vn *VirtualNode) Start() (err error) {
 
 		// start a kubelet http server
 		go func() {
-			vn.log.Info("trying to start kubelet http server")
+			vn.log.Info("starting kubelet http server")
 			defer func() {
 				vn.log.Info("kubelet http server exited")
 
+				// once kubelet server exited, delete this virtual node
 				Delete(vn.name)
 			}()
 
@@ -135,10 +136,11 @@ func (vn *VirtualNode) Start() (err error) {
 		}()
 
 		go func() {
-			vn.log.Info("trying to start connectivity manager")
+			vn.log.Info("starting connectivity manager")
 			defer func() {
 				vn.log.Info("connectivity manager exited")
 
+				// once connectivity manager exited, delete this virtual node
 				Delete(vn.name)
 			}()
 
@@ -149,10 +151,11 @@ func (vn *VirtualNode) Start() (err error) {
 		}()
 
 		go func() {
-			vn.log.Info("trying to start pod manager")
+			vn.log.Info("starting pod manager")
 			defer func() {
 				vn.log.Info("pod manager exited")
 
+				// once connectivity manager exited, delete this virtual node
 				Delete(vn.name)
 			}()
 
@@ -168,6 +171,7 @@ func (vn *VirtualNode) Start() (err error) {
 			defer func() {
 				vn.log.Info("stopped waiting for device connect")
 
+				// once connectivity manager exited, delete this virtual node and the according node object
 				Delete(vn.name)
 
 				vn.log.Info("trying to delete node object by virtual node")
@@ -204,10 +208,18 @@ func (vn *VirtualNode) Start() (err error) {
 					}
 				}()
 
+				connectedCh := make(chan struct{})
+				go func() {
+					select {
+					case <-vn.opt.Manager.Disconnected():
+						close(connectedCh)
+					case <-vn.ctx.Done():
+						close(connectedCh)
+					}
+				}()
+
 				vn.log.Info("starting to handle node status update")
-				go wait.Until(vn.syncNodeStatus,
-					constant.DefaultNodeStatusSyncInterval,
-					vn.opt.Manager.Disconnected())
+				go wait.Until(vn.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, connectedCh)
 
 				vn.log.Info("trying to sync device info")
 				if err := vn.generateCacheForNodeInDevice(); err != nil {
@@ -221,13 +233,7 @@ func (vn *VirtualNode) Start() (err error) {
 					goto waitForDeviceDisconnect
 				}
 			waitForDeviceDisconnect:
-				select {
-				case <-vn.opt.Manager.Disconnected():
-					vn.log.Info("device disconnected, wait for next connection")
-					continue
-				case <-vn.ctx.Done():
-					return
-				}
+				<-connectedCh
 			}
 		}()
 	})

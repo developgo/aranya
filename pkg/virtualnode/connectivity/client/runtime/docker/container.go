@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -189,9 +190,10 @@ func (r *dockerRuntime) createContainer(
 			dataMap := volData.GetDataMap()
 
 			dir := r.PodVolumeDir(options.PodUid, "native", volName)
-			if plainErr = os.MkdirAll(dir, 0755); err != nil {
+			if plainErr = os.MkdirAll(dir, 0755); plainErr != nil {
 				return "", connectivity.NewCommonError(plainErr.Error())
 			}
+
 			source, plainErr = volMountSpec.Ensure(dir, dataMap)
 			if plainErr != nil {
 				return "", connectivity.NewCommonError(plainErr.Error())
@@ -199,9 +201,9 @@ func (r *dockerRuntime) createContainer(
 		}
 
 		containerMounts = append(containerMounts, dockerMount.Mount{
-			Type:     dockerMount.Type(volMountSpec.GetType()),
+			Type:     "bind",
 			Source:   source,
-			Target:   volMountSpec.MountPath,
+			Target:   filepath.Join(volMountSpec.MountPath, volMountSpec.SubPath),
 			ReadOnly: volMountSpec.ReadOnly,
 		})
 	}

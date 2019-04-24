@@ -1,29 +1,71 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sample-secret
+data:
+   testSecretData: YXJhbnlhLmFyaGF0LmRldg== # aranya.arhat.dev
+type: Opaque
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-configmap
+data:
+  default.conf: |-
+    server {
+        listen       8080;
+        server_name  localhost;
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /usr/share/nginx/html;
+        }
+    }
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: example-edge-pod
 spec:
   tolerations:
-    # set deploy to which virtual cluster (kubernetes namespace)
-    # this toleration is requeired, because it's the taint set on 
-    # every node in the virtual cluster (namespace)
-    - key: arhat.dev/namespace
-      operator: Equal
-      value: edge
+  # set which virtual cluster (kubernetes namespace) to deploy to
+  # this node taint is set by aranya by default to every node in the namespace
+  - key: arhat.dev/namespace
+    operator: Equal
+    value: edge
   nodeSelector:
-    # select specific remote node(s) with labels
-    # to ensure this pod will be scheduled to edge devices, add role label
+    # to ensure this pod will be scheduled to edge devices, add this role label
     arhat.dev/role: EdgeDevice
     # use edge device name label selector
     arhat.dev/name: example-edge-device-grpc
+  volumes:
+  - name: config
+    configMap:
+      name: nginx-config
   containers:
   - name: nginx
     imagePullPolicy: IfNotPresent
     image: nginx:stable-alpine
-  - name: sleep
-    imagePullPolicy: IfNotPresent
-    image: alpine:3.9
-    command:
-    - /bin/sleep
-    - "3600"
+    env:
+    - name: SAMPLE_PLAIN_TEXT
+      value: plain.text
+    - name: ARANYA_URL
+      valueFrom:
+        secretKeyRef:
+          name: sample-secret
+          key: testSecretData
+    ports:
+    - name: http
+      containerPort: 8080
+      # only host port will be exposed
+      hostPort: 8090
+    volumeMounts:
+    - name: config
+      mountPath: /etc/nginx/conf.d
+      subPath: default.conf
   restartPolicy: Never

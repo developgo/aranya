@@ -110,31 +110,6 @@ func translatePodCreateOptions(
 		hostPaths  = make(map[string]string)
 	)
 
-	translateImagePullPolicy := func(policy corev1.PullPolicy) connectivity.ImagePullPolicy {
-		switch policy {
-		case corev1.PullNever:
-			return connectivity.ImagePullNever
-		case corev1.PullIfNotPresent:
-			return connectivity.ImagePullIfNotPresent
-		case corev1.PullAlways:
-			return connectivity.ImagePullAlways
-		default:
-			return connectivity.ImagePullNever
-		}
-	}
-
-	translateRestartPolicy := func(policy corev1.RestartPolicy) connectivity.RestartPolicy {
-		switch policy {
-		case corev1.RestartPolicyAlways:
-			return connectivity.RestartAlways
-		case corev1.RestartPolicyNever:
-			return connectivity.RestartNever
-		case corev1.RestartPolicyOnFailure:
-			return connectivity.RestartOnFailure
-		}
-		return connectivity.RestartAlways
-	}
-
 	for _, vol := range pod.Spec.Volumes {
 		if vol.HostPath != nil {
 			hostPaths[vol.Name] = vol.HostPath.Path
@@ -158,11 +133,11 @@ func translatePodCreateOptions(
 		mounts := make(map[string]*connectivity.MountOptions)
 		for _, volMount := range ctr.VolumeMounts {
 			mounts[volMount.Name] = &connectivity.MountOptions{
-				MountPath:     volMount.MountPath,
-				VolumeSubPath: volMount.SubPath,
-				ReadOnly:      volMount.ReadOnly,
-				Type:          "",
-				Options:       nil,
+				MountPath: volMount.MountPath,
+				SubPath:   volMount.SubPath,
+				ReadOnly:  volMount.ReadOnly,
+				Type:      "",
+				Options:   nil,
 			}
 		}
 
@@ -298,4 +273,29 @@ func resolveCommonSecOpts(podSecOpts *corev1.PodSecurityContext, ctrSecOpts *cor
 			return nil
 		}(),
 	}
+}
+
+func translateImagePullPolicy(policy corev1.PullPolicy) connectivity.ImagePullPolicy {
+	switch policy {
+	case corev1.PullNever:
+		return connectivity.ImagePullNever
+	case corev1.PullIfNotPresent:
+		return connectivity.ImagePullIfNotPresent
+	case corev1.PullAlways:
+		return connectivity.ImagePullAlways
+	default:
+		return connectivity.ImagePullNever
+	}
+}
+
+func translateRestartPolicy(policy corev1.RestartPolicy) connectivity.RestartPolicy {
+	switch policy {
+	case corev1.RestartPolicyAlways:
+		return connectivity.RestartAlways
+	case corev1.RestartPolicyNever:
+		return connectivity.RestartNever
+	case corev1.RestartPolicyOnFailure:
+		return connectivity.RestartOnFailure
+	}
+	return connectivity.RestartAlways
 }
