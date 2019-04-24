@@ -2,8 +2,6 @@ package constant
 
 import (
 	"os"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -18,7 +16,8 @@ func CurrentPodName() string {
 func CurrentNamespace() string {
 	ns := os.Getenv(EnvKeyWatchNamespace)
 	if ns == "" {
-		return corev1.NamespaceDefault
+		return "default"
 	}
+
 	return ns
 }

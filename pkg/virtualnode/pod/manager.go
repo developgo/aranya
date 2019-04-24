@@ -357,30 +357,21 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 		containerEnvs[ctr.Name] = envs
 	}
 
-	secrets := make([]corev1.Secret, len(pod.Spec.ImagePullSecrets))
-	for i, secretRef := range pod.Spec.ImagePullSecrets {
-		s, err := m.kubeClient.CoreV1().Secrets(pod.Namespace).Get(secretRef.Name, metav1.GetOptions{})
-		if err != nil {
-			log.Error(err, "failed to get image pull secret", "secret", secretRef.Name)
-			return err
-		}
-		secrets[i] = *s
-	}
-
-	imagePullSecrets, err := resolver.ResolveImagePullSecret(pod, secrets)
+	imagePullAuthConfig, err := resolver.ResolveImagePullAuthConfig(m.kubeClient, pod)
 	if err != nil {
 		log.Error(err, "failed to resolve image pull secret")
 		return err
 	}
 
-	volumeData, hostVolume, err := resolver.ResolveVolume(m.kubeClient, pod)
+	volumeData, err := resolver.ResolveVolumeData(m.kubeClient, pod)
 	if err != nil {
 		log.Error(err, "failed to resolve container volumes")
 		return err
 	}
 
 	log.Info("trying to post pod create cmd to edge device")
-	podCreateCmd := connectivity.NewPodCreateCmd(pod, imagePullSecrets, containerEnvs, volumeData, hostVolume)
+	podCreateOptions := translatePodCreateOptions(pod.DeepCopy(), containerEnvs, imagePullAuthConfig, volumeData)
+	podCreateCmd := connectivity.NewPodCreateCmd(podCreateOptions)
 	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod create command")
@@ -446,6 +437,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 			if err.Kind == connectivity.ErrNotFound {
 				log.Info("device pod already deleted")
 			} else {
+				// TODO: should we offer another pod delete work?
 				log.Error(err, "failed to delete pod in device")
 				continue
 			}

@@ -2,8 +2,6 @@ package connectivity
 
 import (
 	"time"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
 func NewNodeCmd(action NodeCmd_Action) *Cmd {
@@ -28,66 +26,9 @@ func newPodCmd(sid uint64, action PodCmd_Action, options isPodCmd_Options) *Cmd 
 	}
 }
 
-func NewPodCreateCmd(
-	pod *corev1.Pod,
-	imagePullSecrets map[string]*AuthConfig,
-	containerEnvs map[string]map[string]string,
-	volumeData map[string]*NamedData,
-	hostVolume map[string]string,
-) *Cmd {
-	containers := make(map[string]*ContainerSpec)
-	for _, ctr := range pod.Spec.Containers {
-		containers[ctr.Name] = &ContainerSpec{
-			Image: ctr.Image,
-			ImagePullPolicy: func() ImagePullPolicy {
-				switch ctr.ImagePullPolicy {
-				case corev1.PullNever:
-					return ImagePullNever
-				case corev1.PullIfNotPresent:
-					return ImagePullIfNotPresent
-				case corev1.PullAlways:
-					return ImagePullAlways
-				default:
-					return ImagePullNever
-				}
-			}(),
-			Command:    ctr.Command,
-			Args:       ctr.Args,
-			WorkingDir: ctr.WorkingDir,
-			Stdin:      ctr.Stdin,
-			Tty:        ctr.TTY,
-
-			Ports: func() map[string]*ContainerPort {
-				m := make(map[string]*ContainerPort)
-				for _, p := range ctr.Ports {
-					m[p.Name] = &ContainerPort{
-						Protocol:      string(p.Protocol),
-						HostPort:      p.HostPort,
-						ContainerPort: p.ContainerPort,
-						HostIp:        p.HostIP,
-					}
-				}
-				return m
-			}(),
-			Envs: containerEnvs[ctr.Name],
-		}
-	}
-
+func NewPodCreateCmd(options *CreateOptions) *Cmd {
 	return newPodCmd(0, CreatePod, &PodCmd_CreateOptions{
-		CreateOptions: &CreateOptions{
-			PodUid:              string(pod.UID),
-			Namespace:           pod.Namespace,
-			Name:                pod.Name,
-			Containers:          containers,
-			ImagePullAuthConfig: imagePullSecrets,
-			VolumeData:          volumeData,
-			HostVolumes:         hostVolume,
-
-			HostNetwork: pod.Spec.HostNetwork,
-			HostIpc:     pod.Spec.HostIPC,
-			HostPid:     pod.Spec.HostPID,
-			Hostname:    pod.Spec.Hostname,
-		},
+		CreateOptions: options,
 	})
 }
 

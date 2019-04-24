@@ -117,9 +117,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	createCtx, cancelCreate := r.RuntimeActionContext()
 	defer cancelCreate()
 
-	pauseContainerInfo, ns, networkSettings, err := r.createPauseContainer(
-		createCtx, options.GetNamespace(), options.GetName(), options.GetPodUid(),
-		options.GetHostNetwork(), options.GetHostPid(), options.GetHostIpc(), options.GetHostname())
+	pauseContainerInfo, ns, networkSettings, err := r.createPauseContainer(createCtx, options)
 	if err != nil {
 		createLog.Error(err, "failed to create pause container")
 		return nil, err
@@ -137,10 +135,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 
 	var containersCreated []string
 	for containerName, containerSpec := range options.GetContainers() {
-		ctrID, err := r.createContainer(
-			createCtx, options.GetNamespace(), options.GetName(), options.GetPodUid(),
-			containerName, options.GetHostname(), ns, containerSpec, options.GetVolumeData(),
-			options.GetHostVolumes(), networkSettings)
+		ctrID, err := r.createContainer(createCtx, options, containerName, ns, containerSpec, networkSettings)
 		if err != nil {
 			createLog.Error(err, "failed to create container", "container", containerName)
 			return nil, err
@@ -560,6 +555,7 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		return connectivity.NewCommonError("bridge ip address not found")
 	}
 
+	// TODO: evaluate more efficient way to get traffic redirected
 	var plainErr error
 	conn, plainErr := net.Dial(protocol, fmt.Sprintf("%s:%s", address, strconv.FormatInt(int64(port), 10)))
 	if plainErr != nil {

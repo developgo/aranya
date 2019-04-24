@@ -20,6 +20,19 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity/client/runtimeutil"
 )
 
+func translateRestartPolicy(policy connectivity.RestartPolicy) dockerContainer.RestartPolicy {
+	switch policy {
+	case connectivity.RestartAlways:
+		return dockerContainer.RestartPolicy{Name: "always"}
+	case connectivity.RestartOnFailure:
+		return dockerContainer.RestartPolicy{Name: "on-failure"}
+	case connectivity.RestartNever:
+		return dockerContainer.RestartPolicy{Name: "no"}
+	}
+
+	return dockerContainer.RestartPolicy{Name: "always"}
+}
+
 func (r *dockerRuntime) findContainer(podUID, container string) (*dockerType.Container, *connectivity.Error) {
 	findCtx, cancelFind := r.RuntimeActionContext()
 	defer cancelFind()
@@ -42,48 +55,62 @@ func (r *dockerRuntime) findContainer(podUID, container string) (*dockerType.Con
 	return &containers[0], nil
 }
 
-func (r *dockerRuntime) createPauseContainer(
-	ctx context.Context,
-	podNamespace, podName, podUID string,
-	hostNetwork, hostPID, hostIPC bool, hostname string,
-) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, netSettings map[string]*dockerNetwork.EndpointSettings, err *connectivity.Error) {
-	if _, err = r.findContainer(podUID, constant.ContainerNamePause); err != runtimeutil.ErrNotFound {
+func (r *dockerRuntime) createPauseContainer(ctx context.Context, options *connectivity.CreateOptions) (ctrInfo *dockerType.ContainerJSON, ns map[string]string, netSettings map[string]*dockerNetwork.EndpointSettings, err *connectivity.Error) {
+	if _, err = r.findContainer(options.PodUid, constant.ContainerNamePause); err != runtimeutil.ErrNotFound {
 		return nil, nil, nil, runtimeutil.ErrAlreadyExists
 	}
 
-	var plainErr error
-	pauseContainerName := runtimeutil.GetContainerName(podNamespace, podName, constant.ContainerNamePause)
+	var (
+		exposedPorts = make(dockerNat.PortSet)
+		portBindings = make(dockerNat.PortMap)
+		plainErr     error
+	)
+
+	for _, port := range options.Ports {
+		ctrPort, plainErr := dockerNat.NewPort(port.Protocol, strconv.FormatInt(int64(port.ContainerPort), 10))
+		if plainErr != nil {
+			return nil, nil, nil, connectivity.NewCommonError(plainErr.Error())
+		}
+
+		exposedPorts[ctrPort] = struct{}{}
+		portBindings[ctrPort] = []dockerNat.PortBinding{{
+			HostPort: strconv.FormatInt(int64(port.GetHostPort()), 10),
+		}}
+	}
+
+	pauseContainerName := runtimeutil.GetContainerName(options.Namespace, options.Name, constant.ContainerNamePause)
 	pauseContainer, plainErr := r.runtimeClient.ContainerCreate(ctx,
 		&dockerContainer.Config{
-			Hostname: hostname,
-			Image:    r.PauseImage,
-			Labels:   runtimeutil.ContainerLabels(podNamespace, podName, podUID, constant.ContainerNamePause),
+			ExposedPorts: exposedPorts,
+			Hostname:     options.Hostname,
+			Image:        r.PauseImage,
+			Labels:       runtimeutil.ContainerLabels(options.Namespace, options.Name, options.PodUid, constant.ContainerNamePause),
 		},
 		&dockerContainer.HostConfig{
 			Resources: dockerContainer.Resources{
 				MemorySwap: 0,
 				CPUShares:  2,
 			},
+			PortBindings:  portBindings,
+			RestartPolicy: translateRestartPolicy(options.GetRestartPolicy()),
 			NetworkMode: func() dockerContainer.NetworkMode {
-				if hostNetwork {
+				if options.HostNetwork {
 					return "host"
 				}
 				return "default"
 			}(),
 			IpcMode: func() dockerContainer.IpcMode {
-				if hostIPC {
+				if options.HostIpc {
 					return "host"
 				}
 				return "shareable"
 			}(),
 			PidMode: func() dockerContainer.PidMode {
-				if hostPID {
+				if options.HostPid {
 					return "host"
 				}
 				return "container"
 			}(),
-			// UsernsMode: "host",
-			// UTSMode:    "host",
 		},
 		&dockerNetwork.NetworkingConfig{
 			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{},
@@ -115,49 +142,45 @@ func (r *dockerRuntime) createPauseContainer(
 
 func (r *dockerRuntime) createContainer(
 	ctx context.Context,
-	podNamespace, podName, podUID, container, hostname string,
+	options *connectivity.CreateOptions,
+	container string,
 	namespaces map[string]string,
 	spec *connectivity.ContainerSpec,
-	volumeData map[string]*connectivity.NamedData,
-	hostVolumes map[string]string,
 	endpointSettings map[string]*dockerNetwork.EndpointSettings,
 ) (ctrID string, err *connectivity.Error) {
-	if _, err = r.findContainer(podUID, container); err != runtimeutil.ErrNotFound {
+	if _, err = r.findContainer(options.PodUid, container); err != runtimeutil.ErrNotFound {
 		return "", runtimeutil.ErrAlreadyExists
 	}
 
 	var (
-		exposedPorts     = make(dockerNat.PortSet)
-		portBindings     = make(dockerNat.PortMap)
+		plainErr         error
 		containerVolumes = make(map[string]struct{})
 		containerBinds   []string
 		containerMounts  []dockerMount.Mount
 		envs             []string
-		containerName    = runtimeutil.GetContainerName(podNamespace, podName, container)
-		plainErr         error
+		hostPaths        = options.HostPaths
+		volumeData       = options.VolumeData
+		containerName    = runtimeutil.GetContainerName(options.Namespace, options.Name, container)
 	)
 
-	for _, port := range spec.GetPorts() {
-		ctrPort, err := dockerNat.NewPort(port.GetProtocol(), strconv.FormatInt(int64(port.GetContainerPort()), 10))
-		if err != nil {
-			return "", nil
-		}
-		exposedPorts[ctrPort] = struct{}{}
-		portBindings[ctrPort] = []dockerNat.PortBinding{{
-			HostIP:   port.GetHostIp(),
-			HostPort: strconv.FormatInt(int64(port.GetHostPort()), 10),
-		}}
+	// generalize to avoid panic
+	if hostPaths == nil {
+		hostPaths = make(map[string]string)
 	}
 
-	for k, v := range spec.GetEnvs() {
+	if volumeData == nil {
+		volumeData = make(map[string]*connectivity.NamedData)
+	}
+
+	for k, v := range spec.Envs {
 		envs = append(envs, k+"="+v)
 	}
 
-	for volName, volMountSpec := range spec.GetVolumeMounts() {
-		containerVolumes[volMountSpec.GetMountPath()] = struct{}{}
+	for volName, volMountSpec := range spec.Mounts {
+		containerVolumes[volMountSpec.MountPath] = struct{}{}
 
 		source := ""
-		hostPath, isHostVol := hostVolumes[volName]
+		hostPath, isHostVol := hostPaths[volName]
 		if isHostVol {
 			source = hostPath
 		}
@@ -165,7 +188,7 @@ func (r *dockerRuntime) createContainer(
 		if volData, isVolData := volumeData[volName]; isVolData && volData.GetDataMap() != nil {
 			dataMap := volData.GetDataMap()
 
-			dir := r.PodVolumeDir(podUID, "native", volName)
+			dir := r.PodVolumeDir(options.PodUid, "native", volName)
 			if plainErr = os.MkdirAll(dir, 0755); err != nil {
 				return "", connectivity.NewCommonError(plainErr.Error())
 			}
@@ -178,39 +201,47 @@ func (r *dockerRuntime) createContainer(
 		containerMounts = append(containerMounts, dockerMount.Mount{
 			Type:     dockerMount.Type(volMountSpec.GetType()),
 			Source:   source,
-			Target:   volMountSpec.GetMountPath(),
-			ReadOnly: volMountSpec.GetReadOnly(),
+			Target:   volMountSpec.MountPath,
+			ReadOnly: volMountSpec.ReadOnly,
 		})
 	}
+
 	containerConfig := &dockerContainer.Config{
-		Hostname:     hostname,
-		ExposedPorts: exposedPorts,
-		Labels:       runtimeutil.ContainerLabels(podNamespace, podName, podUID, container),
-		Image:        spec.GetImage(),
-		Env:          envs,
-		Tty:          spec.GetTty(),
-		OpenStdin:    spec.GetStdin(),
-		Volumes:      containerVolumes,
-		StopSignal:   "SIGTERM",
-		Entrypoint:   spec.GetCommand(),
-		Cmd:          spec.GetArgs(),
-		WorkingDir:   spec.GetWorkingDir(),
+		Hostname:   options.Hostname,
+		Labels:     runtimeutil.ContainerLabels(options.Namespace, options.Name, options.PodUid, container),
+		Image:      spec.Image,
+		Env:        envs,
+		Tty:        spec.Tty,
+		OpenStdin:  spec.Stdin,
+		StdinOnce:  spec.StdinOnce,
+		Volumes:    containerVolumes,
+		StopSignal: "SIGTERM",
+		Entrypoint: spec.Command,
+		Cmd:        spec.Args,
+		WorkingDir: spec.WorkingDir,
 	}
+
 	hostConfig := &dockerContainer.HostConfig{
-		Binds:        containerBinds,
-		Privileged:   spec.GetPrivileged(),
-		PortBindings: portBindings,
-		Mounts:       containerMounts,
-		Resources: dockerContainer.Resources{
-			MemorySwap: 0,
-			CPUShares:  2,
-		},
+		Resources: dockerContainer.Resources{MemorySwap: 0, CPUShares: 2},
+
+		Binds:  containerBinds,
+		Mounts: containerMounts,
+
+		RestartPolicy: translateRestartPolicy(options.RestartPolicy),
+
+		// share namespaces
 		NetworkMode: dockerContainer.NetworkMode(namespaces["net"]),
 		IpcMode:     dockerContainer.IpcMode(namespaces["ipc"]),
 		UTSMode:     dockerContainer.UTSMode(namespaces["uts"]),
 		UsernsMode:  dockerContainer.UsernsMode(namespaces["user"]),
-		// shared only when it's host
+		// shared only when it's host (do not add `pid` ns to `namespaces`)
 		PidMode: dockerContainer.PidMode(namespaces["pid"]),
+
+		// security options
+		Privileged:     spec.Security.GetPrivileged(),
+		CapAdd:         spec.Security.GetCapsAdd(),
+		CapDrop:        spec.Security.GetCapsDrop(),
+		ReadonlyRootfs: spec.Security.GetReadOnlyRootfs(),
 	}
 	networkingConfig := &dockerNetwork.NetworkingConfig{
 		EndpointsConfig: endpointSettings,

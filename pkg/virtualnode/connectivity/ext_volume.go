@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func (v *VolumeMount) Ensure(dir string, dataMap map[string][]byte) (mountPath string, err error) {
+func (v *MountOptions) Ensure(dir string, dataMap map[string][]byte) (mountPath string, err error) {
 	if v.GetVolumeSubPath() != "" {
 		data, ok := dataMap[v.GetVolumeSubPath()]
 		if !ok {

@@ -82,15 +82,44 @@ message NamedData {
 
 message ContainerPort {
     string protocol = 1;
-    int32 host_port = 2;
-    int32 container_port = 3;
-    string host_ip = 4;
+    int32 container_port = 2;
+    int32 host_port = 3;
 }
 
-message VolumeMount {
+message SELinuxOptions {
+    string type = 1;
+    string level = 2;
+    string role = 3;
+    string user = 4;
+}
+
+message SecurityOptions {
+    enum ProcMountKind {
+        ProcMountDefault = 0;
+        ProcMountUnmasked = 1;
+    }
+
+    bool privileged = 1;
+    bool allow_new_privileges = 2;
+    bool non_root = 3;
+    bool read_only_rootfs = 4;
+
+    int64 user = 5;
+    int64 group = 6;
+
+    repeated string caps_add = 7;
+    repeated string caps_drop = 8;
+
+    ProcMountKind proc_mount_kind = 9;
+
+    SELinuxOptions selinux_options = 10;
+}
+
+message MountOptions {
     string mount_path = 1;
     string volume_sub_path = 2;
     bool read_only = 3;
+    // device type
     string type = 4;
     repeated string options = 5;
 }
@@ -113,29 +142,32 @@ message ContainerSpec {
 
     string working_dir = 5;
     bool stdin = 6;
-    bool tty = 7;
+    bool stdin_once = 7;
+    bool tty = 8;
 
-    // key: port name
-    // value: port map and spec
-    map<string, ContainerPort> ports = 11;
+    // Contaienr environment variables
+    //
     // key: env key
     // value: env value
-    map<string, string> envs = 12;
-    // key: volume name
-    // value: volume mount spec
-    map<string, VolumeMount> volume_mounts = 13;
+    map<string, string> envs = 11;
+
+    // Container voulme or device mounts
+    //
+    // key: volume or device name
+    // value: mount options
+    map<string, MountOptions> mounts = 12;
 
     //
-    // security opts
+    // resolved security opts in pod
     //
-    bool privileged = 21;
-    bool allow_new_privileges = 22;
+    SecurityOptions security = 21;
 }
 
-// A cri/runtime/v1alpah2/.AuthConfig replacement
+// replacement for cri/runtime/v1alpah2/.AuthConfig
 message AuthConfig {
     string username = 1;
-	string password = 2;
+    string password = 2;
+
 	string auth = 3;
 	string server_address = 4;
 	// IdentityToken is used to authenticate the user and get
@@ -145,11 +177,27 @@ message AuthConfig {
 	string registry_token = 6;
 }
 
+enum RestartPolicy {
+    RestartAlways = 0;
+    RestartOnFailure = 1;
+    RestartNever = 2;
+}
+
 message CreateOptions {
-    // kubernetes pod uid
+    // kubernetes metadata
     string pod_uid = 1;
     string namespace = 2;
     string name = 3;
+    
+    RestartPolicy restart_policy = 4;
+
+    //
+    // Relationships to host environment
+    //
+    bool host_ipc = 5;
+    bool host_network = 6;
+    bool host_pid = 7;
+    string hostname = 8;
 
     // key: container name in the pod
     // value: container creation spec
@@ -160,23 +208,31 @@ message CreateOptions {
     // used to pull private images
     map<string, AuthConfig> image_pull_auth_config = 12;
 
+    // Container ports is processed when creating the pause container
     //
-    // Volumes
+    // key: port name
+    //          the port name is in the format of `{container}/{port_name}`
+    //          if the port name is missing in the corev1.Container, 
+    //          it's index number in the will be used as port_name
+    // value: port map and spec
+    //          currently only ports with `host_port` specified will be exposed
+    map<string, ContainerPort> ports = 13;
+
+    //
+    // Volumes and devices (in early days, they are the same)
     //
 
-    // key: volume name
+    // Volumes and devices' host path
+    //
+    // key: volume or device name
     // value: host path
-    map<string, string> host_volumes = 21;
+    map<string, string> host_paths = 21;
+
+    // Data to populate files in container
+    //
     // key: volume name
     // value: data from {ConfigMap, Secret}
-    // used to populate file(s) in container(s)
     map<string, NamedData> volume_data = 22;
-
-    // other options
-    bool host_ipc = 31;
-    bool host_network = 32;
-    bool host_pid = 33;
-    string hostname = 34;
 }
 
 message DeleteOptions {

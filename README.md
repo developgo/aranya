@@ -18,12 +18,12 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Prerequisites
 
-- `Kubernetes` Cluster with RBAC enabled
-  - Minimum requirements: 1 master with 1 node
+- `Kubernetes` cluster with `RBAC` enabled
+  - Minimum cluster requirements: 1 master with 1 node
 
 ## Features
 
-- Pod management in edge device (without cluster Network, see [roadmap #Networking](./ROADMAP.md#Networking))
+- Pod modeled container management in edge device
   - Support `Pod` creation with `Env`, `Volume`
     - Sources: plain text, `Secret`, `ConfigMap`
 - Remote management with `kubectl`
@@ -32,11 +32,15 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
     - `arhat` treats commands with prefix `#` as host command, useful for remote device management
       - e.g. `kubectl exec -it example-pod \#bash` will get you into a host `bash`
   - `attach`
-  - `portforward`
+  - `port-forward`
+
+## Restrictions
+
+- `Kubernetes` cluster network not working, see [Roadmap #Networking](./ROADMAP.md#Networking)
 
 ## Deployment Workflow
 
-1. Deploy `aranya` to your `Kubernetes` cluster with following commands
+1. Deploy `aranya` to your `Kubernetes` cluster for test with following commands (see [docs/Deployment.md](./docs/Deployment.md) for more deployment tips)
 
    ```bash
    # set the namespace for edge devices, aranya will be deployed to this namespace
@@ -62,13 +66,13 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
    ```
 
 2. Create `EdgeDevice` resource objects for each one of your edge devices (see [sample-edge-devices.yaml](./cicd/k8s/sample/sample-edge-devices.yaml) for example)
-   1. `aranya` will create a node object according to the edge device name in your `Kubernetes` cluster
-   2. You need to setup check the connectivity between `aranya` and your edge devices, depending on the connectivity method set in the spec (`spec.connectivity.method`):
+   1. `aranya` will create a node object with the same name for every `EdgeDevice` in your cluster
+   2. Configure the connectivity between `aranya` and your edge devices, depending on the connectivity method set in the spec (`spec.connectivity.method`):
       - `grpc`
         - A gRPC server will be created and served by `aranya` according to the `spec.connectivity.grpcConfig`, `aranya` also maintains an according service object for that server.
         - If you want to access the newly created gRPC service for your edge device outside the cluster, you need to setup `Kubernetes Ingress` using applications like [`ingress-nginx`](https://github.com/kubernetes/ingress-nginx), [`traefik`](https://github.com/containous/traefik) etc. at first. Then you need to create an `Ingress` object (see [sample-ingress-traefik.yaml](./cicd/k8s/sample/sample-ingress-traefik.yaml) for example) for the gRPC service.
         - Configure your edge device's `arhat` to connect the gRPC server accoding to your `Ingress`'s host
-      - `mqtt` (WIP)
+      - `mqtt` (WIP, see [Roadmap #Connectivity](./ROADMAP.md#Connectivity))
         - `aranya` will try to talk to your mqtt broker accoding to the `spec.connectivity.mqttConfig`.
         - You need to configure your edge device's `arhat` to talk to the same mqtt broker or one broker in the same mqtt broker cluster depending on your own usecase, the config option `messageNamespace` must match to get `arhat` able to communicate with `aranya`.
    3. Deploy `arhat` with configuration to your edge devices, start and wait to get connected to `aranya`
@@ -89,7 +93,7 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Performance
 
-Every `EdgeDevice` object needs to setup a `kubelet` server to serve for `kubectl` commands such as `logs`, `exec`, `attach` and `port-forward`, we need to request node certificate for `EdgeDevice`'s virtual node in any `RBAC` enabled cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my homelab](https://github.com/jeffreystoke/homelab) after all the required node certificates has been provisioned.
+Every `EdgeDevice` object needs to setup a `kubelet` server to serve for `kubectl` commands to execute into certain pods, thus we need to provision node certificates for each one of `EdgeDevice`s' virtual node in cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my homelab](https://github.com/jeffreystoke/homelab) after all the required node certificates has been provisioned.
 
 - Test Workload
   - 1000 EdgeDevice using `gRPC` (generated with `./scripts/gen-deploy-script.sh 1000`)
@@ -132,5 +136,11 @@ This project was inspired by [`virtual-kubelet`](https://github.com/virtual-kube
 
 ## Authors
 
-- [Jeffrey Stoke](https://github.com/jeffreystoke) (project owner)
+- [Jeffrey Stoke](https://github.com/jeffreystoke)
   - I'm seeking for career opportunities (associate to junior level) in Deutschland
+
+## License
+
+```text
+
+```

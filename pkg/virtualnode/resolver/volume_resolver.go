@@ -9,17 +9,14 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode/connectivity"
 )
 
-func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData map[string]*connectivity.NamedData, hostVolume map[string]string, err error) {
+func ResolveVolumeData(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData map[string]*connectivity.NamedData, err error) {
 	volumeData = make(map[string]*connectivity.NamedData)
-	hostVolume = make(map[string]string)
 
 	configMapClient := kubeClient.CoreV1().ConfigMaps(pod.Namespace)
 	secretClient := kubeClient.CoreV1().Secrets(pod.Namespace)
 
 	for _, vol := range pod.Spec.Volumes {
 		switch {
-		case vol.HostPath != nil:
-			hostVolume[vol.Name] = vol.HostPath.Path
 		case vol.ConfigMap != nil:
 			optional := vol.ConfigMap.Optional != nil && *vol.ConfigMap.Optional
 
@@ -28,7 +25,7 @@ func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData
 				if errors.IsNotFound(err) && optional {
 					continue
 				}
-				return nil, nil, err
+				return nil, err
 			}
 
 			namedData := &connectivity.NamedData{DataMap: make(map[string][]byte)}
@@ -50,7 +47,7 @@ func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData
 				if errors.IsNotFound(err) && optional {
 					continue
 				}
-				return nil, nil, err
+				return nil, err
 			}
 
 			namedData := &connectivity.NamedData{DataMap: make(map[string][]byte)}
@@ -65,5 +62,6 @@ func ResolveVolume(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData
 			volumeData[vol.Name] = namedData
 		}
 	}
-	return
+
+	return volumeData, nil
 }
