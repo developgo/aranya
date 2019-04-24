@@ -123,7 +123,19 @@ func translateDeviceCondition(cond *connectivity.NodeConditions) []corev1.NodeCo
 	}
 
 	result := []corev1.NodeCondition{
-		{Type: corev1.NodeReady, Status: translate(cond.GetReady())},
+		{
+			Type: corev1.NodeReady,
+			Status: func() corev1.ConditionStatus {
+				switch cond.GetReady() {
+				case connectivity.Healthy:
+					return corev1.ConditionTrue
+				case connectivity.Unhealthy:
+					return corev1.ConditionFalse
+				default:
+					return corev1.ConditionUnknown
+				}
+			}(),
+		},
 		{Type: corev1.NodeOutOfDisk, Status: translate(cond.GetPod())},
 		{Type: corev1.NodeMemoryPressure, Status: translate(cond.GetMemory())},
 		{Type: corev1.NodeDiskPressure, Status: translate(cond.GetDisk())},
