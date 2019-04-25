@@ -61,8 +61,8 @@ make arhat-docker-grpc
 make build-image-arhat-docker-grpc
 # to run arhat in container
 # $ docker run -d \
-#       -v /var/run/docker.sock:/var/run/docker.sock:ro
-#       -v /etc/arhat/config.yaml:$(pwd)/config/arhat/sample-docker.yaml:ro
+#       -v /var/run/docker.sock:/var/run/docker.sock:ro \
+#       -v /etc/arhat/config.yaml:$(pwd)/config/arhat/sample-docker.yaml:ro \
 #       arhatdev/arhat-docker-grpc:latest /app -c /etc/arhat/config.yaml
 ```
 
