@@ -442,12 +442,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	log := m.log.WithValues("type", "device", "action", "delete")
 
-	pod, ok := m.podCache.GetByID(podUID)
-	if !ok {
-		log.Info("device pod already deleted, no action")
-		return nil
-	}
-
+	// post cmd anyway, check pod cache when processing message
 	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Second)
 	msgCh, err := m.connectivityManager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
@@ -464,6 +459,12 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 				log.Error(err, "failed to delete pod in device")
 				continue
 			}
+		}
+
+		pod, ok := m.podCache.GetByID(podUID)
+		if !ok {
+			log.Info("device pod already deleted")
+			continue
 		}
 
 		log.Info("trying to delete pod object immediately")
