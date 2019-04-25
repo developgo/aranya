@@ -26,7 +26,7 @@ import (
 
 type NodeServiceConfig struct {
 	Timers struct {
-		StatusSyncInterval time.Duration
+		StatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
 	} `json:"timers" yaml:"timers"`
 }
 

@@ -22,7 +22,7 @@ import (
 
 type Config struct {
 	Timers struct {
-		ReSyncInterval time.Duration
+		ReSyncInterval time.Duration `json:"resync_interval" yaml:"resync_interval"`
 	} `json:"timers" yaml:"timers"`
 }
 

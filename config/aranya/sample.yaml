@@ -29,7 +29,7 @@ virtualnode:
     timers:
       # close stream when no traffic has been sent/recv for
       # (kubelet default is 4h)
-      idle_timeout: 4h
+      idle_timeout: 30m
       # cancel stream creation after
       # (kubelet default is 30s)
       creation_timeout: 30s
