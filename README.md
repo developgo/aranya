@@ -140,6 +140,8 @@ see [ROADMAP.md](./ROADMAP.md)
 
 ## Thanks to
 
+- [`Kubernetes`](https://github.com/kubernetes/kubernetes)
+  - Really eased my life with my homelab.
 - [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)
   - This project was inspired by its idea, which introduced an cloud agent to run containers in network edge.
 - `Buddhism`

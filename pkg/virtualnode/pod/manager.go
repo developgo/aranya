@@ -262,15 +262,8 @@ func (m *Manager) Start() (err error) {
 							goto handleError
 						}
 					case queue.ActionDelete:
-						workLog.Info("working on updating the pod in device")
-						pod, found := m.podCache.GetByID(podWork.UID)
-						if !found {
-							workLog.Info("pod cache not found")
-							continue
-						}
-
-						workLog.Info("trying to delete pod in device")
-						err = m.DeleteDevicePod(pod.UID)
+						workLog.Info("working on deleting the pod in device")
+						err = m.DeleteDevicePod(podWork.UID)
 						if err != nil {
 							workLog.Error(err, "failed to delete pod in device for update")
 							goto handleError
