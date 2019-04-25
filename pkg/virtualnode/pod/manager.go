@@ -1,3 +1,19 @@
+/*
+Copyright 2019 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pod
 
 import (
@@ -100,7 +116,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 			mgr.podCache.Update(newPod)
 
 			// pod need to be updated on device only when its spec has been changed
-			// TODO: evaluate more delicate check
+			// TODO: evaluate more delicate check since most part of the pod spec cannot be updated
 			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
 				log.V(10).Info("pod spec not updated, skip")
 				return
@@ -150,6 +166,7 @@ type Manager struct {
 
 func (m *Manager) Start() (err error) {
 	err = fmt.Errorf("manager started once, do not start again")
+
 	m.once.Do(func() {
 		// start informer routine
 		go m.podInformerFactory.Start(m.ctx.Done())
@@ -347,14 +364,14 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	log := m.log.WithValues("type", "device", "action", "create")
 
 	log.Info("trying to resolve containers dependencies")
-	containerEnvs := make(map[string]map[string]string)
+	envs := make(map[string]map[string]string)
 	for _, ctr := range pod.Spec.Containers {
-		envs, err := resolver.ResolveEnv(m.kubeClient, pod, &ctr)
+		ctrEnv, err := resolver.ResolveEnv(m.kubeClient, pod, &ctr)
 		if err != nil {
 			log.Error(err, "failed to resolve container envs", "container", ctr.Name)
 			return err
 		}
-		containerEnvs[ctr.Name] = envs
+		envs[ctr.Name] = ctrEnv
 	}
 
 	imagePullAuthConfig, err := resolver.ResolveImagePullAuthConfig(m.kubeClient, pod)
@@ -370,7 +387,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	}
 
 	log.Info("trying to post pod create cmd to edge device")
-	podCreateOptions := translatePodCreateOptions(pod.DeepCopy(), containerEnvs, imagePullAuthConfig, volumeData)
+	podCreateOptions := translatePodCreateOptions(pod.DeepCopy(), envs, imagePullAuthConfig, volumeData)
 	podCreateCmd := connectivity.NewPodCreateCmd(podCreateOptions)
 	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {

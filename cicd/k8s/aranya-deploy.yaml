@@ -6,6 +6,28 @@ metadata:
   namespace: edge
 data:
   config.yaml: |-
+    controller:
+      log:
+        level: 5
+        dir: /var/log/aranya/
+    virtualnode:
+      connectivity:
+        timers:
+          unary_session_timeout: 1m
+          stream_session_timeout: 4h
+          force_node_status_sync_interval: 100m
+          force_pod_status_sync_interval: 10m
+      services:
+        node:
+          timers:
+            status_sync_interval: 10s
+        pod:
+          timers:
+            resync_interval: 60s
+        stream:
+          timers:
+            idle_timeout: 4h
+            creation_timeout: 30s
     services:
       metrics:
         address: "0.0.0.0"
@@ -28,7 +50,7 @@ spec:
     metadata:
       labels:
         name: aranya
-        # required label to get grpc services working
+        # required label to get gRPC services working
         arhat.dev/role: Controller
     spec:
       serviceAccountName: aranya
@@ -45,7 +67,8 @@ spec:
         imagePullPolicy: Always
         command: [ "/app" ]
         env:
-        # namespace to watch (also deployed to this namespace)
+        # namespace to watch 
+        # recommend to be the same with the one aranya deployed to
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:

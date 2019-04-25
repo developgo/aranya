@@ -29,9 +29,11 @@ runtime:
       action_timeout: 2m
 
 connectivity:
-  server:
-    address: arhat-docker.example.com:12443
-    dial_timeout: 20s
+  # mqtt_config:
+  grpc_config:
+    server:
+      address: arhat-docker.example.com:12443
+      dial_timeout: 20s
     tls:
       cert: /etc/arhat/cert.pem
       key: /etc/arhat/key.pem

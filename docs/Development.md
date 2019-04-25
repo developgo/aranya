@@ -15,10 +15,12 @@
 
 - `EdgeDevice`
   - A resource type defined by `aranya`'s `Kubernetes Custom Resource Definition`
-- Virtual Node
-  - The node managed by `aranya`, act as a `Kubernetes` node, but only maintains status
-
-### Naming
-
-- Kubernetes Resource Objects
-  - `{foo}Obj`, `{foo}Object`
+- edge device
+  - A physical computer/device with contaienr runtime (e.g. raspberry pi with docker installed)
+- virtualnode
+  - The node managed by `aranya`, act as a `Kubernetes` `Node`
+  - Functions:
+    - Sync `Node`/`Pod`s status with `Kubernetes` master and edge device.
+    - Schedule `Pod`s to edge devices.
+    - `kubelet` server for remote management.
+    - Connectivity manager to handle edge device connection.

@@ -360,8 +360,8 @@ github.com/gogo/googleapis/google/rpc
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-github.com/gogo/protobuf/types
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
+github.com/gogo/protobuf/types
 # github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef => github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.1 => github.com/golang/protobuf v1.3.1
@@ -705,8 +705,8 @@ k8s.io/apimachinery/pkg/runtime/schema
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/types
 k8s.io/apimachinery/pkg/util/intstr
-k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/api/resource
+k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/fields
 k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/util/validation
@@ -725,14 +725,13 @@ k8s.io/apimachinery/pkg/runtime/serializer/streaming
 k8s.io/apimachinery/pkg/util/net
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/runtime/serializer
+k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/util/httpstream
 k8s.io/apimachinery/pkg/util/remotecommand
-k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/util/clock
 k8s.io/apimachinery/pkg/util/cache
 k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/pkg/util/httpstream/spdy
-k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/apis/meta/v1beta1
 k8s.io/apimachinery/pkg/util/strategicpatch
@@ -743,20 +742,18 @@ k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
 k8s.io/apimachinery/pkg/apis/meta/internalversion
+k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/validation
 k8s.io/apimachinery/pkg/apis/meta/v1/validation
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/pkg/util/framer
-k8s.io/apimachinery/pkg/api/validation/path
 # k8s.io/apiserver v0.0.0-20190319190228-a4358799e4fe => github.com/kubernetes/apiserver v0.0.0-20190319190228-a4358799e4fe
 k8s.io/apiserver/pkg/util/feature
 k8s.io/apiserver/pkg/server/httplog
 k8s.io/apiserver/pkg/util/wsstream
 k8s.io/apiserver/pkg/features
-k8s.io/apiserver/pkg/storage/etcd
-k8s.io/apiserver/pkg/storage
 # k8s.io/client-go v2.0.0-alpha.0.0.20190228174230-b40b2a5939e4+incompatible => github.com/kubernetes/client-go v2.0.0-alpha.0.0.20190307161346-7621a5ebb88b+incompatible
 k8s.io/client-go/kubernetes
 k8s.io/client-go/rest
@@ -919,12 +916,10 @@ k8s.io/kubernetes/pkg/kubelet/config
 k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2
 k8s.io/kubernetes/pkg/kubelet/container
 k8s.io/kubernetes/pkg/util/tail
-k8s.io/kubernetes/pkg/api/v1/pod
-k8s.io/kubernetes/pkg/apis/core/v1/helper/qos
+k8s.io/kubernetes/pkg/api/legacyscheme
+k8s.io/kubernetes/pkg/apis/core/v1/validation
 k8s.io/kubernetes/pkg/kubelet/server/portforward
 k8s.io/kubernetes/pkg/kubelet/server/remotecommand
-k8s.io/kubernetes/pkg/kubelet/status
-k8s.io/kubernetes/pkg/kubelet/types
 k8s.io/kubernetes/pkg/api/v1/resource
 k8s.io/kubernetes/pkg/apis/core/pods
 k8s.io/kubernetes/pkg/credentialprovider
@@ -932,9 +927,6 @@ k8s.io/kubernetes/pkg/credentialprovider/secrets
 k8s.io/kubernetes/pkg/kubectl/util/fieldpath
 k8s.io/kubernetes/pkg/util/parsers
 k8s.io/kubernetes/third_party/forked/golang/expansion
-k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1
-k8s.io/kubernetes/pkg/api/legacyscheme
-k8s.io/kubernetes/pkg/apis/core/v1/validation
 k8s.io/kubernetes/pkg/features
 k8s.io/kubernetes/pkg/apis/core
 k8s.io/kubernetes/pkg/apis/core/helper
@@ -944,15 +936,13 @@ k8s.io/kubernetes/pkg/apis/core/validation
 k8s.io/kubernetes/pkg/kubelet/checkpoint
 k8s.io/kubernetes/pkg/kubelet/checkpointmanager
 k8s.io/kubernetes/pkg/kubelet/events
+k8s.io/kubernetes/pkg/kubelet/types
 k8s.io/kubernetes/pkg/kubelet/util/format
 k8s.io/kubernetes/pkg/util/config
 k8s.io/kubernetes/pkg/util/hash
 k8s.io/kubernetes/pkg/volume
-k8s.io/kubernetes/pkg/kubelet/pod
-k8s.io/kubernetes/pkg/util/pod
-k8s.io/kubernetes/pkg/apis/scheduling
-k8s.io/kubernetes/pkg/fieldpath
 k8s.io/kubernetes/pkg/apis/core/v1/helper
+k8s.io/kubernetes/pkg/fieldpath
 k8s.io/kubernetes/pkg/apis/apps
 k8s.io/kubernetes/pkg/api/service
 k8s.io/kubernetes/pkg/capabilities
@@ -962,17 +952,15 @@ k8s.io/kubernetes/pkg/kubelet/checkpointmanager/checksum
 k8s.io/kubernetes/pkg/kubelet/checkpointmanager/errors
 k8s.io/kubernetes/pkg/kubelet/util/store
 k8s.io/kubernetes/pkg/util/filesystem
+k8s.io/kubernetes/pkg/apis/scheduling
 k8s.io/kubernetes/pkg/util/mount
 k8s.io/kubernetes/pkg/volume/util/fs
 k8s.io/kubernetes/pkg/volume/util/recyclerclient
-k8s.io/kubernetes/pkg/kubelet/configmap
-k8s.io/kubernetes/pkg/kubelet/secret
 k8s.io/kubernetes/pkg/apis/autoscaling
 k8s.io/kubernetes/pkg/util/net/sets
 k8s.io/kubernetes/pkg/util/file
 k8s.io/kubernetes/pkg/util/io
 k8s.io/kubernetes/pkg/util/nsenter
-k8s.io/kubernetes/pkg/kubelet/util/manager
 # k8s.io/utils v0.0.0-20190221042446-c2654d5206da => github.com/kubernetes/utils v0.0.0-20190221042446-c2654d5206da
 k8s.io/utils/exec
 k8s.io/utils/pointer

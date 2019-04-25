@@ -1,11 +1,11 @@
 workflow "build images" {
   on = "push"
   resolves = [
-    "push aranya",
+    "push aranya", "push arhat-docker-grpc"
   ]
 }
 
-action "login @docker_hub" {
+action "login@dockerhub" {
   uses = "actions/docker/login@master"
   secrets = [
     "DOCKER_PASSWORD",
@@ -15,11 +15,22 @@ action "login @docker_hub" {
 
 action "build aranya" {
   uses = "actions/docker/cli@master"
-  args = "build -t arhatdev/aranya:latest -f cicd/docker/aranya.dockerfile ."
+  args = "build -t arhatdev/aranya:latest --build-arg TARGET=aranya -f cicd/docker/app.dockerfile ."
+}
+
+action "build arhat-docker-grpc" {
+  uses = "actions/docker/cli@master"
+  args = "build -t arhatdev/arhat-docker-grpc:latest --build-arg TARGET=arhat-docker-grpc -f cicd/docker/app.dockerfile ."
 }
 
 action "push aranya" {
-  needs = ["build aranya", "login @docker_hub"]
+  needs = ["build aranya", "login@dockerhub"]
   uses = "actions/docker/cli@master"
   args = "push arhatdev/aranya:latest"
+}
+
+action "push arhat-docker-grpc" {
+  needs = ["build arhat-docker-grpc", "login@dockerhub"]
+  uses = "actions/docker/cli@master"
+  args = "push arhatdev/arhat-docker-grpc:latest"
 }

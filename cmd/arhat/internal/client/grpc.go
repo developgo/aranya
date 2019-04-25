@@ -1,5 +1,21 @@
 // +build agent_grpc
 
+/*
+Copyright 2019 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package client
 
 import (
@@ -18,20 +34,24 @@ import (
 )
 
 func New(arhatCtx context.Context, agentConfig *client.Config, connectivityConfig *connectivity.Config, rt runtime.Interface) (client.Interface, error) {
-	dialCtx, cancel := context.WithTimeout(arhatCtx, connectivityConfig.Server.DialTimeout)
+	grpcConfig := connectivityConfig.GRPCConfig
+	if grpcConfig == nil {
+		return nil, ErrConnectivityConfigNotProvided
+	}
+
+	dialCtx, cancel := context.WithTimeout(arhatCtx, grpcConfig.DialTimeout)
 	defer cancel()
 
-	dialOptions := []grpc.DialOption{grpc.WithBlock(), grpc.WithAuthority(connectivityConfig.Server.Address)}
+	dialOptions := []grpc.DialOption{grpc.WithBlock(), grpc.WithAuthority(grpcConfig.ServerAddress)}
 
-	if connectivityConfig.Server.TLS != nil {
-		tlsConfig := connectivityConfig.Server.TLS
+	if tlsConfig := grpcConfig.TLS; tlsConfig != nil {
 		if tlsConfig.ServerName == "" {
-			colonPos := strings.LastIndex(connectivityConfig.Server.Address, ":")
+			colonPos := strings.LastIndex(grpcConfig.ServerAddress, ":")
 			if colonPos == -1 {
-				colonPos = len(connectivityConfig.Server.Address)
+				colonPos = len(grpcConfig.ServerAddress)
 			}
 
-			tlsConfig.ServerName = connectivityConfig.Server.Address[:colonPos]
+			tlsConfig.ServerName = grpcConfig.ServerAddress[:colonPos]
 		}
 
 		tlsCfg := &tls.Config{
@@ -78,7 +98,7 @@ func New(arhatCtx context.Context, agentConfig *client.Config, connectivityConfi
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	}
 
-	conn, err := grpc.DialContext(dialCtx, connectivityConfig.Server.Address, dialOptions...)
+	conn, err := grpc.DialContext(dialCtx, grpcConfig.ServerAddress, dialOptions...)
 	if err != nil {
 		return nil, err
 	}

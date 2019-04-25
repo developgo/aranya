@@ -1,3 +1,6 @@
+#
+# NOTICE: containerd runtime is currently not supported, this configuration is just for reference
+#
 agent:
   log:
     level: 5
@@ -30,9 +33,11 @@ runtime:
       action_timeout: 2m
 
 connectivity:
-  server:
-    address: arhat-containerd.example.com:12443
-    dial_timeout: 20s
+  # mqtt_config:
+  grpc_config:
+    server:
+      address: arhat-containerd.example.com:12443
+      dial_timeout: 20s
     tls:
       cert: /etc/arhat/cert.pem
       key: /etc/arhat/key.pem

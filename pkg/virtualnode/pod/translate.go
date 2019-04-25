@@ -1,3 +1,19 @@
+/*
+Copyright 2019 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pod
 
 import (
@@ -98,12 +114,7 @@ func resolveContainerStatus(pod *corev1.Pod, devicePodStatus *connectivity.PodSt
 	return podPhase, statuses
 }
 
-func translatePodCreateOptions(
-	pod *corev1.Pod,
-	containerEnvs map[string]map[string]string,
-	authConfigs map[string]*connectivity.AuthConfig,
-	volumeData map[string]*connectivity.NamedData,
-) *connectivity.CreateOptions {
+func translatePodCreateOptions(pod *corev1.Pod, envs map[string]map[string]string, authConfigs map[string]*connectivity.AuthConfig, volumeData map[string]*connectivity.NamedData) *connectivity.CreateOptions {
 	var (
 		containers = make(map[string]*connectivity.ContainerSpec)
 		ports      = make(map[string]*connectivity.ContainerPort)
@@ -152,7 +163,7 @@ func translatePodCreateOptions(
 			Stdin:      ctr.Stdin,
 			Tty:        ctr.TTY,
 
-			Envs:   containerEnvs[ctr.Name],
+			Envs:   envs[ctr.Name],
 			Mounts: mounts,
 
 			Security: translateContainerSecOpts(pod.Spec.SecurityContext, ctr.SecurityContext),

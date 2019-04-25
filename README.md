@@ -1,6 +1,10 @@
 # aranya `阿兰若`
 
-A `Kubernetes` operator for edge devices (including `arhat` the agent)
+[![Build Status](https://travis-ci.com/arhat-dev/aranya.svg)](https://travis-ci.com/arhat-dev/aranya) [![GoDoc](https://godoc.org/github.com/arhat-dev/aranya?status.svg)](https://godoc.org/arhat.dev/aranya) [![GoReportCard](https://goreportcard.com/badge/arhat-dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya) [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
+
+A `Kubernetes` operator for edge devices
+
+(This project also includes `arhat`'s source, which is the agent for edge device to communicate with `aranya`)
 
 ## Purpose
 
@@ -10,16 +14,11 @@ A `Kubernetes` operator for edge devices (including `arhat` the agent)
 
 ## Non-Purpose
 
-A Simplified `Kubernetes`
+Simplify `Kubernetes`
 
 ## State
 
 EXPERIMENTAL, USE AT YOUR OWN RISK
-
-## Prerequisites
-
-- `Kubernetes` cluster with `RBAC` enabled
-  - Minimum cluster requirements: 1 master with 1 node
 
 ## Features
 
@@ -36,11 +35,20 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Restrictions
 
-- `Kubernetes` cluster network not working, see [Roadmap #Networking](./ROADMAP.md#Networking)
+- `Kubernetes` cluster network not working for edge devices, see [Roadmap #Networking](./ROADMAP.md#Networking)
+
+## Build
+
+see [docs/Build.md](./docs/Build.md)
+
+## Deployment Prerequisites
+
+- `Kubernetes` cluster with `RBAC` enabled
+  - Minimum cluster requirements: 1 master (must have) with 1 node (to deploy `aranya`)
 
 ## Deployment Workflow
 
-1. Deploy `aranya` to your `Kubernetes` cluster for test with following commands (see [docs/Deployment.md](./docs/Deployment.md) for more deployment tips)
+1. Deploy `aranya` to your `Kubernetes` cluster for test with following commands (see [docs/Maintenance.md](./docs/Maintenance.md) for more deployment tips)
 
    ```bash
    # set the namespace for edge devices, aranya will be deployed to this namespace
@@ -93,7 +101,7 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 
 ## Performance
 
-Every `EdgeDevice` object needs to setup a `kubelet` server to serve for `kubectl` commands to execute into certain pods, thus we need to provision node certificates for each one of `EdgeDevice`s' virtual node in cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my homelab](https://github.com/jeffreystoke/homelab) after all the required node certificates has been provisioned.
+Every `EdgeDevice` object needs to setup a `kubelet` server to serve `kubectl` commands which could execute into certain pods, thus we need to provision node certifications for each one of `EdgeDevice`s' virtual node in cluster, which would take a lot of time for lage scale deployment. The performance test was taken on my own `Kubernetes` cluster described in [my homelab](https://github.com/jeffreystoke/homelab) after all the required node certifications has been provisioned.
 
 - Test Workload
   - 1000 EdgeDevice using `gRPC` (generated with `./scripts/gen-deploy-script.sh 1000`)
@@ -111,7 +119,7 @@ Every `EdgeDevice` object needs to setup a `kubelet` server to serve for `kubect
   Delete Speed:       ~ 6 devices/s
   ```
 
-However, after 1000 devices and 1000 node objects deployed and serving, my cluster shuts me out due to the `kube-apiserver` unable to handle more requests, but it's farely good result for my 4 core virtual machine serving both `etcd` and `kube-apiserver`.
+However, after 1000 devices and node objects deployed and serving, my cluster shuts me out due to the `kube-apiserver` unable to handle more requests, but it's farely good result for my 4 core virtual machine serving both `etcd` and `kube-apiserver`.
 
 ## Roadmap
 
@@ -132,7 +140,10 @@ see [ROADMAP.md](./ROADMAP.md)
 
 ## Thanks to
 
-This project was inspired by [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)'s idea, which introduced an cloud agent to run containers in network edge.
+- [`virtual-kubelet`](https://github.com/virtual-kubelet/virtual-kubelet)
+  - This project was inspired by its idea, which introduced an cloud agent to run containers in network edge.
+- `Buddhism`
+  - Which is the origin of the name `aranya` and `arhat`.
 
 ## Authors
 
@@ -141,6 +152,20 @@ This project was inspired by [`virtual-kubelet`](https://github.com/virtual-kube
 
 ## License
 
-```text
+[![GitHub license](https://img.shields.io/github/license/arhat-dev/aranya.svg)](https://github.com/arhat-dev/aranya/blob/master/LICENSE.txt)
 
+```text
+Copyright 2019 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```

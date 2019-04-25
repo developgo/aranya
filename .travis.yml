@@ -1,0 +1,45 @@
+sudo: true
+os:
+  - linux
+
+language: go
+
+go:
+  - 1.11.x
+  - 1.12.x
+
+env:
+  global:
+    # include $HOME/.local/bin for `aws`
+    - PATH=$HOME/.local/bin:$PATH
+    - GO111MODULE=on
+    - CGO_ENABLED=0
+
+before_install:
+  # set up awscli packages
+  - pip install --user awscli
+  - mkdir -p ~/$TRAVIS_BUILD_NUMBER
+
+jobs:
+  include:
+    - stage: build images
+      if: branch = master
+      script:
+        # build aranya
+        - make build-image-aranya
+        # build arhat
+        - make build-image-arhat-docker-grpc
+        - docker images
+        - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+        # push images
+        - make push-image-aranya-image
+        - make push-image-arhat-docker-grpc
+    - stage: upload release
+      if: branch = v*
+      script:
+        - make aranya
+        - make arhat-docker-grpc
+
+stages:
+  - build images
+  - upload release

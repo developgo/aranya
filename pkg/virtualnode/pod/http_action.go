@@ -1,3 +1,19 @@
+/*
+Copyright 2019 The arhat.dev Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pod
 
 import (
@@ -111,17 +127,26 @@ func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.Port
 
 func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
 	log := m.log.WithValues("type", "stream")
+	streamCtx, exitStream := context.WithCancel(m.ctx)
+
+	defer func() {
+		exitStream()
+
+		// close out and stderr with best effort
+		_ = out.Close()
+		if stderr != nil {
+			_ = stderr.Close()
+		}
+
+		log.Info("finished stream")
+	}()
 
 	if out == nil {
 		return fmt.Errorf("output should not be nil")
 	}
-	defer log.Info("finished stream handle")
-
-	ctx, cancel := context.WithCancel(m.ctx)
-	defer cancel()
 
 	var msgCh <-chan *connectivity.Msg
-	if msgCh, err = m.manager.PostCmd(ctx, initialCmd); err != nil {
+	if msgCh, err = m.manager.PostCmd(streamCtx, initialCmd); err != nil {
 		log.Error(err, "failed to post initial cmd")
 		return err
 	}
@@ -142,34 +167,29 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 	// read user input if needed
 	inputCh := make(chan *connectivity.Cmd, 1)
 	if in != nil {
-		s := bufio.NewScanner(in)
-		s.Split(util.ScanAnyAvail)
-
 		go func() {
-			// defer close(inputCh)
-			defer log.Info("finished stream input")
+			defer func() {
+				close(inputCh)
+
+				log.Info("finished stream input")
+			}()
+
+			s := bufio.NewScanner(in)
+			s.Split(util.ScanAnyAvail)
 
 			for s.Scan() {
 				select {
 				case inputCh <- connectivity.NewContainerInputCmd(sid, s.Bytes()):
-				case <-ctx.Done():
+				case <-streamCtx.Done():
 					return
 				}
 			}
 		}()
 	}
 
-	defer func() {
-		// close out and stderr with best effort
-		_ = out.Close()
-		if stderr != nil {
-			_ = stderr.Close()
-		}
-	}()
-
 	for {
 		select {
-		case <-m.ctx.Done():
+		case <-streamCtx.Done():
 			return
 		case userInput, more := <-inputCh:
 			if !more {
@@ -177,7 +197,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				return nil
 			}
 
-			if _, err = m.manager.PostCmd(ctx, userInput); err != nil {
+			if _, err = m.manager.PostCmd(streamCtx, userInput); err != nil {
 				log.Error(err, "failed to post user input")
 				return err
 			}
@@ -187,11 +207,10 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				return nil
 			}
 
-			// only PodData will be received in this session
-			switch m := msg.GetMsg().(type) {
-			case *connectivity.Msg_Data:
+			// only PodData should be received in this session
+			if dataMsg := msg.GetData(); dataMsg != nil {
 				targetOutput := out
-				switch m.Data.GetKind() {
+				switch dataMsg.GetKind() {
 				case connectivity.OTHER, connectivity.STDOUT:
 					targetOutput = out
 				case connectivity.STDERR:
@@ -202,19 +221,18 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 					return fmt.Errorf("data kind unknown")
 				}
 
-				if _, err = targetOutput.Write(m.Data.GetData()); err != nil {
+				if _, err = targetOutput.Write(dataMsg.Data); err != nil && err != io.EOF {
 					log.Error(err, "failed to write output")
 					return err
 				}
 			}
 		case size, more := <-resizeCh:
 			if !more {
-				log.Info("resize channel closed")
-				return nil
+				return err
 			}
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
-			if _, err = m.manager.PostCmd(ctx, resizeCmd); err != nil {
+			if _, err = m.manager.PostCmd(streamCtx, resizeCmd); err != nil {
 				log.Error(err, "failed to post resize cmd")
 				return err
 			}

@@ -1,5 +1,19 @@
 #!/bin/bash -x
 
+# Copyright 2019 The arhat.dev Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 set -e
 
 export GOPATH=$(go env GOPATH)
@@ -48,6 +62,17 @@ gen-openapi() {
 
     mv "${GOPATH}/src/pkg/aranya/v1alpha1/zz_generated.openapi.go" \
         ./pkg/apis/aranya/v1alpha1/zz_generated.openapi.go
+}
+
+gen-protos() {
+  local TARGET_DIR=./pkg/virtualnode/connectivity
+  
+  protoc \
+    -I${GOPATH}/src/github.com/gogo/protobuf/protobuf \
+    -I${GOPATH}/src \
+    -I${TARGET_DIR} \
+    --gogoslick_out=plugins=grpc:${TARGET_DIR} \
+    ${TARGET_DIR}/*.proto
 }
 
 "$@"
