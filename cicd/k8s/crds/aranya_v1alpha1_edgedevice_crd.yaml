@@ -44,11 +44,11 @@ spec:
                   type: object
                   properties:
                     unarySessionTimeout:
-                      type: object
+                      type: string
                     forceNodeStatusSyncInterval:
-                      type: object
+                      type: string
                     forcePodStatusSyncInterval:
-                      type: object
+                      type: string
                 grpcConfig:
                   properties:
                     server:

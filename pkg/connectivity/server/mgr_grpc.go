@@ -40,9 +40,9 @@ type GRPCManager struct {
 	listener net.Listener
 }
 
-func NewGRPCManager(server *grpc.Server, listener net.Listener) *GRPCManager {
+func NewGRPCManager(server *grpc.Server, listener net.Listener, mgrConfig *Config) *GRPCManager {
 	mgr := &GRPCManager{
-		baseManager: newBaseManager(),
+		baseManager: newBaseManager(mgrConfig),
 		listener:    listener,
 		server:      server,
 	}

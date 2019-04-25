@@ -9,11 +9,11 @@ spec:
     method: grpc
     timers:
       # force close session in server after
-      unary_session_timeout: 10s
+      unarySessionTimeout: 10s
       # force check device node status, reject if operation failed
-      force_node_status_sync_interval: 5m
+      forceNodeStatusSyncInterval: 5s
       # force check device pod status, reject if operation failed
-      force_pod_status_sync_interval: 5m
+      forcePodStatusSyncInterval: 5s
     grpcConfig:
       # here, with empty ref, aranya will setup an insecure grpc server
       tlsSecretRef: {}
@@ -29,11 +29,11 @@ spec:
     # you can specify timers here to override aranya's config
     timers:
       # force close session in server after
-      unary_session_timeout: 1m
+      unarySessionTimeout: 1m
       # force check device node status, reject if operation failed
-      force_node_status_sync_interval: 10m
+      forceNodeStatusSyncInterval: 10m
       # force check device pod status, reject if operation failed
-      force_pod_status_sync_interval: 10m
+      forcePodStatusSyncInterval: 10m
     mqttConfig:
       # mqtt message namespace for aranya communication
       messageNamespace: /aranya.arhat.dev

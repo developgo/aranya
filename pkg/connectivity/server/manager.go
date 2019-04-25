@@ -57,7 +57,7 @@ type Manager interface {
 }
 
 type baseManager struct {
-	Config
+	config *Config
 
 	sessionManager *sessionManager
 	globalMsgChan  chan *connectivity.Msg
@@ -73,11 +73,12 @@ type baseManager struct {
 	mu      sync.RWMutex
 }
 
-func newBaseManager() baseManager {
+func newBaseManager(config *Config) baseManager {
 	disconnected := make(chan struct{})
 	close(disconnected)
 
 	return baseManager{
+		config:         config,
 		sessionManager: newSessionManager(),
 		connected:      make(chan struct{}),
 		rejected:       make(chan struct{}),
@@ -207,7 +208,7 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		sid                uint64
 		sessionMustPresent bool
 		recordSession      = true
-		timeout            = s.Timers.UnarySessionTimeout
+		timeout            = s.config.Timers.UnarySessionTimeout
 	)
 
 	// session id should not be empty if it's a input or resize command

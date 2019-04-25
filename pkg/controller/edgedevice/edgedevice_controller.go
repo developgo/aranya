@@ -198,7 +198,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	var (
 		nodeObj      = &corev1.Node{}
 		svcObj       = &corev1.Service{}
-		creationOpts = &virtualnode.CreationOptions{}
+		creationOpts = &virtualnode.CreationOptions{KubeClient: r.kubeClient}
 		virtualNode  *virtualnode.VirtualNode
 
 		needToCheckDeviceObject bool
@@ -282,6 +282,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 	// here, device presents and not deleted
 	// everything related expected to exist
+	creationOpts.Config = r.VirtualNodeConfig.OverrideWith(deviceObj.Spec.Connectivity.Timers)
 
 	if needToCreateNodeObject {
 		// new node and new virtual node
@@ -363,7 +364,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
 			}
 
-			creationOpts.Manager = server.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener)
+			creationOpts.Manager = server.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener, &creationOpts.Config.Connectivity)
 		} else {
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
@@ -444,7 +445,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		}
 
 		reqLog.Info("trying to create mqtt connectivity manager")
-		creationOpts.Manager, err = server.NewMQTTManager(mqttConfig, cert)
+		creationOpts.Manager, err = server.NewMQTTManager(mqttConfig, cert, &creationOpts.Config.Connectivity)
 		if err != nil {
 			reqLog.Error(err, "failed to create mqtt connectivity manager")
 			return err
@@ -455,9 +456,6 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 	// create virtual node if required
 	if needToCreateVirtualNode {
-		creationOpts.KubeClient = r.kubeClient
-		creationOpts.Config = r.VirtualNodeConfig.OverrideWith(deviceObj.Spec.Connectivity.Timers)
-
 		reqLog.Info("creating virtual node", "options", creationOpts)
 		virtualNode, err = virtualnode.CreateVirtualNode(r.ctx, creationOpts)
 		if err != nil {

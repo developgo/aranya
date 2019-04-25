@@ -30,9 +30,9 @@ var _ Manager = &MQTTManager{}
 type mqttClient struct {
 }
 
-func NewMQTTManager(config aranya.MQTTConfig, clientCert *tls.Certificate) (*MQTTManager, error) {
+func NewMQTTManager(config aranya.MQTTConfig, clientCert *tls.Certificate, mgrConfig *Config) (*MQTTManager, error) {
 	return &MQTTManager{
-		baseManager: newBaseManager(),
+		baseManager: newBaseManager(mgrConfig),
 	}, nil
 }
 

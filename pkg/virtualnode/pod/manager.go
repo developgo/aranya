@@ -211,6 +211,7 @@ func (m *Manager) Start() (err error) {
 					err               error
 					podWork           queue.Work
 					shouldAcquireMore bool
+					rescheduleAfter   = time.Second
 				)
 
 				for {
@@ -274,7 +275,6 @@ func (m *Manager) Start() (err error) {
 					}
 				handleError:
 					if err != nil {
-						// TODO: backoff
 						// requeue work when error happened
 						workLog.Info("exception happened for work, reschedule same work in 1s")
 						time.Sleep(time.Second)
@@ -283,6 +283,13 @@ func (m *Manager) Start() (err error) {
 						} else {
 							workLog.Info("work rescheduled")
 						}
+
+						rescheduleAfter = time.Duration(float64(rescheduleAfter) * 1.5)
+						if rescheduleAfter > 10*time.Second {
+							rescheduleAfter = 10 * time.Second
+						}
+					} else {
+						rescheduleAfter = time.Second
 					}
 				}
 			}()
