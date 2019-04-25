@@ -31,9 +31,9 @@ import (
 
 	internalclient "arhat.dev/aranya/cmd/arhat/internal/client"
 	internalruntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity/client"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/connectivity"
+	"arhat.dev/aranya/pkg/connectivity/client"
+	"arhat.dev/aranya/pkg/connectivity/client/runtime"
 )
 
 const DefaultConfigFile = "/etc/arhat/config.yaml"

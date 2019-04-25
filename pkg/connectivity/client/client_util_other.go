@@ -1,4 +1,4 @@
-// +build rt_containerd
+// +build !linux
 
 /*
 Copyright 2019 The arhat.dev Authors.
@@ -16,15 +16,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package runtime
+package client
 
 import (
-	"context"
-
-	"arhat.dev/aranya/pkg/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/connectivity/client/runtime/containerd"
+	"arhat.dev/aranya/pkg/connectivity"
 )
 
-func New(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
-	return containerd.NewRuntime(ctx, config)
+func setSystemInfo(info *connectivity.NodeSystemInfo) *connectivity.NodeSystemInfo {
+	return info
 }

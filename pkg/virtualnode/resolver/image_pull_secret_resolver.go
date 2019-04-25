@@ -24,7 +24,7 @@ import (
 	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
 	"k8s.io/kubernetes/pkg/util/parsers"
 
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
+	"arhat.dev/aranya/pkg/connectivity"
 )
 
 func ResolveImagePullAuthConfig(kubeClient kubernetes.Interface, pod *corev1.Pod) (map[string]*connectivity.AuthConfig, error) {

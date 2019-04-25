@@ -29,7 +29,7 @@ import (
 	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
+	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )
 
@@ -69,7 +69,7 @@ func (m *Manager) doGetContainerLogs(uid types.UID, options *corev1.PodLogOption
 		tailLines = -1
 	}
 
-	msgCh, err := m.manager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), options.Container, options.Follow, options.Timestamps, since, tailLines))
+	msgCh, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewContainerLogCmd(string(uid), options.Container, options.Follow, options.Timestamps, since, tailLines))
 	if err != nil {
 		return nil, err
 	}
@@ -146,14 +146,14 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 	}
 
 	var msgCh <-chan *connectivity.Msg
-	if msgCh, err = m.manager.PostCmd(streamCtx, initialCmd); err != nil {
+	if msgCh, err = m.connectivityManager.PostCmd(streamCtx, initialCmd); err != nil {
 		log.Error(err, "failed to post initial cmd")
 		return err
 	}
 
 	sid := initialCmd.GetSessionId()
 	defer func() {
-		_, err := m.manager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
+		_, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
 		if err != nil {
 			log.Error(err, "failed to post session close cmd")
 		}
@@ -197,7 +197,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 				return nil
 			}
 
-			if _, err = m.manager.PostCmd(streamCtx, userInput); err != nil {
+			if _, err = m.connectivityManager.PostCmd(streamCtx, userInput); err != nil {
 				log.Error(err, "failed to post user input")
 				return err
 			}
@@ -232,7 +232,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			}
 
 			resizeCmd := connectivity.NewContainerTtyResizeCmd(sid, size.Width, size.Height)
-			if _, err = m.manager.PostCmd(streamCtx, resizeCmd); err != nil {
+			if _, err = m.connectivityManager.PostCmd(streamCtx, resizeCmd); err != nil {
 				log.Error(err, "failed to post resize cmd")
 				return err
 			}

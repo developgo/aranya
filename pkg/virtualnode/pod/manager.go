@@ -36,15 +36,15 @@ import (
 	kubecache "k8s.io/client-go/tools/cache"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/connectivity"
+	"arhat.dev/aranya/pkg/connectivity/server"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod/cache"
 	"arhat.dev/aranya/pkg/virtualnode/pod/queue"
 	"arhat.dev/aranya/pkg/virtualnode/resolver"
 )
 
-func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, manager server.Manager) *Manager {
+func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, connectivityManager server.Manager) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, constant.DefaultPodReSyncInterval,
 		// watch all pods scheduled to the node
@@ -57,12 +57,12 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformer := podInformerFactory.Core().V1().Pods().Informer()
 	ctx, exit := context.WithCancel(parentCtx)
 	mgr := &Manager{
-		log:        logf.Log.WithName(fmt.Sprintf("%s.pod", nodeName)),
-		ctx:        ctx,
-		exit:       exit,
-		manager:    manager,
-		kubeClient: client,
-		podCache:   cache.NewPodCache(),
+		log:                 logf.Log.WithName(fmt.Sprintf("%s.pod", nodeName)),
+		ctx:                 ctx,
+		exit:                exit,
+		connectivityManager: connectivityManager,
+		kubeClient:          client,
+		podCache:            cache.NewPodCache(),
 
 		podInformerFactory: podInformerFactory,
 		podLister:          podInformerFactory.Core().V1().Pods().Lister(),
@@ -149,19 +149,20 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 }
 
 type Manager struct {
-	ctx        context.Context
-	exit       context.CancelFunc
-	log        logr.Logger
-	manager    server.Manager
-	kubeClient kubeclient.Interface
-	podCache   *cache.PodCache
+	once sync.Once
+
+	ctx                 context.Context
+	exit                context.CancelFunc
+	log                 logr.Logger
+	connectivityManager server.Manager
+	kubeClient          kubeclient.Interface
+	podCache            *cache.PodCache
 
 	podInformerFactory kubeinformers.SharedInformerFactory
 	podLister          kubelister.PodLister
 	podInformer        kubecache.SharedIndexInformer
 
 	podWorkQueue *queue.WorkQueue
-	once         sync.Once
 }
 
 func (m *Manager) Start() (err error) {
@@ -192,7 +193,7 @@ func (m *Manager) Start() (err error) {
 			m.podWorkQueue.Stop()
 
 			select {
-			case <-m.manager.Connected():
+			case <-m.connectivityManager.Connected():
 				// we are good to go
 			case <-m.ctx.Done():
 				return
@@ -291,7 +292,7 @@ func (m *Manager) Start() (err error) {
 
 			// wait until device disconnected
 			select {
-			case <-m.manager.Disconnected():
+			case <-m.connectivityManager.Disconnected():
 				// stop work queue acquire, the work queue will keep collecting work items
 				m.podWorkQueue.Stop()
 				continue
@@ -389,7 +390,7 @@ func (m *Manager) CreateDevicePod(pod *corev1.Pod) error {
 	log.Info("trying to post pod create cmd to edge device")
 	podCreateOptions := translatePodCreateOptions(pod.DeepCopy(), envs, imagePullAuthConfig, volumeData)
 	podCreateCmd := connectivity.NewPodCreateCmd(podCreateOptions)
-	msgCh, err := m.manager.PostCmd(m.ctx, podCreateCmd)
+	msgCh, err := m.connectivityManager.PostCmd(m.ctx, podCreateCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod create command")
 		return err
@@ -443,7 +444,7 @@ func (m *Manager) DeleteDevicePod(podUID types.UID) error {
 	}
 
 	podDeleteCmd := connectivity.NewPodDeleteCmd(string(podUID), time.Second)
-	msgCh, err := m.manager.PostCmd(m.ctx, podDeleteCmd)
+	msgCh, err := m.connectivityManager.PostCmd(m.ctx, podDeleteCmd)
 	if err != nil {
 		log.Error(err, "failed to post pod delete command")
 		return err
@@ -480,7 +481,7 @@ func (m *Manager) SyncDevicePods() error {
 	log := m.log.WithValues("type", "device", "action", "sync")
 
 	log.Info("trying to sync device pods")
-	msgCh, err := m.manager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
+	msgCh, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewPodListCmd("", "", true))
 	if err != nil {
 		log.Error(err, "failed to post pod list cmd")
 		return err

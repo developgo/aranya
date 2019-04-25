@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"arhat.dev/aranya/pkg/virtualnode/connectivity"
+	"arhat.dev/aranya/pkg/connectivity"
 )
 
 // generate in cluster node cache for remote device

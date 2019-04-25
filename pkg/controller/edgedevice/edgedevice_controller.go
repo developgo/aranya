@@ -43,9 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
+	"arhat.dev/aranya/pkg/connectivity/server"
 	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 )
 
 var (

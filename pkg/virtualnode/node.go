@@ -33,8 +33,8 @@ import (
 	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/connectivity/server"
 	"arhat.dev/aranya/pkg/constant"
-	"arhat.dev/aranya/pkg/virtualnode/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )

@@ -1,5 +1,3 @@
-// +build rt_containerd
-
 /*
 Copyright 2019 The arhat.dev Authors.
 
@@ -16,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package runtime
+package runtimeutil
 
 import (
-	"context"
-
-	"arhat.dev/aranya/pkg/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/connectivity/client/runtime/containerd"
+	"arhat.dev/aranya/pkg/connectivity"
 )
 
-func New(ctx context.Context, config *runtime.Config) (runtime.Interface, error) {
-	return containerd.NewRuntime(ctx, config)
-}
+var (
+	ErrNotFound      = connectivity.NewNotFoundError("")
+	ErrNotSupported  = connectivity.NewNotSupportedError("")
+	ErrAlreadyExists = connectivity.NewAlreadyExistsError("")
+)
