@@ -40,6 +40,15 @@ spec:
               properties:
                 method:
                   type: string
+                timers:
+                  type: object
+                  properties:
+                    unarySessionTimeout:
+                      type: object
+                    forceNodeStatusSyncInterval:
+                      type: object
+                    forcePodStatusSyncInterval:
+                      type: object
                 grpcConfig:
                   properties:
                     server:

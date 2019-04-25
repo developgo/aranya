@@ -42,7 +42,7 @@ type GRPCManager struct {
 
 func NewGRPCManager(server *grpc.Server, listener net.Listener) *GRPCManager {
 	mgr := &GRPCManager{
-		baseManager: newBaseServer(),
+		baseManager: newBaseManager(),
 		listener:    listener,
 		server:      server,
 	}
@@ -53,6 +53,18 @@ func NewGRPCManager(server *grpc.Server, listener net.Listener) *GRPCManager {
 
 func (m *GRPCManager) Start() error {
 	return m.server.Serve(m.listener)
+}
+
+func (m *GRPCManager) Stop() {
+	m.onStop(func() {
+		m.server.Stop()
+	})
+}
+
+func (m *GRPCManager) Reject(reason connectivity.RejectReason, message string) {
+	m.onReject(func() {
+		_ = m.syncSrv.Send(connectivity.NewRejectCmd(reason, message))
+	})
 }
 
 func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
@@ -98,6 +110,9 @@ func (m *GRPCManager) Sync(server connectivity.Connectivity_SyncServer) error {
 
 	for {
 		select {
+		case <-m.rejected:
+			// device rejected, return to close this stream
+			return nil
 		case <-connCtx.Done():
 			return nil
 		case msg, more := <-msgCh:
@@ -121,11 +136,5 @@ func (m *GRPCManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-ch
 		}
 
 		return m.syncSrv.Send(c)
-	})
-}
-
-func (m *GRPCManager) Stop() {
-	m.onStop(func() {
-		m.server.Stop()
 	})
 }

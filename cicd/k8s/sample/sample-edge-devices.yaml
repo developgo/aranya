@@ -7,6 +7,13 @@ metadata:
 spec:
   connectivity:
     method: grpc
+    timers:
+      # force close session in server after
+      unary_session_timeout: 10s
+      # force check device node status, reject if operation failed
+      force_node_status_sync_interval: 5m
+      # force check device pod status, reject if operation failed
+      force_pod_status_sync_interval: 5m
     grpcConfig:
       # here, with empty ref, aranya will setup an insecure grpc server
       tlsSecretRef: {}
@@ -19,16 +26,22 @@ metadata:
 spec:
   connectivity:
     method: mqtt
+    # you can specify timers here to override aranya's config
+    timers:
+      # force close session in server after
+      unary_session_timeout: 1m
+      # force check device node status, reject if operation failed
+      force_node_status_sync_interval: 10m
+      # force check device pod status, reject if operation failed
+      force_pod_status_sync_interval: 10m
     mqttConfig:
       # mqtt message namespace for aranya communication
       messageNamespace: /aranya.arhat.dev
       # tell aranya how to connect mqtt broker
       #  # set secret ref to use tls when connecting to broker
-      # tlsSecretRef:
-      #   # kubernetes secret name
-      #   name: my-mqtt-client-secret
-      #   # kubenetes namespace in which to find the secret
-      #   namespace: iot-edge
+      tlsSecretRef:
+        # kubernetes secret name
+        name: my-mqtt-client-secret
       # mqtt broker address
       server: mqtt-broker:1883
       # mqtt version, currently only 3.1.1 supported
@@ -47,8 +60,6 @@ spec:
         password:
           # kubernetes secret name for password
           name: secret-name-for-mqtt-password
-          # kubernetes namespace in which to find the secret
-          namespace: secret-stored-in-this-namespace
         clientID: foo
         # time in seconds
         keepalive: 30

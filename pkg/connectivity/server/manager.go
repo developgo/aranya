@@ -43,6 +43,8 @@ type Manager interface {
 	Start() error
 	// Stop manager at once
 	Stop()
+	// Reject current device connection if any
+	Reject(reason connectivity.RejectReason, message string)
 	// Connected signal
 	Connected() <-chan struct{}
 	// Disconnected signal
@@ -55,24 +57,30 @@ type Manager interface {
 }
 
 type baseManager struct {
+	Config
+
 	sessionManager *sessionManager
 	globalMsgChan  chan *connectivity.Msg
 
 	// signals
-	connected    chan struct{}
-	disconnected chan struct{}
+	connected       chan struct{}
+	disconnected    chan struct{}
+	rejected        chan struct{}
+	alreadyRejected bool
+
 	// status
 	stopped bool
 	mu      sync.RWMutex
 }
 
-func newBaseServer() baseManager {
+func newBaseManager() baseManager {
 	disconnected := make(chan struct{})
 	close(disconnected)
 
 	return baseManager{
 		sessionManager: newSessionManager(),
 		connected:      make(chan struct{}),
+		rejected:       make(chan struct{}),
 		disconnected:   disconnected,
 		globalMsgChan:  make(chan *connectivity.Msg, constant.DefaultConnectivityMsgChannelSize),
 	}
@@ -90,6 +98,11 @@ func (s *baseManager) Connected() <-chan struct{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	if s.alreadyRejected {
+		s.rejected = make(chan struct{})
+	}
+	s.alreadyRejected = false
+
 	return s.connected
 }
 
@@ -99,6 +112,27 @@ func (s *baseManager) Disconnected() <-chan struct{} {
 	defer s.mu.RUnlock()
 
 	return s.disconnected
+}
+
+func (s *baseManager) Rejected() <-chan struct{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.rejected
+}
+
+func (s *baseManager) onReject(reject func()) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.alreadyRejected {
+		return
+	}
+	s.alreadyRejected = true
+
+	reject()
+
+	close(s.rejected)
 }
 
 func (s *baseManager) onConnected(setConnected func() bool) error {
@@ -134,6 +168,7 @@ func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
 		if msg.GetCompleted() {
 			s.sessionManager.del(msg.GetSessionId())
 		}
+
 	} else {
 		s.globalMsgChan <- msg
 	}
@@ -172,6 +207,7 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		sid                uint64
 		sessionMustPresent bool
 		recordSession      = true
+		timeout            = s.Timers.UnarySessionTimeout
 	)
 
 	// session id should not be empty if it's a input or resize command
@@ -180,7 +216,12 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		recordSession = false
 	case *connectivity.Cmd_Pod:
 		switch c.Pod.GetAction() {
+		// we don't control stream session timeout,
+		// it is controlled by pod manager
+		case connectivity.PortForward, connectivity.Exec, connectivity.Attach, connectivity.Log:
+			timeout = 0
 		case connectivity.ResizeTty, connectivity.Input:
+			timeout = 0
 			sessionMustPresent = true
 			if cmd.GetSessionId() == 0 {
 				return nil, ErrSessionNotValid
@@ -189,7 +230,7 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 	}
 
 	if recordSession {
-		sid, ch = s.sessionManager.add(ctx, cmd)
+		sid, ch = s.sessionManager.add(ctx, cmd, timeout)
 		defer func() {
 			if err != nil {
 				s.sessionManager.del(sid)

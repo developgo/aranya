@@ -19,6 +19,7 @@ package server
 import (
 	"context"
 	"sync"
+	"time"
 	"unsafe"
 
 	"arhat.dev/aranya/pkg/connectivity"
@@ -72,7 +73,7 @@ func newSessionManager() *sessionManager {
 	}
 }
 
-func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd) (sid uint64, ch chan *connectivity.Msg) {
+func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd, timeout time.Duration) (sid uint64, ch chan *connectivity.Msg) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -85,10 +86,16 @@ func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd) (sid ui
 		ch = make(chan *connectivity.Msg, 1)
 
 		session := &session{msgCh: ch}
-		session.ctx, session.ctxExit = context.WithCancel(ctx)
+		if timeout > 0 {
+			session.ctx, session.ctxExit = context.WithTimeout(ctx, timeout)
+		} else {
+			session.ctx, session.ctxExit = context.WithCancel(ctx)
+		}
+
 		go func() {
 			select {
 			case <-session.ctx.Done():
+				s.dispatch(connectivity.NewTimeoutErrorMsg(sid))
 				s.del(sid)
 			}
 		}()

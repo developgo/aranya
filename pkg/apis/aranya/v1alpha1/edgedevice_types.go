@@ -84,19 +84,20 @@ const (
 )
 
 type MQTTConnectPacket struct {
-	CleanSession bool                   `json:"cleanSession,omitempty" protobuf:"bytes,1,opt,name=cleanSession"`
-	Will         bool                   `json:"will,omitempty" protobuf:"bytes,2,opt,name=will"`
-	WillQos      int32                  `json:"willQos,omitempty" protobuf:"bytes,3,opt,name=willQos"`
-	WillRetain   bool                   `json:"willRetain,omitempty" protobuf:"bytes,4,opt,name=willRetain"`
-	WillTopic    string                 `json:"willTopic,omitempty" protobuf:"bytes,5,opt,name=willTopic"`
-	WillMessage  string                 `json:"willMessage,omitempty" protobuf:"bytes,6,opt,name=willMessage"`
-	Username     string                 `json:"username,omitempty" protobuf:"bytes,7,opt,name=username"`
-	Password     corev1.SecretReference `json:"password,omitempty" protobuf:"bytes,8,opt,name=password"`
-	ClientID     string                 `json:"clientID,omitempty" protobuf:"bytes,9,opt,name=clientID"`
-	Keepalive    int32                  `json:"keepalive,omitempty" protobuf:"bytes,10,opt,name=keepalive"`
+	CleanSession bool                         `json:"cleanSession,omitempty" protobuf:"bytes,1,opt,name=cleanSession"`
+	Will         bool                         `json:"will,omitempty" protobuf:"bytes,2,opt,name=will"`
+	WillQos      int32                        `json:"willQos,omitempty" protobuf:"bytes,3,opt,name=willQos"`
+	WillRetain   bool                         `json:"willRetain,omitempty" protobuf:"bytes,4,opt,name=willRetain"`
+	WillTopic    string                       `json:"willTopic,omitempty" protobuf:"bytes,5,opt,name=willTopic"`
+	WillMessage  string                       `json:"willMessage,omitempty" protobuf:"bytes,6,opt,name=willMessage"`
+	Username     string                       `json:"username,omitempty" protobuf:"bytes,7,opt,name=username"`
+	Password     *corev1.LocalObjectReference `json:"password,omitempty" protobuf:"bytes,8,opt,name=password"`
+	ClientID     string                       `json:"clientID,omitempty" protobuf:"bytes,9,opt,name=clientID"`
+	Keepalive    int32                        `json:"keepalive,omitempty" protobuf:"bytes,10,opt,name=keepalive"`
 }
 
 type MQTTConfig struct {
+	// MessageNamespace to share with arhat agent
 	MessageNamespace string `json:"messageNamespace,omitempty" protobuf:"bytes,1,opt,name=messageNamespace"`
 	// MQTT broker address in the form of addr:port
 	Broker string `json:"server,omitempty" protobuf:"bytes,2,opt,name=server"`
@@ -104,21 +105,31 @@ type MQTTConfig struct {
 	Version string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
 	// Transport protocol underlying the MQTT protocol, one of [tcp, websocket]
 	Transport string `json:"transport,omitempty" protobuf:"bytes,4,opt,name=transport"`
-	// Secret for transport layer security
-	TLSSecretRef *corev1.SecretReference `json:"tlsSecretRef,omitempty" protobuf:"bytes,5,opt,name=tlsSecret"`
+	// Secret for tls cert-key pair
+	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty" protobuf:"bytes,5,opt,name=tlsSecret"`
 	// ConnectPacket in MQTT
 	ConnectPacket *MQTTConnectPacket `json:"connectPacket,omitempty" protobuf:"bytes,6,opt,name=connectPacket"`
 }
 
 type GRPCConfig struct {
-	// Secret for transport layer security
-	TLSSecretRef *corev1.SecretReference `json:"tlsSecretRef,omitempty" protobuf:"bytes,1,opt,name=tlsSecretRef"`
+	// Secret for server side tls cert-key pair
+	TLSSecretRef *corev1.LocalObjectReference `json:"tlsSecretRef,omitempty" protobuf:"bytes,1,opt,name=tlsSecretRef"`
+}
+
+type ConnectivityTimers struct {
+	UnarySessionTimeout         *metav1.Duration `json:"unarySessionTimeout,omitempty" protobuf:"bytes,1,opt,name=unarySessionTimeout"`
+	ForceNodeStatusSyncInterval *metav1.Duration `json:"forceNodeStatusSyncInterval,omitempty" protobuf:"bytes,2,opt,name=forceNodeStatusSyncInterval"`
+	ForcePodStatusSyncInterval  *metav1.Duration `json:"forcePodStatusSyncInterval,omitempty" protobuf:"bytes,3,opt,name=forcePodStatusSyncInterval"`
 }
 
 type Connectivity struct {
 	// Method of how to establish communication channel between server and devices
 	Method ConnectivityMethod `json:"method,omitempty" protobuf:"bytes,1,opt,name=method"`
-	// Configurations to tell aranya server how to create server(s) or client(s)
-	MQTTConfig MQTTConfig `json:"mqttConfig,omitempty" protobuf:"bytes,2,opt,name=mqttConfig"`
-	GRPCConfig GRPCConfig `json:"grpcConfig,omitempty" protobuf:"bytes,3,opt,name=grpcConfig"`
+	// Timers to override aranya's default config
+	Timers *ConnectivityTimers `json:"timers,omitempty" protobuf:"bytes,2,opt,name=timers"`
+
+	// Configurations to tell aranya server how to create mqtt client
+	MQTTConfig MQTTConfig `json:"mqttConfig,omitempty" protobuf:"bytes,3,opt,name=mqttConfig"`
+	// Configurations to tell aranya server how to create grpc server
+	GRPCConfig GRPCConfig `json:"grpcConfig,omitempty" protobuf:"bytes,4,opt,name=grpcConfig"`
 }

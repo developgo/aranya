@@ -37,6 +37,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
+	"arhat.dev/aranya/pkg/virtualnode"
 	aranyaApis "arhat.dev/aranya/pkg/apis"
 	aranyaController "arhat.dev/aranya/pkg/controller"
 )
@@ -45,14 +46,24 @@ const DefaultConfigFile = "/etc/aranya/config.yaml"
 
 var configFile string
 
+type ControllerConfig struct {
+	Log struct {
+		Level int    `json:"level" yaml:"level"`
+		Dir   string `json:"dir" yaml:"dir"`
+	} `json:"log" yaml:"log"`
+}
+
+type ServicesConfig struct {
+	MetricsService *struct {
+		Address string `json:"address" yaml:"address"`
+		Port    int32  `json:"port" yaml:"port"`
+	} `json:"metrics" yaml:"metrics"`
+}
+
 type Config struct {
-	Controller aranyaController.Config `json:"controller" yaml:"controller"`
-	Services   struct {
-		MetricsService *struct {
-			Address string `json:"address" yaml:"address"`
-			Port    int32  `json:"port" yaml:"port"`
-		} `json:"metrics" yaml:"metrics"`
-	} `json:"services" yaml:"services"`
+	Controller  ControllerConfig   `json:"controller" yaml:"controller"`
+	VirtualNode virtualnode.Config `json:"virtualnode" yaml:"virtualnode"`
+	Services    ServicesConfig     `json:"services" yaml:"services"`
 }
 
 var log = logf.Log.WithName("cmd")
@@ -152,7 +163,7 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	// Setup all Controllers
-	if err := aranyaController.AddToManager(mgr); err != nil {
+	if err := aranyaController.AddToManager(mgr, &config.VirtualNode); err != nil {
 		return err
 	}
 

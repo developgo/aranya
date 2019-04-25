@@ -56,23 +56,19 @@ var log = logf.Log.WithName("aranya")
 
 // AddToManager creates a new EdgeDevice Controller and adds it to the manager. The manager will set fields on the Controller
 // and Start it when the manager is Started.
-func AddToManager(mgr controllermanager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func AddToManager(mgr controllermanager.Manager, config *virtualnode.Config) error {
+	return addToManager(mgr, &ReconcileEdgeDevice{
+		client:            mgr.GetClient(),
+		scheme:            mgr.GetScheme(),
+		config:            mgr.GetConfig(),
+		ctx:               context.Background(),
+		kubeClient:        kubeclient.NewForConfigOrDie(mgr.GetConfig()),
+		VirtualNodeConfig: config,
+	})
 }
 
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr controllermanager.Manager) reconcile.Reconciler {
-	return &ReconcileEdgeDevice{
-		client:     mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		config:     mgr.GetConfig(),
-		ctx:        context.Background(),
-		kubeClient: kubeclient.NewForConfigOrDie(mgr.GetConfig()),
-	}
-}
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr controllermanager.Manager, r reconcile.Reconciler) error {
+// addToManager adds a new Controller to mgr with r as the reconcile.Reconciler
+func addToManager(mgr controllermanager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
 	c, err := controller.New("aranya", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -113,6 +109,8 @@ type ReconcileEdgeDevice struct {
 	scheme     *runtime.Scheme
 	config     *rest.Config
 	ctx        context.Context
+
+	VirtualNodeConfig *virtualnode.Config
 }
 
 // Reconcile reads that state of the cluster for a EdgeDevice object and makes changes based on the state read
@@ -356,12 +354,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil && tlsRef.Name != "" {
 				var grpcServerCert *tls.Certificate
 
-				if tlsRef.Namespace == "" {
-					tlsRef.Namespace = namespace
-				}
-
 				reqLog.Info("trying to get grpc server tls secret")
-				grpcServerCert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
+				grpcServerCert, err = r.GetCertFromSecret(namespace, tlsRef.Name)
 				if err != nil {
 					reqLog.Error(err, "failed to get grpc server tls secret")
 					return err
@@ -441,13 +435,8 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		mqttConfig := deviceObj.Spec.Connectivity.MQTTConfig
 		var cert *tls.Certificate
 		if tlsRef := mqttConfig.TLSSecretRef; tlsRef != nil && tlsRef.Name != "" {
-
-			if tlsRef.Namespace == "" {
-				tlsRef.Namespace = namespace
-			}
-
 			reqLog.Info("trying to get mqtt client tls secret")
-			cert, err = r.GetCertFromSecret(tlsRef.Namespace, tlsRef.Name)
+			cert, err = r.GetCertFromSecret(namespace, tlsRef.Name)
 			if err != nil {
 				reqLog.Error(err, "failed to get mqtt client tls secret")
 				return err
@@ -467,6 +456,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 	// create virtual node if required
 	if needToCreateVirtualNode {
 		creationOpts.KubeClient = r.kubeClient
+		creationOpts.Config = r.VirtualNodeConfig.OverrideWith(deviceObj.Spec.Connectivity.Timers)
 
 		reqLog.Info("creating virtual node", "options", creationOpts)
 		virtualNode, err = virtualnode.CreateVirtualNode(r.ctx, creationOpts)

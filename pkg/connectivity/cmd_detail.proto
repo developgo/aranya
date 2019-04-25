@@ -25,6 +25,17 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.messagename_all) = true;
 
+enum RejectReason {
+    RejectedByAlreadyConnected = 0;
+    RejectedByPodStatusSyncError = 1;
+    RejectedByNodeStatusSyncError = 2;
+}
+
+message RejectCmd {
+    RejectReason reason = 1;
+    string message = 2;
+}
+
 message NodeCmd {
     enum Action {
         GetInfoAll = 0;

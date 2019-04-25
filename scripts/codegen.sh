@@ -65,7 +65,7 @@ gen-openapi() {
 }
 
 gen-protos() {
-  local TARGET_DIR=./pkg/virtualnode/connectivity
+  local TARGET_DIR=./pkg/connectivity
   
   protoc \
     -I${GOPATH}/src/github.com/gogo/protobuf/protobuf \

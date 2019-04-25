@@ -20,6 +20,17 @@ import (
 	"time"
 )
 
+func NewRejectCmd(reason RejectReason, message string) *Cmd {
+	return &Cmd{
+		Cmd: &Cmd_Reject{
+			Reject: &RejectCmd{
+				Reason:  reason,
+				Message: message,
+			},
+		},
+	}
+}
+
 func NewNodeCmd(action NodeCmd_Action) *Cmd {
 	return &Cmd{
 		Cmd: &Cmd_Node{

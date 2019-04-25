@@ -3,16 +3,17 @@ controller:
     level: 5
     dir: /var/log/aranya/
 
-connectivity:
-  timers:
-    # force close session in server after
-    unary_session_timeout: 1m
-    # force sync node status from edge device after
-    force_node_status_sync_interval: 100m
-    # force sync pod status from edge device after
-    force_pod_status_sync_interval: 10m
-
 virtualnode:
+  connectivity:
+    # this is the virtual node behavior definition for all EdgeDevices
+    # EdgeDevice's spec can override some of these fields
+    timers:
+      # force close session in server after
+      unary_session_timeout: 1m
+      # force sync node status from edge device after
+      force_node_status_sync_interval: 10m
+      # force sync pod status from edge device after
+      force_pod_status_sync_interval: 10m
   # node status manager
   node:
     timers:
@@ -23,13 +24,14 @@ virtualnode:
     timers:
       # interval pod informer to resync cached pods
       resync_interval: 60s
-  # http stream (started by kubectl)
+  # http streams (started by kubectl commands)
   stream:
     timers:
       # close stream when no traffic has been sent/recv for
       # (kubelet default is 4h)
       idle_timeout: 4h
       # cancel stream creation after
+      # (kubelet default is 30s)
       creation_timeout: 30s
 
 services:

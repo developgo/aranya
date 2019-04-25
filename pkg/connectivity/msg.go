@@ -85,6 +85,18 @@ func newError(kind Error_Kind, description string) *Error {
 	}
 }
 
+func NewTimeoutErrorMsg(sid uint64) *Msg {
+	return &Msg{
+		SessionId: sid,
+		Completed: true,
+		Msg: &Msg_Error{
+			Error: &Error{
+				Kind: ErrTimeout,
+			},
+		},
+	}
+}
+
 func NewCommonError(description string) *Error {
 	return newError(ErrCommon, description)
 }

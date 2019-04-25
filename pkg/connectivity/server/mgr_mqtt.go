@@ -32,7 +32,7 @@ type mqttClient struct {
 
 func NewMQTTManager(config aranya.MQTTConfig, clientCert *tls.Certificate) (*MQTTManager, error) {
 	return &MQTTManager{
-		baseManager: newBaseServer(),
+		baseManager: newBaseManager(),
 	}, nil
 }
 
@@ -48,14 +48,20 @@ func (m *MQTTManager) Start() error {
 	return nil
 }
 
-func (m *MQTTManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error) {
-	return m.baseManager.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
-		return nil
+func (m *MQTTManager) Stop() {
+	m.onStop(func() {
+		m.wg.Done()
 	})
 }
 
-func (m *MQTTManager) Stop() {
-	m.baseManager.onStop(func() {
-		m.wg.Done()
+func (m *MQTTManager) Reject(reason connectivity.RejectReason, message string) {
+	m.onReject(func() {
+
+	})
+}
+
+func (m *MQTTManager) PostCmd(ctx context.Context, c *connectivity.Cmd) (ch <-chan *connectivity.Msg, err error) {
+	return m.onPostCmd(ctx, c, func(c *connectivity.Cmd) error {
+		return nil
 	})
 }

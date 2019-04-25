@@ -25,7 +25,7 @@ import (
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (vn *VirtualNode) syncNodeStatus() {
+func (vn *VirtualNode) syncMirrorNodeStatus() {
 	vn.log.V(10).Info("trying to update node status")
 	for i := 0; i < constant.DefaultNodeStatusUpdateRetry; i++ {
 		if err := vn.tryUpdateNodeStatus(i); err != nil {

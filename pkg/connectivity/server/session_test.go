@@ -29,11 +29,11 @@ import (
 func TestSessionManager_Add(t *testing.T) {
 	mgr := newSessionManager()
 	ctx := context.Background()
-	sidA, chA := mgr.add(ctx, connectivity.NewPodListCmd("", "", true))
-	sidB, chB := mgr.add(ctx, connectivity.NewContainerTtyResizeCmd(sidA, 0, 0))
+	sidA, chA := mgr.add(ctx, connectivity.NewPodListCmd("", "", true), 0)
+	sidB, chB := mgr.add(ctx, connectivity.NewContainerTtyResizeCmd(sidA, 0, 0), 0)
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
 	defer cancel()
-	sidC, chC := mgr.add(timeoutCtx, connectivity.NewPodListCmd("", "", true))
+	sidC, chC := mgr.add(timeoutCtx, connectivity.NewPodListCmd("", "", true), 0)
 
 	assert.NotNil(t, sidA)
 	assert.Equal(t, sidA, sidB)
@@ -49,7 +49,7 @@ func TestSessionManager_Add(t *testing.T) {
 func TestSessionManager_Del(t *testing.T) {
 	mgr := newSessionManager()
 	ctx := context.Background()
-	sid, ch := mgr.add(ctx, connectivity.NewPodListCmd("", "", true))
+	sid, ch := mgr.add(ctx, connectivity.NewPodListCmd("", "", true), 0)
 	mgr.del(sid)
 	ok := mgr.dispatch(nil)
 	assert.Equal(t, false, ok)

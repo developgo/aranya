@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package queue
-package queue // import "arhat.dev/aranya/pkg/virtualnode/queue"
+package queue // import "arhat.dev/aranya/pkg/virtualnode/pod/queue"

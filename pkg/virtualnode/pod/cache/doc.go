@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package cache
-package cache // import "arhat.dev/aranya/pkg/virtualnode/cache"
+package cache // import "arhat.dev/aranya/pkg/virtualnode/pod/cache"

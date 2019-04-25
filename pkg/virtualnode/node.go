@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
@@ -33,8 +34,8 @@ import (
 	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/server"
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 	"arhat.dev/aranya/pkg/virtualnode/util"
 )
@@ -48,6 +49,7 @@ type CreationOptions struct {
 	KubeletServerListener net.Listener
 
 	Manager server.Manager
+	Config  *Config
 
 	// optional
 	GRPCServerListener net.Listener
@@ -69,7 +71,7 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Virtua
 	// m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
 
 	// handle pod related
-	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.Manager)
+	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.Manager, &opt.Config.Stream, &opt.Config.Pod)
 	// containerLogs (kubectl logs)
 	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
 	// exec (kubectl exec)
@@ -197,6 +199,7 @@ func (vn *VirtualNode) Start() (err error) {
 				}
 			}()
 
+			var chanClosed uint32
 			for !vn.closing() {
 				select {
 				case <-vn.opt.Manager.Connected():
@@ -212,44 +215,92 @@ func (vn *VirtualNode) Start() (err error) {
 
 					for {
 						select {
+						case <-vn.opt.Manager.Disconnected():
+							return
 						case <-vn.ctx.Done():
 							return
 						case msg, more := <-vn.opt.Manager.GlobalMessages():
 							if !more {
 								return
 							}
-							vn.log.Info("handling global message")
+							vn.log.Info("recv global message")
 							vn.handleGlobalMsg(msg)
 						}
 					}
 				}()
 
-				connectedCh := make(chan struct{})
+				// mark channel not closed
+				atomic.StoreUint32(&chanClosed, 0)
+				// combine multiple signals into one
+				stopSig := make(chan struct{})
 				go func() {
 					select {
+					case <-stopSig:
+						// can be closed else where
+						return
 					case <-vn.opt.Manager.Disconnected():
-						close(connectedCh)
+						// device disconnected (if rejected will also trigger disconnect)
+						if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
+							close(stopSig)
+						}
 					case <-vn.ctx.Done():
-						close(connectedCh)
+						if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
+							close(stopSig)
+						}
 					}
 				}()
 
-				vn.log.Info("starting to handle node status update")
-				go wait.Until(vn.syncNodeStatus, constant.DefaultNodeStatusSyncInterval, connectedCh)
-
-				vn.log.Info("trying to sync device info")
-				if err := vn.generateCacheForNodeInDevice(); err != nil {
-					vn.log.Error(err, "failed to sync device node info")
+				vn.log.Info("trying to sync device info for the first time")
+				if err := vn.syncDeviceNodeStatus(); err != nil {
+					vn.log.Error(err, "failed to sync device node info, reject")
+					vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass initial node status sync")
 					goto waitForDeviceDisconnect
 				}
 
-				vn.log.Info("trying to sync device pods")
+				vn.log.Info("trying to sync device pods for the first time")
 				if err := vn.podManager.SyncDevicePods(); err != nil {
 					vn.log.Error(err, "failed to sync device pods")
+					vn.opt.Manager.Reject(connectivity.RejectedByPodStatusSyncError, "failed to pass initial pods sync")
 					goto waitForDeviceDisconnect
 				}
+
+				vn.log.Info("starting to handle mirror node status update")
+				go wait.Until(vn.syncMirrorNodeStatus, vn.opt.Config.Node.Timers.StatusSyncInterval, stopSig)
+
+				// start force node status check if configured
+				if vn.opt.Config.Connectivity.Timers.ForceNodeStatusSyncInterval > 0 {
+					go wait.Until(func() {
+						vn.log.Info("trying to force sync device node info")
+						if err := vn.syncDeviceNodeStatus(); err != nil {
+							// failed to sync device node status, device down,
+							// wait for another connection
+							vn.log.Error(err, "failed to force sync device node info")
+							vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force node status sync")
+							if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
+								close(stopSig)
+							}
+							return
+						}
+					}, vn.opt.Config.Connectivity.Timers.ForceNodeStatusSyncInterval, stopSig)
+				}
+
+				// start force pods check if configured
+				if vn.opt.Config.Connectivity.Timers.ForcePodStatusSyncInterval > 0 {
+					go wait.Until(func() {
+						vn.log.Info("trying to force sync device pods")
+						if err := vn.podManager.SyncDevicePods(); err != nil {
+							// failed to sync device node status, device down
+							vn.log.Error(err, "failed to force sync device pods")
+							vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force pods sync")
+							if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
+								close(stopSig)
+							}
+							return
+						}
+					}, vn.opt.Config.Connectivity.Timers.ForcePodStatusSyncInterval, stopSig)
+				}
 			waitForDeviceDisconnect:
-				<-connectedCh
+				<-stopSig
 			}
 		}()
 	})

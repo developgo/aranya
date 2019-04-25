@@ -38,15 +38,14 @@ import (
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/server"
-	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/pod/cache"
 	"arhat.dev/aranya/pkg/virtualnode/pod/queue"
 	"arhat.dev/aranya/pkg/virtualnode/resolver"
 )
 
-func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, connectivityManager server.Manager) *Manager {
+func NewManager(parentCtx context.Context, nodeName string, client kubeclient.Interface, connectivityManager server.Manager, streamConfig *StreamConfig, config *Config) *Manager {
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
-		client, constant.DefaultPodReSyncInterval,
+		client, config.Timers.ReSyncInterval,
 		// watch all pods scheduled to the node
 		kubeinformers.WithNamespace(corev1.NamespaceAll),
 		kubeinformers.WithTweakListOptions(func(options *metav1.ListOptions) {
@@ -67,6 +66,9 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		podInformerFactory: podInformerFactory,
 		podLister:          podInformerFactory.Core().V1().Pods().Lister(),
 		podInformer:        podInformer,
+
+		streamConfig: streamConfig,
+		config:       config,
 
 		podWorkQueue: queue.NewWorkQueue(),
 	}
@@ -161,6 +163,9 @@ type Manager struct {
 	podInformerFactory kubeinformers.SharedInformerFactory
 	podLister          kubelister.PodLister
 	podInformer        kubecache.SharedIndexInformer
+
+	streamConfig *StreamConfig
+	config       *Config
 
 	podWorkQueue *queue.WorkQueue
 }

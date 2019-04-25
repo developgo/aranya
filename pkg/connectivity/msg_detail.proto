@@ -130,6 +130,10 @@ message Error {
         // work not supported, aranya should ignore this error 
         // and cancel work
         ErrNotSupported = 3;
+
+        // ErrTimeout only happen in connectivity server, 
+        // right after the session is timeout
+        ErrTimeout = 4;
     }
 
     Kind kind = 1;

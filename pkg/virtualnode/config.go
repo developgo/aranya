@@ -19,6 +19,7 @@ package virtualnode
 import (
 	"time"
 
+	aranya "arhat.dev/aranya/pkg/apis/aranya/v1alpha1"
 	"arhat.dev/aranya/pkg/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
 )
@@ -31,7 +32,38 @@ type NodeServiceConfig struct {
 
 type Config struct {
 	Connectivity server.Config     `json:"connectivity" yaml:"connectivity"`
+	Node         NodeServiceConfig `json:"node" yaml:"node"`
 	Pod          pod.Config        `json:"pod" yaml:"pod"`
 	Stream       pod.StreamConfig  `json:"stream" yaml:"stream"`
-	Node         NodeServiceConfig `json:"node" yaml:"node"`
+}
+
+func (c *Config) DeepCopy() *Config {
+	return &Config{
+		Connectivity: c.Connectivity,
+		Node:         c.Node,
+		Pod:          c.Pod,
+		Stream:       c.Stream,
+	}
+}
+
+// OverrideWith a config with higher priority (config from EdgeDevices)
+func (c *Config) OverrideWith(a *aranya.ConnectivityTimers) *Config {
+	if a == nil {
+		return c
+	}
+
+	newConfig := c.DeepCopy()
+	if a.ForceNodeStatusSyncInterval != nil {
+		newConfig.Connectivity.Timers.ForceNodeStatusSyncInterval = a.ForceNodeStatusSyncInterval.Duration
+	}
+
+	if a.ForcePodStatusSyncInterval != nil {
+		newConfig.Connectivity.Timers.ForcePodStatusSyncInterval = a.ForcePodStatusSyncInterval.Duration
+	}
+
+	if a.UnarySessionTimeout != nil {
+		newConfig.Connectivity.Timers.UnarySessionTimeout = a.UnarySessionTimeout.Duration
+	}
+
+	return newConfig
 }
