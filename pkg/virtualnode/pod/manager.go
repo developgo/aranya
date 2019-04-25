@@ -274,16 +274,15 @@ func (m *Manager) Start() (err error) {
 					}
 				handleError:
 					if err != nil {
+						// TODO: backoff
 						// requeue work when error happened
-						workLog.Info("exception happened for work, reschedule same work in future")
-						go func(w queue.Work) {
-							time.Sleep(time.Second)
-							if err := m.podWorkQueue.Offer(w.Action, w.UID); err != nil {
-								workLog.Info("failed to reschedule work", "reason", err.Error())
-							} else {
-								workLog.Info("work rescheduled")
-							}
-						}(podWork)
+						workLog.Info("exception happened for work, reschedule same work in 1s")
+						time.Sleep(time.Second)
+						if err := m.podWorkQueue.Offer(podWork.Action, podWork.UID); err != nil {
+							workLog.Info("failed to reschedule work", "reason", err.Error())
+						} else {
+							workLog.Info("work rescheduled")
+						}
 					}
 				}
 			}()
