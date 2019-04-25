@@ -45,6 +45,7 @@ type Config struct {
 	PauseCommand string `json:"pause_command" yaml:"pause_command"`
 
 	// ManagementNamespace the name used to separate container's view
+	// used by containerd and podman
 	ManagementNamespace string `json:"management_namespace" yaml:"management_namespace"`
 
 	Defaults struct {

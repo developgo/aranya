@@ -33,7 +33,8 @@ type PodConfig struct {
 	} `json:"timers" yaml:"timers"`
 }
 
-type Config struct {
+// AgentConfig configuration for agent part in arhat
+type AgentConfig struct {
 	Log struct {
 		Level int    `json:"level" yaml:"level"`
 		Dir   string `json:"dir" yaml:"dir"`
@@ -45,4 +46,43 @@ type Config struct {
 
 	Node NodeConfig `json:"node" yaml:"node"`
 	Pod  PodConfig  `json:"pod" yaml:"pod"`
+}
+
+type TLSConfig struct {
+	CaCert     string `json:"ca_cert" yaml:"ca_cert"`
+	Cert       string `json:"cert" yaml:"cert"`
+	Key        string `json:"key" yaml:"key"`
+	ServerName string `json:"server_name" yaml:"server_name"`
+}
+
+type GRPCConfig struct {
+	ServerAddress string        `json:"server_address" yaml:"server_address"`
+	DialTimeout   time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
+	TLS           *TLSConfig    `json:"tls" yaml:"tls"`
+}
+
+type MQTTConfig struct {
+	BrokerAddress string        `json:"broker_address" yaml:"broker_address"`
+	DialTimeout   time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
+	TLS           *TLSConfig    `json:"tls" yaml:"tls"`
+
+	// mqtt connect packet
+	ConnectPacket struct {
+		CleanSession bool   `json:"cleanSession" yaml:"cleanSession"`
+		Will         bool   `json:"will" yaml:"will"`
+		WillQos      int32  `json:"willQos" yaml:"willQos"`
+		WillRetain   bool   `json:"willRetain" yaml:"willRetain"`
+		WillTopic    string `json:"willTopic" yaml:"willTopic"`
+		WillMessage  string `json:"willMessage" yaml:"willMessage"`
+		Username     string `json:"username" yaml:"username"`
+		Password     string `json:"password" yaml:"password"`
+		ClientID     string `json:"clientID" yaml:"clientID"`
+		Keepalive    int32  `json:"keepalive" yaml:"keepalive"`
+	} `json:"connect_packet" yaml:"connect_packet"`
+}
+
+// ConnectivityConfig configuration for connectivity part in arhat
+type ConnectivityConfig struct {
+	MQTTConfig *MQTTConfig `json:"mqtt_config" yaml:"mqtt_config"`
+	GRPCConfig *GRPCConfig `json:"grpc_config" yaml:"grpc_config"`
 }

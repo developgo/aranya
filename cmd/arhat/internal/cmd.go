@@ -31,7 +31,6 @@ import (
 
 	internalclient "arhat.dev/aranya/cmd/arhat/internal/client"
 	internalruntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
-	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
 )
@@ -42,9 +41,9 @@ var configFile string
 
 // Config for arhat
 type Config struct {
-	Agent        client.Config       `json:"agent" yaml:"agent"`
-	Connectivity connectivity.Config `json:"connectivity" yaml:"connectivity"`
-	Runtime      runtime.Config      `json:"runtime" yaml:"runtime"`
+	Agent        client.AgentConfig        `json:"agent" yaml:"agent"`
+	Connectivity client.ConnectivityConfig `json:"connectivity" yaml:"connectivity"`
+	Runtime      runtime.Config            `json:"runtime" yaml:"runtime"`
 }
 
 func NewArhatCmd() *cobra.Command {

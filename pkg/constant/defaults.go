@@ -29,7 +29,6 @@ const (
 // Default timeouts
 const (
 	DefaultUnarySessionTimeout   = time.Minute
-	DefaultStreamSessionTimeout  = 8 * time.Hour
 	DefaultStreamIdleTimeout     = 4 * time.Hour
 	DefaultStreamCreationTimeout = 30 * time.Second
 )

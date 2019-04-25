@@ -66,7 +66,7 @@ func newGRPCTestManagerAndAgent(rt runtime.Interface) (mgr *server.GRPCManager, 
 		panic(err)
 	}
 
-	client, err = NewGRPCAgent(context.TODO(), &Config{}, conn, rt)
+	client, err = NewGRPCAgent(context.TODO(), &AgentConfig{}, conn, rt)
 	if err != nil {
 		panic(err)
 	}

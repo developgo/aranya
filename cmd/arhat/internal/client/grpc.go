@@ -28,13 +28,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
 )
 
-func New(arhatCtx context.Context, agentConfig *client.Config, connectivityConfig *connectivity.Config, rt runtime.Interface) (client.Interface, error) {
-	grpcConfig := connectivityConfig.GRPCConfig
+func New(arhatCtx context.Context, agentConfig *client.AgentConfig, clientConfig *client.ConnectivityConfig, rt runtime.Interface) (client.Interface, error) {
+	grpcConfig := clientConfig.GRPCConfig
 	if grpcConfig == nil {
 		return nil, ErrConnectivityConfigNotProvided
 	}

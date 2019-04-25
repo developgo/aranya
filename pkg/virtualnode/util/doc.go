@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package server the connectivity manager in cluster
-package server // import "arhat.dev/aranya/pkg/connectivity/server"
+// Package util
+package util // import "arhat.dev/aranya/pkg/virtualnode/util"

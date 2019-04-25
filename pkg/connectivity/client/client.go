@@ -37,11 +37,11 @@ type Interface interface {
 	PostMsg(msg *connectivity.Msg) error
 }
 
-func newBaseAgent(ctx context.Context, config *Config, rt runtime.Interface) baseAgent {
+func newBaseAgent(ctx context.Context, config *AgentConfig, rt runtime.Interface) baseAgent {
 	return baseAgent{
-		Config:  *config,
-		ctx:     ctx,
-		runtime: rt,
+		AgentConfig: *config,
+		ctx:         ctx,
+		runtime:     rt,
 		openedStreams: streamSession{
 			streamHandlers: make(map[uint64]*streamHandler),
 		},
@@ -49,7 +49,7 @@ func newBaseAgent(ctx context.Context, config *Config, rt runtime.Interface) bas
 }
 
 type baseAgent struct {
-	Config
+	AgentConfig
 
 	ctx       context.Context
 	doPostMsg func(msg *connectivity.Msg) error

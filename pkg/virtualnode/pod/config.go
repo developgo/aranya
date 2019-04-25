@@ -14,5 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package server the connectivity manager in cluster
-package server // import "arhat.dev/aranya/pkg/connectivity/server"
+package pod
+
+import (
+	"time"
+)
+
+type Config struct {
+	Timers struct {
+		ReSyncInterval time.Duration
+	} `json:"timers" yaml:"timers"`
+}
+
+type StreamConfig struct {
+	Timers struct {
+		CreationTimeout time.Duration `json:"creation_timeout" yaml:"creation_timeout"`
+		IdleTimeout     time.Duration `json:"idle_timeout" yaml:"idle_timeout"`
+	} `json:"timers" yaml:"timers"`
+}

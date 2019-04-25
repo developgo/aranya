@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package server the connectivity manager in cluster
-package server // import "arhat.dev/aranya/pkg/connectivity/server"
+// Package edgedevice the controller for EdgeDevice
+package edgedevice // import "arhat.dev/aranya/pkg/controller/edgedevice"

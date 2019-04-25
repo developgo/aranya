@@ -15,4 +15,4 @@ limitations under the License.
 */
 
 // Package client
-package client // import "arhat.dev/aranya/pkg/virtualnode/connectivity/client"
+package client // import "arhat.dev/aranya/pkg/connectivity/client"
