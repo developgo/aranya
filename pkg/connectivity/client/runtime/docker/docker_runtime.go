@@ -193,26 +193,15 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *connectivity.PodStatus, err *connectivity.Error) {
 	deleteLog := r.Log().WithValues("action", "delete", "options", options)
 
-	deleteLog.Info("trying to find pause container")
-	pauseCtr, err := r.findContainer(options.GetPodUid(), constant.ContainerNamePause)
-	if err != nil {
-		deleteLog.Error(err, "failed to find pause container")
-		return nil, err
-	}
-
-	timeout := time.Duration(options.GetGraceTime())
-	now := time.Now()
-
 	deleteCtx, cancelDelete := r.RuntimeActionContext()
 	defer cancelDelete()
 
-	deleteLog.Info("trying to list work containers")
+	deleteLog.Info("trying to list containers for pod delete")
 	var plainErr error
 	containers, plainErr := r.runtimeClient.ContainerList(deleteCtx, dockerType.ContainerListOptions{
 		Quiet: true,
 		Filters: dockerFilter.NewArgs(
-			dockerFilter.Arg("label", constant.ContainerLabelPodUID+"="+options.GetPodUid()),
-			dockerFilter.Arg("label", constant.ContainerLabelPodContainerRole+"="+constant.ContainerRoleWork),
+			dockerFilter.Arg("label", constant.ContainerLabelPodUID+"="+options.PodUid),
 		),
 	})
 	if plainErr != nil {
@@ -221,7 +210,25 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	}
 
 	// delete work containers first
-	containers = append(containers, dockerType.Container{ID: pauseCtr.ID})
+	now := time.Now()
+	timeout := time.Duration(options.GraceTime)
+
+	pauseCtrIndex := -1
+	for i, ctr := range containers {
+		// find pause container
+		if ctr.Labels[constant.ContainerLabelPodContainerRole] == constant.ContainerRoleInfra {
+			pauseCtrIndex = i
+			break
+		}
+	}
+	lastIndex := len(containers) - 1
+	// swap pause container to last
+	deleteLog.Info("original containers", "containers", containers)
+	if pauseCtrIndex != -1 {
+		containers[lastIndex], containers[pauseCtrIndex] = containers[pauseCtrIndex], containers[lastIndex]
+	}
+	deleteLog.Info("swapped containers", "containers", containers)
+
 	for _, ctr := range containers {
 		timeout = timeout - time.Since(now)
 		now = time.Now()
