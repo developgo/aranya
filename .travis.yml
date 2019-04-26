@@ -31,7 +31,7 @@ jobs:
         - make build-image-arhat-docker-grpc
         - docker images
         - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-        # push images
+        # push images (buggy, sometimes fail)
         - make push-image-aranya-image
         - make push-image-arhat-docker-grpc
     - stage: upload release

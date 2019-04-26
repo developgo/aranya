@@ -152,7 +152,7 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	metricsAddress := ""
-	if config.Services.MetricsService != nil {
+	if config.Services.MetricsService.Address != "" {
 		metricsAddress = fmt.Sprintf("%s:%d", config.Services.MetricsService.Address, config.Services.MetricsService.Port)
 
 		// Create Service object to expose the metrics port.
