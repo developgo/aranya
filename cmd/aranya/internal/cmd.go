@@ -20,22 +20,17 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
-	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	aranyaApis "arhat.dev/aranya/pkg/apis"
 	"arhat.dev/aranya/pkg/constant"
@@ -65,14 +60,12 @@ type Config struct {
 	Services    ServicesConfig     `json:"services" yaml:"services"`
 }
 
-var log = logf.Log.WithName("cmd")
-
 func NewAranyaCmd() *cobra.Command {
 	ctx, exit := context.WithCancel(context.Background())
 	config := &Config{}
 
 	cmd := &cobra.Command{
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			configBytes, err := ioutil.ReadFile(configFile)
 			if err != nil {
 				return fmt.Errorf("failed to read config file %s: %v", configFile, err)
@@ -82,9 +75,6 @@ func NewAranyaCmd() *cobra.Command {
 				return fmt.Errorf("failed to unmarshal config file %s: %v", configFile, err)
 			}
 
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(ctx, config)
 		},
 	}
@@ -131,16 +121,8 @@ func NewAranyaCmd() *cobra.Command {
 }
 
 func run(ctx context.Context, config *Config) error {
-	logf.SetLogger(zap.Logger())
-	printVersion()
-
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return err
-	}
-
 	// Get a config to talk to the api-server
-	kubeConfig, err := clientConfig.GetConfig()
+	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return err
 	}
@@ -158,20 +140,18 @@ func run(ctx context.Context, config *Config) error {
 		// Create Service object to expose the metrics port.
 		_, err = metrics.ExposeMetricsPort(ctx, config.Services.MetricsService.Port)
 		if err != nil {
-			log.Info(err.Error())
+			log.Printf(err.Error())
 		}
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(kubeConfig, manager.Options{
-		Namespace:          namespace,
+		Namespace:          constant.CurrentNamespace(),
 		MetricsBindAddress: metricsAddress,
 	})
 	if err != nil {
 		return err
 	}
-
-	log.Info("registering components")
 
 	// Setup Scheme for all resources
 	if err := aranyaApis.AddToScheme(mgr.GetScheme()); err != nil {
@@ -179,20 +159,14 @@ func run(ctx context.Context, config *Config) error {
 	}
 
 	// Setup all Controllers
-	if err := aranyaController.AddToManager(mgr, &config.VirtualNode); err != nil {
+	if err := aranyaController.AddControllersToManager(mgr, &config.VirtualNode); err != nil {
 		return err
 	}
 
-	log.Info("starting the controller")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	log.Printf("starting the controller")
+	if err := mgr.Start(ctx.Done()); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func printVersion() {
-	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }

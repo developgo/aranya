@@ -1,36 +1,41 @@
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: aranya
+  namespace: edge
 rules:
 - apiGroups:
   - ""
   resources:
   - services
-  - endpoints
-  - events
   - configmaps
   - secrets
-  # aranya needs to create and manage virtual nodes and its pods for edge deivces
-  - nodes
-  - nodes/status
   - pods
   - pods/status
-  verbs:
-  - '*'
+  verbs: ["*"]
 # control aranya crds
-- apiGroups: [ 'aranya.arhat.dev' ]
-  resources: [ '*' ]
-  verbs: [ '*' ]
+- apiGroups: ["aranya.arhat.dev"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aranya
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/status
+  verbs: ["*"]
 # required to generate node certificates
 - apiGroups:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests
   - certificatesigningrequests/approval
-  verbs:
-  - '*'
+  verbs: ["*"]
 
 # TODO: find a way to create cluster role binding in script with different namespace
 

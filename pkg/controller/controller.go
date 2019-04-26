@@ -23,7 +23,7 @@ import (
 	"arhat.dev/aranya/pkg/virtualnode"
 )
 
-// AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager, virtualNodeConfig *virtualnode.Config) error {
+// AddControllersToManager adds all Controllers to the Manager
+func AddControllersToManager(m manager.Manager, virtualNodeConfig *virtualnode.Config) error {
 	return edgedevice.AddToManager(m, virtualNodeConfig)
 }

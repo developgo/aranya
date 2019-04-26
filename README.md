@@ -61,7 +61,7 @@ see [docs/Build.md](./docs/Build.md)
    $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/crds/aranya_v1alpha1_edgedevice_crd.yaml
 
    # create cluster role for aranya
-   $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/aranya-cluster-role.yaml
+   $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/aranya-roles.yaml
 
    # create service account for aranya
    $ kubectl -n ${NS} create serviceaccount aranya

@@ -38,6 +38,7 @@ import (
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/server"
+	"arhat.dev/aranya/pkg/constant"
 	"arhat.dev/aranya/pkg/virtualnode/pod/cache"
 	"arhat.dev/aranya/pkg/virtualnode/pod/queue"
 	"arhat.dev/aranya/pkg/virtualnode/resolver"
@@ -47,7 +48,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, config.Timers.ReSyncInterval,
 		// watch all pods scheduled to the node
-		kubeinformers.WithNamespace(corev1.NamespaceAll),
+		kubeinformers.WithNamespace(constant.CurrentNamespace()),
 		kubeinformers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 		}),

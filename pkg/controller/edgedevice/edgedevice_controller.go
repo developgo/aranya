@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +54,10 @@ var (
 )
 
 var log = logf.Log.WithName("aranya")
+
+func init() {
+	logf.SetLogger(zap.Logger())
+}
 
 // AddToManager creates a new EdgeDevice Controller and adds it to the manager. The manager will set fields on the Controller
 // and Start it when the manager is Started.
@@ -142,6 +147,31 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 	reqLog := log.WithValues("name", request.Name)
 	if request.Namespace == corev1.NamespaceAll {
+		// check this node belongs to this namespace
+		nodeObj := &corev1.Node{}
+		err = r.client.Get(r.ctx, types.NamespacedName{Namespace: corev1.NamespaceAll, Name: request.Name}, nodeObj)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return reconcile.Result{}, err
+			}
+
+			// we're not sure which namespace this node belongs to
+			// reconcile the edge device to make sure we are in consistent state
+			return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, constant.CurrentNamespace(), request.Name)
+		}
+
+		belongsToThisNamespace := false
+		for _, t := range nodeObj.Spec.Taints {
+			if t.Key == constant.TaintKeyNamespace && t.Value == constant.CurrentNamespace() {
+				belongsToThisNamespace = true
+				break
+			}
+		}
+
+		if !belongsToThisNamespace {
+			return reconcile.Result{}, nil
+		}
+
 		// reconcile node only
 		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, constant.CurrentNamespace(), request.Name, nil)
 	}

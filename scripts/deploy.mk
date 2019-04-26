@@ -14,6 +14,7 @@
 
 NS := edge
 
+KUBE_CREATE := kubectl create -n ${NS}
 KUBE_APPLY := kubectl apply -n ${NS}
 KUBE_DEL := kubectl delete -n ${NS}
 
@@ -24,8 +25,9 @@ operator-setup:
 	# crd
 	${KUBE_APPLY} -f cicd/k8s/crds/aranya_v1alpha1_edgedevice_crd.yaml
 	# rbac
-	${KUBE_APPLY} -f cicd/k8s/aranya-cluster-role.yaml
-	kubectl create -n ${NS} serviceaccount aranya || true
+	${KUBE_APPLY} -f cicd/k8s/aranya-roles.yaml
+	${KUBE_CREATE} serviceaccount aranya || true
+	${KUBE_CREATE} rolebinding aranya --role=aranya --serviceaccount=${NS}:aranya || true
 	kubectl create clusterrolebinding aranya --clusterrole=aranya --serviceaccount=${NS}:aranya || true
 	# deploy
 	${KUBE_APPLY} -f cicd/k8s/aranya-deploy.yaml
@@ -35,6 +37,7 @@ operator-cleanup: delete-sample-devices
 	# delete deployment
 	${KUBE_DEL} -f cicd/k8s/aranya-deploy.yaml || true
 	# delete rbac
+	${KUBE_DEL} rolebinding aranya || true
 	${KUBE_DEL} clusterrolebinding aranya || true
 	${KUBE_DEL} serviceaccount aranya || true
 	${KUBE_DEL} -f cicd/k8s/aranya-cluster-role.yaml || true
