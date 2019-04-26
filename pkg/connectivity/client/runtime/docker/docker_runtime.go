@@ -166,14 +166,14 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 			return nil, connectivity.NewCommonError(plainErr.Error())
 		}
 
-		defer func() {
+		defer func(ctrID string) {
 			if err != nil {
 				createLog.Info("delete container due to error", "containerID", ctrID)
 				if e := r.deleteContainer(ctrID, 0); e != nil {
 					createLog.Error(e, "failed to delete container after start failure")
 				}
 			}
-		}()
+		}(ctrID)
 	}
 
 	containersInfo := make([]*dockerType.ContainerJSON, len(containersCreated))
