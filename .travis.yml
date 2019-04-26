@@ -39,6 +39,7 @@ jobs:
       script:
         - make aranya
         - make arhat-docker-grpc
+        # TODO: upload output
 
 stages:
   - build images
