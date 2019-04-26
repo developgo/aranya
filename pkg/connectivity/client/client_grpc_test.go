@@ -30,8 +30,8 @@ import (
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
-	"arhat.dev/aranya/pkg/connectivity/runtime/fake"
-	"arhat.dev/aranya/pkg/connectivity/servertivity/server"
+	"arhat.dev/aranya/pkg/connectivity/client/runtime/fake"
+	"arhat.dev/aranya/pkg/connectivity/server"
 )
 
 var (

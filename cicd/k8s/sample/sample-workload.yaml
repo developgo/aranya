@@ -17,8 +17,7 @@ data:
         listen       8080;
         server_name  localhost;
         location / {
-            root   /usr/share/nginx/html;
-            index  index.html index.htm;
+            proxy_pass http://example.com;
         }
 
         error_page   500 502 503 504  /50x.html;
