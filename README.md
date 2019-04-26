@@ -1,6 +1,6 @@
 # aranya `阿兰若`
 
-[![Build Status](https://travis-ci.com/arhat-dev/aranya.svg)](https://travis-ci.com/arhat-dev/aranya) [![GoDoc](https://godoc.org/github.com/arhat-dev/aranya?status.svg)](https://godoc.org/arhat.dev/aranya) [![GoReportCard](https://goreportcard.com/badge/arhat-dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya) [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
+[![Build Status](https://travis-ci.com/arhat-dev/aranya.svg)](https://travis-ci.com/arhat-dev/aranya) [![GoDoc](https://godoc.org/github.com/arhat-dev/aranya?status.svg)](https://godoc.org/arhat.dev/aranya) [![GoReportCard](https://goreportcard.com/badge/github.com/arhat-dev/aranya)](https://goreportcard.com/report/arhat.dev/aranya) [![codecov](https://codecov.io/gh/arhat-dev/aranya/branch/master/graph/badge.svg)](https://codecov.io/gh/arhat-dev/aranya)
 
 A `Kubernetes` operator for edge devices
 
