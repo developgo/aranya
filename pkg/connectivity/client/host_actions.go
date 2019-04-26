@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
 Copyright 2019 The arhat.dev Authors.
 
@@ -24,10 +26,6 @@ import (
 	"github.com/kr/pty"
 
 	"arhat.dev/aranya/pkg/connectivity"
-)
-
-var (
-	ErrCommandNotProvided = connectivity.NewCommonError("command not provided for exec")
 )
 
 func execInHost(stdin io.Reader, stdout, stderr io.Writer, resizeCh <-chan *connectivity.TtyResizeOptions, command []string, tty bool) *connectivity.Error {

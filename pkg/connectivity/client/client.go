@@ -31,6 +31,7 @@ var (
 	ErrClientAlreadyConnected = errors.New("client already connected")
 	ErrClientNotConnected     = errors.New("client not connected")
 	ErrStreamSessionClosed    = connectivity.NewCommonError("stream session closed")
+	ErrCommandNotProvided     = connectivity.NewCommonError("command not provided for exec")
 )
 
 type Interface interface {
