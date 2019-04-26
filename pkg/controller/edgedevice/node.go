@@ -76,7 +76,9 @@ func newKubeletListener(kubeClient kubernetes.Interface, hostNodeName string, de
 		C:  certInfo.Country,
 		ST: certInfo.State,
 		L:  certInfo.Locality,
-		O:  certInfo.Organisation,
+		// Follow kubernetes guideline, see
+		// https://kubernetes.io/docs/setup/certificates/#configure-certificates-for-user-accounts
+		O:  "system:nodes",
 		OU: certInfo.OrganisationUnit,
 	}
 	tlsCert, err := getKubeletServerCert(kubeClient, hostNodeName, deviceObj.Name, csrName, nodeAddresses)

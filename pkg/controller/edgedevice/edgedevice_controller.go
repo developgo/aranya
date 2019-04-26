@@ -65,10 +65,10 @@ func AddToManager(mgr controllermanager.Manager, config *virtualnode.Config) err
 	return addToManager(mgr, &ReconcileEdgeDevice{
 		client:            mgr.GetClient(),
 		scheme:            mgr.GetScheme(),
-		config:            mgr.GetConfig(),
+		kubeConfig:        mgr.GetConfig(),
 		ctx:               context.Background(),
 		kubeClient:        kubeclient.NewForConfigOrDie(mgr.GetConfig()),
-		VirtualNodeConfig: config,
+		virtualNodeConfig: config,
 	})
 }
 
@@ -112,10 +112,10 @@ type ReconcileEdgeDevice struct {
 	client     client.Client
 	kubeClient kubeclient.Interface
 	scheme     *runtime.Scheme
-	config     *rest.Config
+	kubeConfig *rest.Config
 	ctx        context.Context
 
-	VirtualNodeConfig *virtualnode.Config
+	virtualNodeConfig *virtualnode.Config
 }
 
 // Reconcile reads that state of the cluster for a EdgeDevice object and makes changes based on the state read
@@ -312,7 +312,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 	// here, device presents and not deleted
 	// everything related expected to exist
-	creationOpts.Config = r.VirtualNodeConfig.OverrideWith(deviceObj.Spec.Connectivity.Timers)
+	creationOpts.Config = r.virtualNodeConfig.OverrideWith(deviceObj.Spec.Connectivity.Timers)
 
 	if needToCreateNodeObject {
 		// new node and new virtual node
