@@ -25,7 +25,8 @@ import (
 )
 
 type NodeServiceConfig struct {
-	Timers struct {
+	StatusUpdateRetryCount int `json:"status_update_retry_count" yaml:"status_update_retry_count"`
+	Timers                 struct {
 		StatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
 	} `json:"timers" yaml:"timers"`
 }

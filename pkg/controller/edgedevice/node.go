@@ -102,15 +102,26 @@ func newNodeForEdgeDevice(device *aranya.EdgeDevice, addresses []corev1.NodeAddr
 		}
 	}
 
+	labels := map[string]string{
+		// this label can be overridden
+		"kubernetes.io/role": "EdgeDevice",
+	}
+
+	for k, v := range device.Labels {
+		labels[k] = v
+	}
+
+	labels[constant.LabelRole] = constant.LabelRoleValueEdgeDevice
+	labels[constant.LabelName] = device.Name
+	if hostname != "" {
+		labels[kubeletapis.LabelHostname] = hostname
+	}
+
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: device.Name,
-			Labels: map[string]string{
-				constant.LabelRole:        constant.LabelRoleValueEdgeDevice,
-				constant.LabelName:        device.Name,
-				"kubernetes.io/role":      "EdgeDevice",
-				kubeletapis.LabelHostname: hostname,
-			},
+			Name:        device.Name,
+			Annotations: device.Annotations,
+			Labels:      labels,
 			ClusterName: device.ClusterName,
 		},
 		Spec: corev1.NodeSpec{

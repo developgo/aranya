@@ -19,8 +19,8 @@ package controller
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"arhat.dev/aranya/pkg/virtualnode"
 	"arhat.dev/aranya/pkg/controller/edgedevice"
+	"arhat.dev/aranya/pkg/virtualnode"
 )
 
 // AddToManager adds all Controllers to the Manager

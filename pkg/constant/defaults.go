@@ -20,6 +20,21 @@ import (
 	"time"
 )
 
+// Default file and dirs
+const (
+	// aranya defaults
+	DefaultAranyaConfigFile = "/etc/aranya/config.yaml"
+	DefaultAranyaLogDir     = "/var/log/aranya"
+
+	// arhat defaults
+	DefaultArhatConfigFile     = "/etc/arhat/config.yaml"
+	DefaultArhatLogDir         = "/var/log/arhat"
+	DefaultArhatDataDir        = "/var/lib/arhat/data"
+	DefaultPauseImage          = "k8s.gcr.io/pause:3.1"
+	DefaultPauseCommand        = "/pause"
+	DefaultManagementNamespace = "container.arhat.dev"
+)
+
 // Defaults intervals
 const (
 	DefaultNodeStatusSyncInterval = 10 * time.Second

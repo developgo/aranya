@@ -38,9 +38,9 @@ type EndPoint struct {
 type Config struct {
 	once sync.Once
 
-	RootDir string `json:"root_dir" yaml:"root_dir"`
+	DataDir string `json:"data_dir" yaml:"data_dir"`
 
-	// pod image
+	// pause image and command
 	PauseImage   string `json:"pause_image" yaml:"pause_image"`
 	PauseCommand string `json:"pause_command" yaml:"pause_command"`
 
@@ -63,15 +63,15 @@ type Config struct {
 }
 
 func (c *Config) PodsDir() string {
-	return filepath.Join(c.RootDir, config.DefaultKubeletPodsDirName)
+	return filepath.Join(c.DataDir, config.DefaultKubeletPodsDirName)
 }
 
 func (c *Config) PluginsDir() string {
-	return filepath.Join(c.RootDir, config.DefaultKubeletPluginsDirName)
+	return filepath.Join(c.DataDir, config.DefaultKubeletPluginsDirName)
 }
 
 func (c *Config) PluginsRegistrationDir() string {
-	return filepath.Join(c.RootDir, config.DefaultKubeletPluginsRegistrationDirName)
+	return filepath.Join(c.DataDir, config.DefaultKubeletPluginsRegistrationDirName)
 }
 
 func (c *Config) PluginDir(pluginName string) string {
@@ -103,7 +103,7 @@ func (c *Config) PodContainerDir(podUID, containerName string) string {
 }
 
 func (c *Config) PodResourcesDir() string {
-	return filepath.Join(c.RootDir, config.DefaultKubeletPodResourcesDirName)
+	return filepath.Join(c.DataDir, config.DefaultKubeletPodResourcesDirName)
 }
 
 func (c *Config) ContainerLogsDir() string {
@@ -123,7 +123,7 @@ func (c *Config) Init() error {
 
 func (c *Config) ensureAllDir() error {
 	requiredDirs := map[string]os.FileMode{
-		c.RootDir:                  0750,
+		c.DataDir:                  0750,
 		c.PodsDir():                0750,
 		c.PluginsDir():             0750,
 		c.PluginsRegistrationDir(): 0750,

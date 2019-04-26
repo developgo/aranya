@@ -21,13 +21,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/kubelet/util"
-
-	"arhat.dev/aranya/pkg/constant"
 )
 
 func (vn *VirtualNode) syncMirrorNodeStatus() {
 	vn.log.V(10).Info("trying to update node status")
-	for i := 0; i < constant.DefaultNodeStatusUpdateRetry; i++ {
+	for i := 0; i < vn.opt.Config.Node.StatusUpdateRetryCount; i++ {
 		if err := vn.tryUpdateNodeStatus(i); err != nil {
 			vn.log.Error(err, "failed to update node status, retry")
 		} else {

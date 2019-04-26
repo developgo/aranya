@@ -13,7 +13,7 @@ agent:
       status_sync_interval: 60s
 
 runtime:
-  root_dir: /tmp/arhat/data
+  data_dir: /tmp/arhat/data
 
   pause_image: k8s.gcr.io/pause:3.1
   pause_command: /pause

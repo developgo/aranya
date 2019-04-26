@@ -69,16 +69,25 @@ func (r *ReconcileEdgeDevice) createGRPCSvcObjectForDevice(device *aranya.EdgeDe
 }
 
 func newServiceForEdgeDevice(device *aranya.EdgeDevice, grpcListenPort int32) *corev1.Service {
+	labels := make(map[string]string)
+	for k, v := range device.Labels {
+		labels[k] = v
+	}
+	labels[constant.LabelRole] = constant.LabelRoleValueService
+
+	selector := map[string]string{
+		constant.LabelRole: constant.LabelRoleValueController,
+	}
+
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        device.Name,
 			Namespace:   device.Namespace,
-			Labels:      map[string]string{constant.LabelRole: constant.LabelRoleValueService},
+			Labels:      labels,
 			ClusterName: device.ClusterName,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{constant.LabelRole: constant.LabelRoleValueController},
-
+			Selector: selector,
 			// setup port for grpc server served by virtual node,
 			// with mqtt we don't need to expose service
 			Ports: []corev1.ServicePort{{
@@ -91,7 +100,7 @@ func newServiceForEdgeDevice(device *aranya.EdgeDevice, grpcListenPort int32) *c
 				},
 			}},
 			Type: corev1.ServiceTypeClusterIP,
-			// no cluster ip since it's target is aranya's host node,
+			// do not allocate cluster ip since it's target is aranya's host node,
 			// and only one grpc backend
 			ClusterIP: corev1.ClusterIPNone,
 		},

@@ -37,12 +37,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	"arhat.dev/aranya/pkg/virtualnode"
 	aranyaApis "arhat.dev/aranya/pkg/apis"
+	"arhat.dev/aranya/pkg/constant"
 	aranyaController "arhat.dev/aranya/pkg/controller"
+	"arhat.dev/aranya/pkg/virtualnode"
 )
-
-const DefaultConfigFile = "/etc/aranya/config.yaml"
 
 var configFile string
 
@@ -90,6 +89,25 @@ func NewAranyaCmd() *cobra.Command {
 		},
 	}
 
+	flags := cmd.PersistentFlags()
+	// config file
+	flags.StringVarP(&configFile, "config", "c", constant.DefaultAranyaConfigFile, "path to the aranya config file")
+	// virtual node flags
+	flags.DurationVar(&config.VirtualNode.Pod.Timers.ReSyncInterval, "pod-resync-interval", constant.DefaultPodReSyncInterval, "pod informer resync interval")
+	flags.IntVar(&config.VirtualNode.Node.StatusUpdateRetryCount, "node-status-update-retry-count", constant.DefaultNodeStatusUpdateRetry, "retry count when node object status update fail")
+	flags.DurationVar(&config.VirtualNode.Node.Timers.StatusSyncInterval, "node-status-sync-interval", constant.DefaultNodeStatusSyncInterval, "cluster node status update interval")
+	flags.DurationVar(&config.VirtualNode.Stream.Timers.CreationTimeout, "stream-creation-timeout", constant.DefaultStreamCreationTimeout, "kubectl stream creation timeout (exec, attach, port-forward)")
+	flags.DurationVar(&config.VirtualNode.Stream.Timers.IdleTimeout, "stream-idle-timeout", constant.DefaultStreamIdleTimeout, "kubectl stream idle timeout (exec, attach, port-forward)")
+	flags.DurationVar(&config.VirtualNode.Connectivity.Timers.UnarySessionTimeout, "unary-session-timeout", constant.DefaultUnarySessionTimeout, "timeout duration for unary session")
+	flags.DurationVar(&config.VirtualNode.Connectivity.Timers.ForcePodStatusSyncInterval, "force-pod-status-sync-interval", 0, "device pod status sync interval, reject device if operation failed")
+	flags.DurationVar(&config.VirtualNode.Connectivity.Timers.ForceNodeStatusSyncInterval, "force-node-status-sync-interval", 0, "device node status sync interval, reject device if operation failed")
+	// controller flags
+	flags.IntVarP(&config.Controller.Log.Level, "log-level", "v", 0, "log level, higher level means more verbose")
+	flags.StringVar(&config.Controller.Log.Dir, "log-dir", constant.DefaultAranyaLogDir, "save log files to this dir")
+	// services flags
+	flags.StringVar(&config.Services.MetricsService.Address, "metrics-service-address", "0.0.0.0", "")
+	flags.Int32Var(&config.Services.MetricsService.Port, "metrics-service-port", 8383, "")
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
@@ -108,8 +126,6 @@ func NewAranyaCmd() *cobra.Command {
 			}
 		}
 	}()
-
-	cmd.PersistentFlags().StringVarP(&configFile, "config", "c", DefaultConfigFile, "set the path to configuration file")
 
 	return cmd
 }

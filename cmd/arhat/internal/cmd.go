@@ -33,9 +33,8 @@ import (
 	internalruntime "arhat.dev/aranya/cmd/arhat/internal/runtime"
 	"arhat.dev/aranya/pkg/connectivity/client"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
+	"arhat.dev/aranya/pkg/constant"
 )
-
-const DefaultConfigFile = "/etc/arhat/config.yaml"
 
 var configFile string
 
@@ -52,6 +51,10 @@ func NewArhatCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := cmd.ParseFlags(args); err != nil {
+				return err
+			}
+
 			configBytes, err := ioutil.ReadFile(configFile)
 			if err != nil {
 				return fmt.Errorf("failed to read config file %s: %v", configFile, err)
@@ -68,6 +71,25 @@ func NewArhatCmd() *cobra.Command {
 		},
 	}
 
+	flags := cmd.PersistentFlags()
+	// config file
+	flags.StringVarP(&configFile, "config", "c", constant.DefaultArhatConfigFile, "path to the arhat config file")
+	// agent flags
+	flags.StringVar(&config.Agent.Log.Dir, "log-dir", constant.DefaultArhatLogDir, "save log files to this dir")
+	flags.IntVarP(&config.Agent.Log.Level, "log-level", "v", 0, "log level, higher level means more verbose")
+	flags.BoolVar(&config.Agent.Features.AllowHostExec, "allow-host-exec", false, "allow kubectl exec issued # prefixed commands to execute in arhat host")
+	flags.DurationVar(&config.Agent.Node.Timers.NodeStatusSyncInterval, "node-status-sync-interval", 0, "periodically sync node status")
+	flags.DurationVar(&config.Agent.Pod.Timers.PodStatusSyncInterval, "pod-status-sync-interval", 0, "periodically sync node status")
+	flags.IntVar(&config.Agent.Pod.MaxPodCount, "max-pod-count", 0, "")
+	// runtime flags
+	flags.StringVar(&config.Runtime.DataDir, "data-dir", constant.DefaultArhatDataDir, "pod data dir, store values from Kubernetes ConfigMap and Secret")
+	flags.StringVar(&config.Runtime.PauseImage, "pause-image", constant.DefaultPauseImage, "pause container image to claim linux namespaces")
+	flags.StringVar(&config.Runtime.PauseCommand, "pause-command", constant.DefaultPauseCommand, "pause container command")
+	flags.StringVarP(&config.Runtime.ManagementNamespace, "management-namespace", "n", constant.DefaultManagementNamespace, "container runtime namespace for container management")
+	// commandline flags are not sufficient to run arhat properly,
+	// so mark config flag as required
+	_ = cmd.MarkPersistentFlagRequired("config")
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, os.Kill, syscall.SIGHUP)
 	go func() {
@@ -81,9 +103,6 @@ func NewArhatCmd() *cobra.Command {
 			}
 		}
 	}()
-
-	cmd.PersistentFlags().StringVarP(&configFile, "config", "c", DefaultConfigFile, "set the path to configuration file")
-	_ = cmd.MarkPersistentFlagRequired("config")
 
 	return cmd
 }
