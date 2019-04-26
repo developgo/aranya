@@ -53,7 +53,7 @@ type ControllerConfig struct {
 }
 
 type ServicesConfig struct {
-	MetricsService *struct {
+	MetricsService struct {
 		Address string `json:"address" yaml:"address"`
 		Port    int32  `json:"port" yaml:"port"`
 	} `json:"metrics" yaml:"metrics"`
