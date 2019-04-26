@@ -80,3 +80,5 @@ tags
 private*
 
 dive.log
+
+/cicd/k8s/sample/share

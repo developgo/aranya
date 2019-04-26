@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/kubernetes/pkg/apis/core/v1/validation"
-	kubeletportforward "k8s.io/kubernetes/pkg/kubelet/server/portforward"
-	kubeletremotecommand "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
+	kubeletpf "k8s.io/kubernetes/pkg/kubelet/server/portforward"
+	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
 const (
@@ -98,8 +98,8 @@ func getParamsForContainerLog(req *http.Request) (namespace, podName string, log
 	return
 }
 
-func getRemoteCommandOptions(req *http.Request) *kubeletremotecommand.Options {
-	return &kubeletremotecommand.Options{
+func getRemoteCommandOptions(req *http.Request) *kubeletrc.Options {
+	return &kubeletrc.Options{
 		TTY:    req.FormValue(corev1.ExecTTYParam) == "1",
 		Stdin:  req.FormValue(corev1.ExecStdinParam) == "1",
 		Stdout: req.FormValue(corev1.ExecStdoutParam) == "1",
@@ -166,7 +166,7 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpLog.Info("starting to serve exec")
-	kubeletremotecommand.ServeExec(
+	kubeletrc.ServeExec(
 		w, r, /* http context */
 		m.doHandleExecInContainer(), /* wrapped pod executor */
 		"",                          /* pod name (unused) */
@@ -193,7 +193,7 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpLog.Info("starting to serve attach")
-	kubeletremotecommand.ServeAttach(
+	kubeletrc.ServeAttach(
 		w, r, /* http context */
 		m.doHandleAttachContainer(), /* wrapped pod attacher */
 		"",                          /* pod name (not used) */
@@ -213,7 +213,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	namespace, podName, uid := getParamsForPortForward(r)
 
 	httpLog.Info("trying to get portforward options")
-	portForwardOptions, err := kubeletportforward.NewV4Options(r)
+	portForwardOptions, err := kubeletpf.NewV4Options(r)
 	if err != nil {
 		httpLog.Error(err, "failed to parse portforward options")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -247,7 +247,7 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpLog.Info("starting to serve port forward")
-	kubeletportforward.ServePortForward(
+	kubeletpf.ServePortForward(
 		w, r, /* http context */
 		m.doHandlePortForward(portProto), /* wrapped pod port forwarder */
 		"",                               /* pod name (not used) */

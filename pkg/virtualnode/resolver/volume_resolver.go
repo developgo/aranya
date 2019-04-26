@@ -20,12 +20,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeClient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes"
 
 	"arhat.dev/aranya/pkg/connectivity"
 )
 
-func ResolveVolumeData(kubeClient kubeClient.Interface, pod *corev1.Pod) (volumeData map[string]*connectivity.NamedData, err error) {
+func ResolveVolumeData(kubeClient kubernetes.Interface, pod *corev1.Pod) (volumeData map[string]*connectivity.NamedData, err error) {
 	volumeData = make(map[string]*connectivity.NamedData)
 
 	configMapClient := kubeClient.CoreV1().ConfigMaps(pod.Namespace)

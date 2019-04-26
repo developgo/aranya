@@ -21,13 +21,13 @@ package docker
 import (
 	"time"
 
-	dockerType "github.com/docker/docker/api/types"
+	dockertype "github.com/docker/docker/api/types"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/constant"
 )
 
-func (r *dockerRuntime) translatePodStatus(pauseContainer *dockerType.ContainerJSON, containers []*dockerType.ContainerJSON) *connectivity.PodStatus {
+func (r *dockerRuntime) translatePodStatus(pauseContainer *dockertype.ContainerJSON, containers []*dockertype.ContainerJSON) *connectivity.PodStatus {
 	podUID := pauseContainer.Config.Labels[constant.ContainerLabelPodUID]
 	ctrStatus := make(map[string]*connectivity.PodStatus_ContainerStatus)
 
@@ -46,7 +46,7 @@ func (r *dockerRuntime) translatePodStatus(pauseContainer *dockerType.ContainerJ
 	return connectivity.NewPodStatus(podUID, ctrStatus)
 }
 
-func (r *dockerRuntime) translateContainerStatus(ctrInfo *dockerType.ContainerJSON) *connectivity.PodStatus_ContainerStatus {
+func (r *dockerRuntime) translateContainerStatus(ctrInfo *dockertype.ContainerJSON) *connectivity.PodStatus_ContainerStatus {
 	ctrCreatedAt, _ := time.Parse(time.RFC3339Nano, ctrInfo.Created)
 	ctrStartedAt, _ := time.Parse(time.RFC3339Nano, ctrInfo.State.StartedAt)
 	ctrFinishedAt, _ := time.Parse(time.RFC3339Nano, ctrInfo.State.FinishedAt)

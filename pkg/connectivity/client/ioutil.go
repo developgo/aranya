@@ -14,5 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package util
-package util // import "arhat.dev/aranya/pkg/virtualnode/util"
+package client
+
+// scanAnyAvail a split func to return all bytes available
+func scanAnyAvail(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	return len(data), data[:], nil
+}

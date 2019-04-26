@@ -22,6 +22,54 @@ import (
 	"path/filepath"
 )
 
+func (m *Msg) Err() *Error {
+	if m.GetError() == nil {
+		return nil
+	}
+
+	switch m.GetError().GetKind() {
+	case ErrCommon:
+		if m.GetError().GetDescription() != "" {
+			return m.GetError()
+		}
+
+		return nil
+	default:
+		return m.GetError()
+	}
+}
+
+func (m *Error) Error() string {
+	if m == nil {
+
+	}
+	return m.GetKind().String() + "/" + m.GetDescription()
+}
+
+func (m *Error) IsCommon() bool {
+	return m.isKind(ErrCommon)
+}
+
+func (m *Error) IsNotFound() bool {
+	return m.isKind(ErrNotFound)
+}
+
+func (m *Error) IsAlreadyExists() bool {
+	return m.isKind(ErrAlreadyExists)
+}
+
+func (m *Error) IsNotSupported() bool {
+	return m.isKind(ErrNotSupported)
+}
+
+func (m *Error) isKind(kind Error_Kind) bool {
+	if m == nil {
+		return false
+	}
+
+	return m.Kind == kind
+}
+
 func (v *MountOptions) Ensure(dir string, dataMap map[string][]byte) (mountPath string, err error) {
 	if subPath := v.GetSubPath(); subPath != "" {
 		data, ok := dataMap[subPath]

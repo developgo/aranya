@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"arhat.dev/aranya/pkg/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/util"
 )
 
 func (b *baseAgent) doPodCreate(sid uint64, options *connectivity.CreateOptions) {
@@ -86,7 +85,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 
 		go func() {
 			s := bufio.NewScanner(remoteStdout)
-			s.Split(util.ScanAnyAvail)
+			s.Split(scanAnyAvail)
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
@@ -103,7 +102,7 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 
 		go func() {
 			s := bufio.NewScanner(remoteStderr)
-			s.Split(util.ScanAnyAvail)
+			s.Split(scanAnyAvail)
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
@@ -152,7 +151,7 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 
 		go func() {
 			s := bufio.NewScanner(remoteStdout)
-			s.Split(util.ScanAnyAvail)
+			s.Split(scanAnyAvail)
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
@@ -169,7 +168,7 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 
 		go func() {
 			s := bufio.NewScanner(remoteStderr)
-			s.Split(util.ScanAnyAvail)
+			s.Split(scanAnyAvail)
 
 			for s.Scan() {
 				if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
@@ -216,7 +215,7 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	// read stdout
 	go func() {
 		s := bufio.NewScanner(remoteStdout)
-		s.Split(util.ScanAnyAvail)
+		s.Split(scanAnyAvail)
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {
@@ -229,7 +228,7 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	// read stderr
 	go func() {
 		s := bufio.NewScanner(remoteStderr)
-		s.Split(util.ScanAnyAvail)
+		s.Split(scanAnyAvail)
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDERR, s.Bytes())); err != nil {
@@ -260,7 +259,7 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	// read output
 	go func() {
 		s := bufio.NewScanner(remoteOutput)
-		s.Split(util.ScanAnyAvail)
+		s.Split(scanAnyAvail)
 
 		for s.Scan() {
 			if err := b.doPostMsg(connectivity.NewDataMsg(sid, false, connectivity.STDOUT, s.Bytes())); err != nil {

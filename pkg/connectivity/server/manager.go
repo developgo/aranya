@@ -99,11 +99,6 @@ func (s *baseManager) Connected() <-chan struct{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.alreadyRejected {
-		s.rejected = make(chan struct{})
-	}
-	s.alreadyRejected = false
-
 	return s.connected
 }
 
@@ -115,6 +110,7 @@ func (s *baseManager) Disconnected() <-chan struct{} {
 	return s.disconnected
 }
 
+// Rejected
 func (s *baseManager) Rejected() <-chan struct{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -149,6 +145,8 @@ func (s *baseManager) onConnected(setConnected func() bool) error {
 		close(s.connected)
 		// refresh device disconnected signal
 		s.disconnected = make(chan struct{})
+		s.rejected = make(chan struct{})
+		s.alreadyRejected = false
 
 		return nil
 	}

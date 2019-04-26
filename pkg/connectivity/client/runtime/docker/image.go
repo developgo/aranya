@@ -22,17 +22,17 @@ import (
 	"encoding/json"
 	"io"
 
-	dockerType "github.com/docker/docker/api/types"
-	dockerFilter "github.com/docker/docker/api/types/filters"
-	dockerMessage "github.com/docker/docker/pkg/jsonmessage"
+	dockertype "github.com/docker/docker/api/types"
+	dockerfilter "github.com/docker/docker/api/types/filters"
+	dockermessage "github.com/docker/docker/pkg/jsonmessage"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client/runtimeutil"
 )
 
-func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.ContainerSpec, authConfig map[string]*connectivity.AuthConfig) (map[string]*dockerType.ImageSummary, *connectivity.Error) {
+func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.ContainerSpec, authConfig map[string]*connectivity.AuthConfig) (map[string]*dockertype.ImageSummary, *connectivity.Error) {
 	var (
-		imageMap    = make(map[string]*dockerType.ImageSummary)
+		imageMap    = make(map[string]*dockertype.ImageSummary)
 		imageToPull = make([]string, 0)
 	)
 
@@ -68,7 +68,7 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 		if authConfig != nil {
 			config, hasCred := authConfig[imageName]
 			if hasCred {
-				authCfg := dockerType.AuthConfig{
+				authCfg := dockertype.AuthConfig{
 					Username:      config.GetUsername(),
 					Password:      config.GetPassword(),
 					ServerAddress: config.GetServerAddress(),
@@ -83,7 +83,7 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 			}
 		}
 
-		out, err := r.imageClient.ImagePull(pullCtx, imageName, dockerType.ImagePullOptions{
+		out, err := r.imageClient.ImagePull(pullCtx, imageName, dockertype.ImagePullOptions{
 			RegistryAuth: authStr,
 		})
 		if err != nil {
@@ -93,7 +93,7 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 			defer func() { _ = out.Close() }()
 			decoder := json.NewDecoder(out)
 			for {
-				var msg dockerMessage.JSONMessage
+				var msg dockermessage.JSONMessage
 				err := decoder.Decode(&msg)
 				if err == io.EOF {
 					break
@@ -121,9 +121,9 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 	return imageMap, nil
 }
 
-func (r *dockerRuntime) getImage(ctx context.Context, imageName string) (*dockerType.ImageSummary, *connectivity.Error) {
-	imageList, err := r.imageClient.ImageList(ctx, dockerType.ImageListOptions{
-		Filters: dockerFilter.NewArgs(dockerFilter.Arg("reference", imageName)),
+func (r *dockerRuntime) getImage(ctx context.Context, imageName string) (*dockertype.ImageSummary, *connectivity.Error) {
+	imageList, err := r.imageClient.ImageList(ctx, dockertype.ImageListOptions{
+		Filters: dockerfilter.NewArgs(dockerfilter.Arg("reference", imageName)),
 	})
 	if err != nil {
 		return nil, connectivity.NewCommonError(err.Error())

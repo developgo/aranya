@@ -23,15 +23,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
-	kubeClient "k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/api/v1/resource"
-	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
+	"k8s.io/kubernetes/pkg/apis/core/pods"
 	"k8s.io/kubernetes/pkg/kubectl/util/fieldpath"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 )
 
-func ResolveEnv(kubeClient kubeClient.Interface, pod *corev1.Pod, container *corev1.Container) (map[string]string, error) {
+func ResolveEnv(kubeClient kubernetes.Interface, pod *corev1.Pod, container *corev1.Container) (map[string]string, error) {
 	result := make(map[string]string)
 
 	var (
@@ -67,7 +67,7 @@ func ResolveEnv(kubeClient kubeClient.Interface, pod *corev1.Pod, container *cor
 				if len(envFrom.Prefix) > 0 {
 					k = envFrom.Prefix + k
 				}
-				if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+				if errMsgs := validation.IsEnvVarName(k); len(errMsgs) != 0 {
 					invalidKeys = append(invalidKeys, k)
 					continue
 				}
@@ -98,7 +98,7 @@ func ResolveEnv(kubeClient kubeClient.Interface, pod *corev1.Pod, container *cor
 				if len(envFrom.Prefix) > 0 {
 					k = envFrom.Prefix + k
 				}
-				if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+				if errMsgs := validation.IsEnvVarName(k); len(errMsgs) != 0 {
 					invalidKeys = append(invalidKeys, k)
 					continue
 				}
@@ -220,7 +220,7 @@ func containerResourceRuntimeValue(fs *corev1.ResourceFieldSelector, pod *corev1
 // podFieldSelectorRuntimeValue returns the runtime value of the given
 // selector for a pod.
 func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod, podIP string) (string, error) {
-	internalFieldPath, _, err := podshelper.ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
+	internalFieldPath, _, err := pods.ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
 	if err != nil {
 		return "", err
 	}

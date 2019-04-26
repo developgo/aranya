@@ -58,11 +58,13 @@ func (m *GRPCManager) Start() error {
 func (m *GRPCManager) Stop() {
 	m.onStop(func() {
 		m.server.Stop()
+		_ = m.listener.Close()
 	})
 }
 
 func (m *GRPCManager) Reject(reason connectivity.RejectReason, message string) {
 	m.onReject(func() {
+		// best effort
 		_ = m.syncSrv.Send(connectivity.NewRejectCmd(reason, message))
 	})
 }

@@ -29,11 +29,13 @@ rules:
   - nodes
   - nodes/status
   verbs: ["*"]
-# required to generate node certificates
+# required to generate node certificates automatically
 - apiGroups:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests
+  # remove the approval ability if you would like to
+  # approve on you own (for security reason)
   - certificatesigningrequests/approval
   verbs: ["*"]
 

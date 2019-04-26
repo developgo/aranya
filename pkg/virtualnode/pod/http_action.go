@@ -30,7 +30,6 @@ import (
 	kubeletrc "k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 
 	"arhat.dev/aranya/pkg/connectivity"
-	"arhat.dev/aranya/pkg/virtualnode/util"
 )
 
 type containerExecutor func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
@@ -175,7 +174,7 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			}()
 
 			s := bufio.NewScanner(in)
-			s.Split(util.ScanAnyAvail)
+			s.Split(scanAnyAvail)
 
 			for s.Scan() {
 				select {
@@ -238,4 +237,12 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			}
 		}
 	}
+}
+
+// scanAnyAvail a split func to get all available bytes
+func scanAnyAvail(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	return len(data), data[:], nil
 }

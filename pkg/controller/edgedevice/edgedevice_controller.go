@@ -276,7 +276,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 
 				creationOpts.KubeletServerListener = oldOpts.KubeletServerListener
 				creationOpts.GRPCServerListener = oldOpts.GRPCServerListener
-				creationOpts.Manager = oldOpts.Manager
+				creationOpts.ConnectivityManager = oldOpts.ConnectivityManager
 			}
 		}
 	}
@@ -394,7 +394,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				grpcSrvOptions = append(grpcSrvOptions, grpc.Creds(credentials.NewServerTLSFromCert(grpcServerCert)))
 			}
 
-			creationOpts.Manager = server.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener, &creationOpts.Config.Connectivity)
+			creationOpts.ConnectivityManager = server.NewGRPCManager(grpc.NewServer(grpcSrvOptions...), creationOpts.GRPCServerListener, &creationOpts.Config.Connectivity)
 		} else {
 			// service object deleted (most likely deleted by user)
 			// create service object according to existing grpc listener
@@ -475,7 +475,7 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 		}
 
 		reqLog.Info("trying to create mqtt connectivity manager")
-		creationOpts.Manager, err = server.NewMQTTManager(mqttConfig, cert, &creationOpts.Config.Connectivity)
+		creationOpts.ConnectivityManager, err = server.NewMQTTManager(mqttConfig, cert, &creationOpts.Config.Connectivity)
 		if err != nil {
 			reqLog.Error(err, "failed to create mqtt connectivity manager")
 			return err

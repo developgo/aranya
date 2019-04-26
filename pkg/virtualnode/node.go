@@ -30,14 +30,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	kubeClient "k8s.io/client-go/kubernetes"
-	kubeNodeClient "k8s.io/client-go/kubernetes/typed/core/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+	kubecorev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/server"
 	"arhat.dev/aranya/pkg/virtualnode/pod"
-	"arhat.dev/aranya/pkg/virtualnode/util"
+	"arhat.dev/aranya/pkg/virtualnode/pod/middleware"
 )
 
 var log = logf.Log.WithName("node")
@@ -45,11 +45,11 @@ var log = logf.Log.WithName("node")
 type CreationOptions struct {
 	// required fields
 	NodeObject            *corev1.Node
-	KubeClient            kubeClient.Interface
+	KubeClient            kubeclient.Interface
 	KubeletServerListener net.Listener
 
-	Manager server.Manager
-	Config  *Config
+	ConnectivityManager server.Manager
+	Config              *Config
 
 	// optional
 	GRPCServerListener net.Listener
@@ -59,10 +59,10 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Virtua
 	ctx, exit := context.WithCancel(parentCtx)
 	nodeLogger := log.WithValues("name", opt.NodeObject.Name)
 
-	m := &mux.Router{NotFoundHandler: util.NotFoundHandler(nodeLogger)}
+	m := &mux.Router{NotFoundHandler: middleware.NotFoundHandler(nodeLogger)}
 	// register http routes
 
-	m.Use(util.LogMiddleware(nodeLogger), util.PanicRecoverMiddleware(nodeLogger))
+	m.Use(middleware.LogMiddleware(nodeLogger), middleware.PanicRecoverMiddleware(nodeLogger))
 	m.StrictSlash(true)
 	//
 	// routes for pod
@@ -71,7 +71,7 @@ func CreateVirtualNode(parentCtx context.Context, opt *CreationOptions) (*Virtua
 	// m.Handle("/logs/{logpath:*}", http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))).Methods(http.MethodGet)
 
 	// handle pod related
-	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.Manager, &opt.Config.Stream, &opt.Config.Pod)
+	podManager := pod.NewManager(ctx, opt.NodeObject.Name, opt.KubeClient, opt.ConnectivityManager, &opt.Config.Stream, &opt.Config.Pod)
 	// containerLogs (kubectl logs)
 	m.HandleFunc("/containerLogs/{namespace}/{name}/{container}", podManager.HandlePodContainerLog).Methods(http.MethodGet)
 	// exec (kubectl exec)
@@ -118,7 +118,7 @@ type VirtualNode struct {
 	exit context.CancelFunc
 	name string
 
-	kubeNodeClient kubeNodeClient.NodeInterface
+	kubeNodeClient kubecorev1client.NodeInterface
 
 	kubeletSrv      *http.Server
 	podManager      *pod.Manager
@@ -162,7 +162,7 @@ func (vn *VirtualNode) Start() (err error) {
 				Delete(vn.name)
 			}()
 
-			if err := vn.opt.Manager.Start(); err != nil {
+			if err := vn.opt.ConnectivityManager.Start(); err != nil {
 				vn.log.Error(err, "failed to start connectivity manager")
 				return
 			}
@@ -173,7 +173,7 @@ func (vn *VirtualNode) Start() (err error) {
 			defer func() {
 				vn.log.Info("pod manager exited")
 
-				// once connectivity manager exited, delete this virtual node
+				// once pod manager exited, delete this virtual node
 				Delete(vn.name)
 			}()
 
@@ -189,7 +189,7 @@ func (vn *VirtualNode) Start() (err error) {
 			defer func() {
 				vn.log.Info("stopped waiting for device connect")
 
-				// once connectivity manager exited, delete this virtual node and the according node object
+				// once virtual node exited, delete this virtual node and the according node object
 				Delete(vn.name)
 
 				vn.log.Info("trying to delete node object by virtual node")
@@ -202,7 +202,7 @@ func (vn *VirtualNode) Start() (err error) {
 			var chanClosed uint32
 			for !vn.closing() {
 				select {
-				case <-vn.opt.Manager.Connected():
+				case <-vn.opt.ConnectivityManager.Connected():
 					// we are good to go
 					vn.log.Info("device connected, starting to handle")
 				case <-vn.ctx.Done():
@@ -215,11 +215,11 @@ func (vn *VirtualNode) Start() (err error) {
 
 					for {
 						select {
-						case <-vn.opt.Manager.Disconnected():
+						case <-vn.opt.ConnectivityManager.Disconnected():
 							return
 						case <-vn.ctx.Done():
 							return
-						case msg, more := <-vn.opt.Manager.GlobalMessages():
+						case msg, more := <-vn.opt.ConnectivityManager.GlobalMessages():
 							if !more {
 								return
 							}
@@ -238,7 +238,7 @@ func (vn *VirtualNode) Start() (err error) {
 					case <-stopSig:
 						// can be closed else where
 						return
-					case <-vn.opt.Manager.Disconnected():
+					case <-vn.opt.ConnectivityManager.Disconnected():
 						// device disconnected (if rejected will also trigger disconnect)
 						if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
 							close(stopSig)
@@ -253,14 +253,14 @@ func (vn *VirtualNode) Start() (err error) {
 				vn.log.Info("trying to sync device info for the first time")
 				if err := vn.syncDeviceNodeStatus(); err != nil {
 					vn.log.Error(err, "failed to sync device node info, reject")
-					vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass initial node status sync")
+					vn.opt.ConnectivityManager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass initial node status sync")
 					goto waitForDeviceDisconnect
 				}
 
 				vn.log.Info("trying to sync device pods for the first time")
 				if err := vn.podManager.SyncDevicePods(); err != nil {
 					vn.log.Error(err, "failed to sync device pods")
-					vn.opt.Manager.Reject(connectivity.RejectedByPodStatusSyncError, "failed to pass initial pods sync")
+					vn.opt.ConnectivityManager.Reject(connectivity.RejectedByPodStatusSyncError, "failed to pass initial pods sync")
 					goto waitForDeviceDisconnect
 				}
 
@@ -275,7 +275,7 @@ func (vn *VirtualNode) Start() (err error) {
 							// failed to sync device node status, device down,
 							// wait for another connection
 							vn.log.Error(err, "failed to force sync device node info")
-							vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force node status sync")
+							vn.opt.ConnectivityManager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force node status sync")
 							if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
 								close(stopSig)
 							}
@@ -291,7 +291,7 @@ func (vn *VirtualNode) Start() (err error) {
 						if err := vn.podManager.SyncDevicePods(); err != nil {
 							// failed to sync device node status, device down
 							vn.log.Error(err, "failed to force sync device pods")
-							vn.opt.Manager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force pods sync")
+							vn.opt.ConnectivityManager.Reject(connectivity.RejectedByNodeStatusSyncError, "failed to pass force pods sync")
 							if atomic.CompareAndSwapUint32(&chanClosed, 0, 1) {
 								close(stopSig)
 							}
@@ -316,7 +316,9 @@ func (vn *VirtualNode) ForceClose() {
 	vn.log.Info("force close virtual node")
 
 	_ = vn.kubeletSrv.Close()
-	vn.opt.Manager.Stop()
+	_ = vn.opt.KubeletServerListener.Close()
+	// connectivity manager will handle gRPC server and listener close
+	vn.opt.ConnectivityManager.Stop()
 	vn.podManager.Stop()
 	vn.exit()
 }

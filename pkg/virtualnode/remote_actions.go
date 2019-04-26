@@ -28,7 +28,7 @@ import (
 
 // generate in cluster node cache for remote device
 func (vn *VirtualNode) syncDeviceNodeStatus() error {
-	msgCh, err := vn.opt.Manager.PostCmd(vn.ctx, connectivity.NewNodeCmd(connectivity.GetInfoAll))
+	msgCh, err := vn.opt.ConnectivityManager.PostCmd(vn.ctx, connectivity.NewNodeCmd(connectivity.GetInfoAll))
 	if err != nil {
 		return err
 	}

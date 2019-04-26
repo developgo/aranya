@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
-	dockerType "github.com/docker/docker/api/types"
-	dockerFilter "github.com/docker/docker/api/types/filters"
-	dockerClient "github.com/docker/docker/client"
-	dockerCopy "github.com/docker/docker/pkg/stdcopy"
+	dockertype "github.com/docker/docker/api/types"
+	dockerfilter "github.com/docker/docker/api/types/filters"
+	dockerclient "github.com/docker/docker/client"
+	dockercopy "github.com/docker/docker/pkg/stdcopy"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
@@ -58,10 +58,10 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 		}
 	}
 
-	runtimeClient, err := dockerClient.NewClientWithOpts(
-		dockerClient.WithHost(config.EndPoints.Runtime.Address),
-		dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
-		dockerClient.FromEnv,
+	runtimeClient, err := dockerclient.NewClientWithOpts(
+		dockerclient.WithHost(config.EndPoints.Runtime.Address),
+		dockerclient.WithDialContext(dialCtxFunc(config.EndPoints.Runtime.DialTimeout)),
+		dockerclient.FromEnv,
 	)
 	if err != nil {
 		return nil, err
@@ -69,10 +69,10 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 
 	imageClient := runtimeClient
 	if config.EndPoints.Image.Address != config.EndPoints.Runtime.Address {
-		imageClient, err = dockerClient.NewClientWithOpts(
-			dockerClient.WithHost(config.EndPoints.Runtime.Address),
-			dockerClient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
-			dockerClient.FromEnv,
+		imageClient, err = dockerclient.NewClientWithOpts(
+			dockerclient.WithHost(config.EndPoints.Runtime.Address),
+			dockerclient.WithDialContext(dialCtxFunc(config.EndPoints.Image.DialTimeout)),
+			dockerclient.FromEnv,
 		)
 		if err != nil {
 			return nil, err
@@ -104,8 +104,8 @@ func NewRuntime(ctx context.Context, config *runtime.Config) (runtime.Interface,
 type dockerRuntime struct {
 	runtime.Base
 
-	runtimeClient dockerClient.ContainerAPIClient
-	imageClient   dockerClient.ImageAPIClient
+	runtimeClient dockerclient.ContainerAPIClient
+	imageClient   dockerclient.ImageAPIClient
 }
 
 func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.PodStatus, err *connectivity.Error) {
@@ -160,7 +160,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	}
 
 	for _, ctrID := range containersCreated {
-		plainErr := r.runtimeClient.ContainerStart(createCtx, ctrID, dockerType.ContainerStartOptions{})
+		plainErr := r.runtimeClient.ContainerStart(createCtx, ctrID, dockertype.ContainerStartOptions{})
 		if plainErr != nil {
 			createLog.Error(plainErr, "failed to start container", "containerID", ctrID)
 			return nil, connectivity.NewCommonError(plainErr.Error())
@@ -176,7 +176,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 		}(ctrID)
 	}
 
-	containersInfo := make([]*dockerType.ContainerJSON, len(containersCreated))
+	containersInfo := make([]*dockertype.ContainerJSON, len(containersCreated))
 	for i, ctrID := range containersCreated {
 		ctrInfo, plainErr := r.runtimeClient.ContainerInspect(createCtx, ctrID)
 		if plainErr != nil {
@@ -198,10 +198,10 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 
 	deleteLog.Info("trying to list containers for pod delete")
 	var plainErr error
-	containers, plainErr := r.runtimeClient.ContainerList(deleteCtx, dockerType.ContainerListOptions{
+	containers, plainErr := r.runtimeClient.ContainerList(deleteCtx, dockertype.ContainerListOptions{
 		Quiet: true,
-		Filters: dockerFilter.NewArgs(
-			dockerFilter.Arg("label", constant.ContainerLabelPodUID+"="+options.PodUid),
+		Filters: dockerfilter.NewArgs(
+			dockerfilter.Arg("label", constant.ContainerLabelPodUID+"="+options.PodUid),
 		),
 	})
 	if plainErr != nil {
@@ -255,7 +255,7 @@ func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connecti
 	listCtx, cancelList := r.RuntimeActionContext()
 	defer cancelList()
 
-	filter := dockerFilter.NewArgs()
+	filter := dockerfilter.NewArgs()
 	if !options.All {
 		if options.Namespace != "" {
 			filter.Add("label", constant.ContainerLabelPodNamespace+"="+options.Namespace)
@@ -267,7 +267,7 @@ func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connecti
 	}
 
 	listLog.Info("listing containers")
-	containers, err := r.runtimeClient.ContainerList(listCtx, dockerType.ContainerListOptions{
+	containers, err := r.runtimeClient.ContainerList(listCtx, dockertype.ContainerListOptions{
 		All:     options.All,
 		Quiet:   true,
 		Filters: filter,
@@ -280,9 +280,9 @@ func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connecti
 	var (
 		results []*connectivity.PodStatus
 		// podUID -> pause container
-		pauseContainers = make(map[string]dockerType.Container)
+		pauseContainers = make(map[string]dockertype.Container)
 		// podUID -> containers
-		podContainers = make(map[string][]dockerType.Container)
+		podContainers = make(map[string][]dockertype.Container)
 	)
 
 	for _, ctr := range containers {
@@ -309,7 +309,7 @@ func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connecti
 			return nil, connectivity.NewCommonError(err.Error())
 		}
 
-		var containersInfo []*dockerType.ContainerJSON
+		var containersInfo []*dockertype.ContainerJSON
 		for _, ctr := range podContainers[podUID] {
 			ctrInfo, err := r.runtimeClient.ContainerInspect(listCtx, ctr.ID)
 			if err != nil {
@@ -340,7 +340,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 
 	var plainErr error
 	execLog.Info("trying to exec create")
-	resp, plainErr := r.runtimeClient.ContainerExecCreate(execCtx, ctr.ID, dockerType.ExecConfig{
+	resp, plainErr := r.runtimeClient.ContainerExecCreate(execCtx, ctr.ID, dockertype.ExecConfig{
 		Tty:          tty,
 		AttachStdin:  stdin != nil,
 		AttachStdout: stdout != nil,
@@ -353,7 +353,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	}
 
 	execLog.Info("trying to exec attach")
-	attachResp, plainErr := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockerType.ExecStartCheck{Tty: tty})
+	attachResp, plainErr := r.runtimeClient.ContainerExecAttach(execCtx, resp.ID, dockertype.ExecStartCheck{Tty: tty})
 	if plainErr != nil {
 		execLog.Error(plainErr, "failed to exec attach")
 		return connectivity.NewCommonError(plainErr.Error())
@@ -382,7 +382,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 					return
 				}
 
-				err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockerType.ResizeOptions{
+				err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockertype.ResizeOptions{
 					Height: uint(size.GetRows()),
 					Width:  uint(size.GetCols()),
 				})
@@ -416,7 +416,7 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 	if tty {
 		_, plainErr = io.Copy(stdOut, attachResp.Reader)
 	} else {
-		_, plainErr = dockerCopy.StdCopy(stdOut, stdErr, attachResp.Reader)
+		_, plainErr = dockercopy.StdCopy(stdOut, stdErr, attachResp.Reader)
 	}
 
 	if plainErr != nil {
@@ -441,7 +441,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 
 	var plainErr error
 	attachLog.Info("trying to attach")
-	resp, plainErr := r.runtimeClient.ContainerAttach(attachCtx, ctr.ID, dockerType.ContainerAttachOptions{
+	resp, plainErr := r.runtimeClient.ContainerAttach(attachCtx, ctr.ID, dockertype.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  stdin != nil,
 		Stdout: stdout != nil,
@@ -476,7 +476,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 					return
 				}
 
-				err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockerType.ResizeOptions{
+				err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockertype.ResizeOptions{
 					Height: uint(size.GetRows()),
 					Width:  uint(size.GetCols()),
 				})
@@ -493,7 +493,7 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 	defer attachLog.Info("finished read routine")
 
 	if stderr != nil {
-		_, plainErr = dockerCopy.StdCopy(stdout, stderr, resp.Reader)
+		_, plainErr = dockercopy.StdCopy(stdout, stderr, resp.Reader)
 	} else {
 		_, plainErr = io.Copy(stdout, resp.Reader)
 	}
@@ -527,7 +527,7 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *connectivity.Lo
 	}
 
 	var plainErr error
-	logReader, plainErr := r.runtimeClient.ContainerLogs(logCtx, ctr.ID, dockerType.ContainerLogsOptions{
+	logReader, plainErr := r.runtimeClient.ContainerLogs(logCtx, ctr.ID, dockertype.ContainerLogsOptions{
 		ShowStdout: stdout != nil,
 		ShowStderr: stderr != nil,
 		Since:      since,
@@ -541,7 +541,7 @@ func (r *dockerRuntime) GetContainerLogs(podUID string, options *connectivity.Lo
 		return connectivity.NewCommonError(plainErr.Error())
 	}
 
-	_, plainErr = dockerCopy.StdCopy(stdout, stderr, logReader)
+	_, plainErr = dockercopy.StdCopy(stdout, stderr, logReader)
 	if plainErr != nil {
 		logLog.Error(plainErr, "exception happened in logs")
 		return connectivity.NewCommonError(plainErr.Error())
