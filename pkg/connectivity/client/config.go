@@ -22,14 +22,14 @@ import (
 
 type NodeConfig struct {
 	Timers struct {
-		NodeStatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
+		StatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
 	} `json:"timers" yaml:"timers"`
 }
 
 type PodConfig struct {
 	MaxPodCount int `json:"max_pod_count" yaml:"max_pod_count"`
 	Timers      struct {
-		PodStatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
+		StatusSyncInterval time.Duration `json:"status_sync_interval" yaml:"status_sync_interval"`
 	} `json:"timers" yaml:"timers"`
 }
 

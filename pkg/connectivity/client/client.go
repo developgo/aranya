@@ -21,6 +21,7 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
@@ -35,13 +36,17 @@ var (
 type Interface interface {
 	Start(ctx context.Context) error
 	PostMsg(msg *connectivity.Msg) error
+	Stop()
 }
 
 func newBaseAgent(ctx context.Context, config *AgentConfig, rt runtime.Interface) baseAgent {
+	disconnected := make(chan struct{})
+	close(disconnected)
 	return baseAgent{
-		AgentConfig: *config,
-		ctx:         ctx,
-		runtime:     rt,
+		AgentConfig:  *config,
+		ctx:          ctx,
+		runtime:      rt,
+		disconnected: disconnected,
 		openedStreams: streamSession{
 			streamHandlers: make(map[uint64]*streamHandler),
 		},
@@ -54,6 +59,9 @@ type baseAgent struct {
 	ctx       context.Context
 	doPostMsg func(msg *connectivity.Msg) error
 
+	// connection signals
+	disconnected chan struct{}
+
 	openedStreams streamSession
 	mu            sync.RWMutex
 	runtime       runtime.Interface
@@ -65,14 +73,64 @@ func (b *baseAgent) onConnect(connect func() error) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	return connect()
+	if err := connect(); err != nil {
+		return err
+	}
+
+	b.disconnected = make(chan struct{})
+	if b.Node.Timers.StatusSyncInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(b.Node.Timers.StatusSyncInterval)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					b.doGetNodeInfoAll(0)
+				case <-b.ctx.Done():
+					return
+				case <-b.disconnected:
+					return
+				}
+			}
+		}()
+	}
+
+	if b.Pod.Timers.StatusSyncInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(b.Pod.Timers.StatusSyncInterval)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					b.doPodList(0, &connectivity.ListOptions{All: true})
+				case <-b.ctx.Done():
+					return
+				case <-b.disconnected:
+					return
+				}
+			}
+		}()
+	}
+
+	return nil
 }
 
-func (b *baseAgent) onDisconnected(setDisconnected func()) {
+func (b *baseAgent) onDisconnect(setDisconnected func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	setDisconnected()
+
+	close(b.disconnected)
+}
+
+func (b *baseAgent) onStop(stop func()) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	stop()
 }
 
 func (b *baseAgent) onPostMsg(msg *connectivity.Msg, send func(*connectivity.Msg) error) error {

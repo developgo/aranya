@@ -78,8 +78,8 @@ func NewArhatCmd() *cobra.Command {
 	flags.StringVar(&config.Agent.Log.Dir, "log-dir", constant.DefaultArhatLogDir, "save log files to this dir")
 	flags.IntVarP(&config.Agent.Log.Level, "log-level", "v", 0, "log level, higher level means more verbose")
 	flags.BoolVar(&config.Agent.Features.AllowHostExec, "allow-host-exec", false, "allow kubectl exec issued # prefixed commands to execute in arhat host")
-	flags.DurationVar(&config.Agent.Node.Timers.NodeStatusSyncInterval, "node-status-sync-interval", 0, "periodically sync node status")
-	flags.DurationVar(&config.Agent.Pod.Timers.PodStatusSyncInterval, "pod-status-sync-interval", 0, "periodically sync node status")
+	flags.DurationVar(&config.Agent.Node.Timers.StatusSyncInterval, "node-status-sync-interval", 0, "periodically sync node status")
+	flags.DurationVar(&config.Agent.Pod.Timers.StatusSyncInterval, "pod-status-sync-interval", 0, "periodically sync node status")
 	flags.IntVar(&config.Agent.Pod.MaxPodCount, "max-pod-count", 0, "")
 	// runtime flags
 	flags.StringVar(&config.Runtime.DataDir, "data-dir", constant.DefaultArhatDataDir, "pod data dir, store values from Kubernetes ConfigMap and Secret")

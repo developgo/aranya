@@ -47,7 +47,7 @@ func NewGRPCAgent(ctx context.Context, config *AgentConfig, conn *grpc.ClientCon
 }
 
 func (c *GRPCAgent) Start(ctx context.Context) error {
-	if err := c.baseAgent.onConnect(func() error {
+	if err := c.onConnect(func() error {
 		if c.syncClient != nil {
 			return ErrClientAlreadyConnected
 		}
@@ -78,7 +78,7 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 		}
 	}()
 
-	defer c.baseAgent.onDisconnected(func() {
+	defer c.onDisconnect(func() {
 		c.syncClient = nil
 	})
 
@@ -99,8 +99,16 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 	}
 }
 
+func (c *GRPCAgent) Stop() {
+	c.onStop(func() {
+		if c.syncClient != nil {
+			_ = c.syncClient.CloseSend()
+		}
+	})
+}
+
 func (c *GRPCAgent) PostMsg(msg *connectivity.Msg) error {
-	return c.baseAgent.onPostMsg(msg, func(msg *connectivity.Msg) error {
+	return c.onPostMsg(msg, func(msg *connectivity.Msg) error {
 		if c.syncClient == nil {
 			return ErrClientNotConnected
 		}

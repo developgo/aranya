@@ -26,7 +26,7 @@ import (
 func (vn *VirtualNode) syncMirrorNodeStatus() {
 	vn.log.V(10).Info("trying to update node status")
 	for i := 0; i < vn.opt.Config.Node.StatusUpdateRetryCount; i++ {
-		if err := vn.tryUpdateNodeStatus(i); err != nil {
+		if err := vn.tryUpdateMirrorNodeStatus(i); err != nil {
 			vn.log.Error(err, "failed to update node status, retry")
 		} else {
 			vn.log.V(10).Info("update node status success")
@@ -36,7 +36,7 @@ func (vn *VirtualNode) syncMirrorNodeStatus() {
 	vn.log.Info("update node status exceeds retry count")
 }
 
-func (vn *VirtualNode) tryUpdateNodeStatus(tryNumber int) error {
+func (vn *VirtualNode) tryUpdateMirrorNodeStatus(tryNumber int) error {
 	opts := metav1.GetOptions{}
 	if tryNumber == 0 {
 		util.FromApiserverCache(&opts)
