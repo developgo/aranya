@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -245,7 +246,12 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 		}
 	}
 
-	r.Log().Info("pod deleted")
+	plainErr = os.RemoveAll(r.PodVolumesDir(options.PodUid))
+	if plainErr != nil && !os.IsNotExist(plainErr) {
+		deleteLog.Error(plainErr, "failed to delete pod volumes")
+	}
+
+	deleteLog.Info("pod deleted")
 	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
 }
 
