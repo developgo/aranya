@@ -20,7 +20,8 @@ import (
 	"bufio"
 	"io"
 	"log"
-	"strings"
+	"os"
+	"runtime"
 
 	"arhat.dev/aranya/pkg/connectivity"
 )
@@ -116,9 +117,31 @@ func (b *baseAgent) doContainerAttach(sid uint64, options *connectivity.ExecOpti
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := b.runtime.AttachContainer(options.PodUid, options.Container, stdin, stdout, stderr, resizeCh); err != nil {
-		b.handleRuntimeError(sid, err)
-		return
+	if options.PodUid == "" {
+		// command issued to virtual pod, means host attach (create a shell with tty)
+		if b.Features.AllowHostAttach {
+			shell := os.Getenv("SHELL")
+			if shell == "" {
+				switch runtime.GOOS {
+				case "windows":
+					shell = "powershell"
+				default:
+					shell = "/bin/sh"
+				}
+			}
+
+			if err := execInHost(stdin, stdout, stderr, resizeCh, []string{shell}, true); err != nil {
+				b.handleRuntimeError(sid, err)
+				return
+			}
+		} else {
+			b.handleRuntimeError(sid, connectivity.NewCommonError("host attach not allowed"))
+		}
+	} else {
+		if err := b.runtime.AttachContainer(options.PodUid, options.Container, stdin, stdout, stderr, resizeCh); err != nil {
+			b.handleRuntimeError(sid, err)
+			return
+		}
 	}
 }
 
@@ -182,10 +205,9 @@ func (b *baseAgent) doContainerExec(sid uint64, options *connectivity.ExecOption
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if strings.HasPrefix(options.Command[0], "#") {
+	if options.PodUid == "" {
+		// command issued to virtual pod, means host command execution
 		if b.Features.AllowHostExec {
-			// host exec
-			options.Command[0] = options.Command[0][1:]
 			if err := execInHost(stdin, stdout, stderr, resizeCh, options.Command, options.Tty); err != nil {
 				b.handleRuntimeError(sid, err)
 				return
@@ -241,9 +263,21 @@ func (b *baseAgent) doContainerLog(sid uint64, options *connectivity.LogOptions)
 	// best effort
 	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
-	if err := b.runtime.GetContainerLogs(options.PodUid, options, stdout, stderr); err != nil {
-		b.handleRuntimeError(sid, err)
-		return
+	if options.PodUid == "" {
+		// command issued to virtual pod, means host log
+		if b.Features.AllowHostLog {
+			if err := getArhatLogs(options, stdout, stderr); err != nil {
+				b.handleRuntimeError(sid, err)
+				return
+			}
+		} else {
+			b.handleRuntimeError(sid, connectivity.NewCommonError("host log not allowed"))
+		}
+	} else {
+		if err := b.runtime.GetContainerLogs(options.PodUid, options, stdout, stderr); err != nil {
+			b.handleRuntimeError(sid, err)
+			return
+		}
 	}
 }
 
@@ -276,8 +310,21 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 		options.Protocol = "tcp"
 	}
 
-	if err := b.runtime.PortForward(options.PodUid, options.Protocol, options.Port, input, output); err != nil {
-		b.handleRuntimeError(sid, err)
-		return
+	if options.PodUid == "" {
+		// port forward issued to virtual pod, means host port forward
+		if b.Features.AllowHostPortForward {
+			if err := portForwardToHost(options.Protocol, options.Port, input, output); err != nil {
+				b.handleRuntimeError(sid, err)
+				return
+			}
+		} else {
+			b.handleRuntimeError(sid, connectivity.NewCommonError("host port forward not allowed"))
+		}
+	} else {
+		// pod uid exists, this is for container port forward
+		if err := b.runtime.PortForward(options.PodUid, options.Protocol, options.Port, input, output); err != nil {
+			b.handleRuntimeError(sid, err)
+			return
+		}
 	}
 }

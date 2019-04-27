@@ -24,3 +24,7 @@
     - Schedule `Pod`s to edge devices.
     - `kubelet` server for remote management.
     - Connectivity manager to handle edge device connection.
+- virtual pod
+  - The pod created by `aranya`, won't be actually deployed to any node
+  - Functions:
+    - Help `kubectl` to find the edge device, then the device admin could do host management with `kubectl` commands

@@ -44,12 +44,13 @@ data:
 
     services:
       metrics:
-        address: "0.0.0.0"
+        # set to empty string to disable
+        address: ""
         port: 8383
 
 ---
 # this is an example deployment script for test deployment only
-# use DaemonSet if possible
+# use StatefulSet if possible
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -84,10 +85,19 @@ spec:
         env:
         # namespace to watch 
         # recommend to be the same with the one aranya deployed to
+        # if not set, will be `default`
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        # the namespace aranya deployed to
+        # if not set, will default to be the same with WATCH_NAMESPACE
+        - name: ARANYA_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # the pod name aranya running in
+        # used to find the node aranya running in
         - name: POD_NAME
           valueFrom:
             fieldRef:

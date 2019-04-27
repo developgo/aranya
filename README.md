@@ -11,6 +11,7 @@ A `Kubernetes` operator for edge devices
 - Deploy and manage edge devices with ease.
 - Remove the boundry between `Edge` and `Cloud`.
 - Integrate every device with container runtime into your `Kubernetes` cluster.
+- Help everyone to be able to share `Kubernetes` clusters for edge devices. (see [docs/Multi-tenancy.md](./docs/Multi-tenancy.md))
 
 ## Non-Purpose
 
@@ -25,13 +26,13 @@ EXPERIMENTAL, USE AT YOUR OWN RISK
 - Pod modeled container management in edge device
   - Support `Pod` creation with `Env`, `Volume`
     - Sources: plain text, `Secret`, `ConfigMap`
-- Remote management with `kubectl`
+- Remote device management with `kubectl` (both container and host)
   - `log`
   - `exec`
-    - `arhat` treats commands with prefix `#` as host command, useful for remote device management
-      - e.g. `kubectl exec -it example-pod \#bash` will get you into a host `bash`
   - `attach`
   - `port-forward`
+
+__NOTE:__ For details of the host management, please refer to [Maintenance #Host Management](./docs/Maintenance.md#host-management)
 
 ## Restrictions
 
@@ -89,7 +90,9 @@ see [docs/Build.md](./docs/Build.md)
       - For configuration references, please refer to [config/arhat](./config/arhat) for configuration samples.
       - Run `/path/to/arhat -c /path/to/arhat-config.yaml`
 
-3. Create workloads with tolerations (taints for edge devices) and use label selectors or node affinity to assign to specific edge devices (see [sample-workload.yaml](./cicd/k8s/sample/sample-workload.yaml) for example)
+3. `aranya` will create a virtual pod with the name of the `EdgeDevice` in the same namespace, `kuebctl log/exec/attach/port-froward` to the `virtual pod` will work in edge device host if allowed. (see design reasons at [Maintenance #Host Management](./docs/Maintenance.md#host-management))
+
+4. Create workloads with tolerations (taints for edge devices) and use label selectors or node affinity to assign to specific edge devices (see [sample-workload.yaml](./cicd/k8s/sample/sample-workload.yaml) for example)
    - Common Node Taints
 
       | Taint Key             | Value                                             |

@@ -17,5 +17,34 @@
 3. `aranya` requires host network to work properly.
    - Deploy multiple `aranya` in the same `namespace` to different `Node`s to avoid single point failure.
 4. `aranya` will request node certifications for each one of the `EdgeDevice`s you have deployed. The node certification includes the `Node`'s address(es) and hostname(s) (Here the `Node` is the one `aranya` deployed to).
-   - Use `DaemonSet` or `nodeAffinity` to avoid unexpected certification regenation when `aranya` is deployed to different nodes.
+   - Use `StatefulSet` or `nodeAffinity` to avoid unexpected certification regenation when `aranya` is deployed to different nodes.
    - Changes to `Node`'s address(es) or hostname(s) (which is the rare case) when `aranya` has been serving the `kubelet` servers and connectivity managers for edge devices would result in connectivity failure and remote management failure, you need to restart `aranya` to solve this problem.
+
+## Host Management
+
+`Kubernetes` doesn't allow users to directly control the node via `kubectl`, but with the help of privileged `Pod`, we can do some host maintenance work. (Check out my device plugin [arhat-dev/kube-host-pty](https://github.com/arhat-dev/kube-host-pty) to enable host access via `kubectl` if you are interested)
+
+I would say, it's the best practice for cloud computing to isolate maintenance and deployment with such barrier, but it's not so good in the case of edge devices, because in this way:
+
+If using `ssh` (or `ansible`) for device management (which enables full management):
+
+- Edge devices need to expose ssh service port for remote management
+  - Most attack to IoT network happens to ssh services
+  - SSH key management in remote devices is another big problem
+  - Connectivity through network with NAT and Firewall requires extra effort (such as `frp` service)
+
+If using privileged `Pod` for management:
+
+- We need to maintain a set of management container images
+  - To download when needed
+    - data usage is a thing
+  - To store preflight
+    - storage may be a concern
+
+So what if we need to be able to access our edge device at any place and at any time, once the edge device has been online?
+
+`aranya` and `arhat` solves this problem with the concept `virtual pod`
+
+`virtual pod` is a `Pod` object only living in `Kubernetes` cluster and never will be deployed to your edge devices, its phase is always `Running`. Any `kubectl` command to the `virtual pod` such as `logs`, `exec`, `attach` and `port-forward` will be treated as works to do in device host.
+
+No ssh service exposure, no actual `Pod` deployment, maintenance work done right for edge devices ;)

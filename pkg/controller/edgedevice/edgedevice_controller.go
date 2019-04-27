@@ -128,7 +128,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		log.Info("initialize edge devices")
 		// get all edge devices in this namespace (only once)
 		deviceList := &aranya.EdgeDeviceList{}
-		err = r.client.List(r.ctx, &client.ListOptions{Namespace: constant.CurrentNamespace()}, deviceList)
+		err = r.client.List(r.ctx, &client.ListOptions{Namespace: constant.WatchNamespace()}, deviceList)
 		if err != nil {
 			log.Error(err, "failed to list edge devices")
 			return
@@ -157,12 +157,12 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 
 			// we're not sure which namespace this node belongs to
 			// reconcile the edge device to make sure we are in consistent state
-			return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, constant.CurrentNamespace(), request.Name)
+			return reconcile.Result{}, r.doReconcileEdgeDevice(reqLog, constant.WatchNamespace(), request.Name)
 		}
 
 		belongsToThisNamespace := false
 		for _, t := range nodeObj.Spec.Taints {
-			if t.Key == constant.TaintKeyNamespace && t.Value == constant.CurrentNamespace() {
+			if t.Key == constant.TaintKeyNamespace && t.Value == constant.WatchNamespace() {
 				belongsToThisNamespace = true
 				break
 			}
@@ -173,7 +173,7 @@ func (r *ReconcileEdgeDevice) Reconcile(request reconcile.Request) (result recon
 		}
 
 		// reconcile node only
-		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, constant.CurrentNamespace(), request.Name, nil)
+		return reconcile.Result{}, r.doReconcileVirtualNode(reqLog, constant.WatchNamespace(), request.Name, nil)
 	}
 
 	reqLog = reqLog.WithValues("ns", request.Namespace)

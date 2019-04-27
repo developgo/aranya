@@ -73,7 +73,7 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 		certBytes       []byte
 	)
 
-	secretClient := client.CoreV1().Secrets(constant.CurrentNamespace())
+	secretClient := client.CoreV1().Secrets(constant.WatchNamespace())
 	pkSecret, err := secretClient.Get(secretObjName, metav1.GetOptions{})
 	if err != nil {
 		// create secret object if not found, add tls.csr
@@ -108,7 +108,7 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 
 		pkSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: constant.CurrentNamespace(),
+				Namespace: constant.WatchNamespace(),
 				Name:      secretObjName,
 			},
 			Type: corev1.SecretTypeTLS,

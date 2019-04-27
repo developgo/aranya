@@ -4,6 +4,9 @@ agent:
     dir: /var/log/arhat/
   features:
     allow_host_exec: false
+    allow_host_attach: false
+    allow_host_log: false
+    allow_host_port_forward: false
   node:
     timers:
       status_sync_interval: 10m

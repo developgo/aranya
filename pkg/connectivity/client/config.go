@@ -41,7 +41,10 @@ type AgentConfig struct {
 	} `json:"log" yaml:"log"`
 
 	Features struct {
-		AllowHostExec bool `json:"allow_host_exec" yaml:"allow_host_exec"`
+		AllowHostAttach      bool `json:"allow_host_attach" yaml:"allow_host_attach"`
+		AllowHostExec        bool `json:"allow_host_exec" yaml:"allow_host_exec"`
+		AllowHostLog         bool `json:"allow_host_log" yaml:"allow_host_log"`
+		AllowHostPortForward bool `json:"allow_host_port_forward" yaml:"allow_host_port_forward"`
 	} `json:"features" yaml:"features"`
 
 	Node NodeConfig `json:"node" yaml:"node"`

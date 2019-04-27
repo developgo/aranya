@@ -21,19 +21,27 @@ import (
 )
 
 const (
-	EnvKeyPodName        = "POD_NAME"
-	EnvKeyWatchNamespace = "WATCH_NAMESPACE"
+	EnvKeyPodName         = "POD_NAME"
+	EnvKeyWatchNamespace  = "WATCH_NAMESPACE"
+	EnvKeyAranyaNamespace = "ARANYA_NAMESPACE"
 )
 
-func CurrentPodName() string {
+func ThisPodName() string {
 	return os.Getenv(EnvKeyPodName)
 }
 
-func CurrentNamespace() string {
+func WatchNamespace() string {
 	ns := os.Getenv(EnvKeyWatchNamespace)
 	if ns == "" {
 		return "default"
 	}
+	return ns
+}
 
+func AranyaNamespace() string {
+	ns := os.Getenv(EnvKeyAranyaNamespace)
+	if ns == "" {
+		return WatchNamespace()
+	}
 	return ns
 }

@@ -48,7 +48,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client, config.Timers.ReSyncInterval,
 		// watch all pods scheduled to the node
-		kubeinformers.WithNamespace(constant.CurrentNamespace()),
+		kubeinformers.WithNamespace(constant.WatchNamespace()),
 		kubeinformers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 		}),
@@ -68,6 +68,7 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		podLister:          podInformerFactory.Core().V1().Pods().Lister(),
 		podInformer:        podInformer,
 
+		nodeName:     nodeName,
 		streamConfig: streamConfig,
 		config:       config,
 
@@ -82,6 +83,13 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 			log.Info("pod object created")
 			// always cache newly created pod
 			mgr.podCache.Update(pod)
+
+			if pod.Name == mgr.nodeName {
+				// this is the virtual pod, skip the device pod creation
+				mgr.updateVirtualPodToRunningPhase(pod)
+				return
+			}
+
 			// always schedule work for edge device
 			if err := mgr.podWorkQueue.Offer(queue.ActionCreate, pod.UID); err != nil {
 				log.Info("work discarded", "reason", err.Error())
@@ -96,6 +104,12 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 
 			podDeleted := !(newPod.GetDeletionTimestamp() == nil || newPod.GetDeletionTimestamp().IsZero())
 			if podDeleted {
+				if newPod.Name == mgr.nodeName {
+					// this is the virtual pod, delete at once
+					mgr.deleteVirtualPod()
+					return
+				}
+
 				// pod object has been deleted, but we do have cache for it,
 				// which means we have that pod running on the edge device
 				// delete it
@@ -118,6 +132,14 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 			// we cache the new pod for possible future use
 			mgr.podCache.Update(newPod)
 
+			if newPod.Name == mgr.nodeName {
+				// this is the virtual pod, update to running and return
+				if newPod.Status.Phase != corev1.PodRunning {
+					mgr.updateVirtualPodToRunningPhase(newPod.DeepCopy())
+				}
+				return
+			}
+
 			// pod need to be updated on device only when its spec has been changed
 			// TODO: evaluate more delicate check since most part of the pod spec cannot be updated
 			if reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
@@ -133,6 +155,12 @@ func NewManager(parentCtx context.Context, nodeName string, client kubeclient.In
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
+			if pod.Name == mgr.nodeName {
+				// the virtual pod deleted, create again
+				mgr.createVirtualPod()
+				return
+			}
+
 			log := mgr.log.WithValues("type", "inform", "action", "delete")
 
 			if _, ok := mgr.podCache.GetByID(pod.UID); !ok {
@@ -165,6 +193,7 @@ type Manager struct {
 	podLister          kubelister.PodLister
 	podInformer        kubecache.SharedIndexInformer
 
+	nodeName     string
 	streamConfig *StreamConfig
 	config       *Config
 
@@ -175,6 +204,11 @@ func (m *Manager) Start() (err error) {
 	err = fmt.Errorf("manager started once, do not start again")
 
 	m.once.Do(func() {
+		// create a virtual pod always in running status for this device (for device management)
+		m.createVirtualPod()
+		// delete the virtual pod when exiting
+		defer m.deleteVirtualPod()
+
 		// start informer routine
 		go m.podInformerFactory.Start(m.ctx.Done())
 

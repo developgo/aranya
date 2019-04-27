@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"arhat.dev/aranya/pkg/constant"
@@ -57,8 +58,8 @@ func (r *ReconcileEdgeDevice) getCurrentNodeAddresses() (hostNodeName string, ad
 	globalMutex.Lock()
 	defer globalMutex.Unlock()
 
-	thisPod := &corev1.Pod{}
-	err = r.client.Get(r.ctx, types.NamespacedName{Namespace: constant.CurrentNamespace(), Name: constant.CurrentPodName()}, thisPod)
+	var thisPod *corev1.Pod
+	thisPod, err = r.kubeClient.CoreV1().Pods(constant.AranyaNamespace()).Get(constant.ThisPodName(), metav1.GetOptions{})
 	if err != nil {
 		return "", nil, err
 	}

@@ -77,10 +77,13 @@ func NewArhatCmd() *cobra.Command {
 	// agent flags
 	flags.StringVar(&config.Agent.Log.Dir, "log-dir", constant.DefaultArhatLogDir, "save log files to this dir")
 	flags.IntVarP(&config.Agent.Log.Level, "log-level", "v", 0, "log level, higher level means more verbose")
-	flags.BoolVar(&config.Agent.Features.AllowHostExec, "allow-host-exec", false, "allow kubectl exec issued # prefixed commands to execute in arhat host")
+	flags.BoolVar(&config.Agent.Features.AllowHostExec, "allow-host-exec", false, "allow kubectl exec issued commands to execute in host")
+	flags.BoolVar(&config.Agent.Features.AllowHostAttach, "allow-host-exec", false, "allow kubectl attach to host tty")
+	flags.BoolVar(&config.Agent.Features.AllowHostLog, "allow-host-log", false, "allow kubectl to read arhat's log")
+	flags.BoolVar(&config.Agent.Features.AllowHostPortForward, "allow-host-port-forward", false, "allow kubectl to port-forward to host")
 	flags.DurationVar(&config.Agent.Node.Timers.StatusSyncInterval, "node-status-sync-interval", 0, "periodically sync node status")
 	flags.DurationVar(&config.Agent.Pod.Timers.StatusSyncInterval, "pod-status-sync-interval", 0, "periodically sync node status")
-	flags.IntVar(&config.Agent.Pod.MaxPodCount, "max-pod-count", 0, "")
+	flags.IntVar(&config.Agent.Pod.MaxPodCount, "max-pod-count", 1, "max allowed pods running in this device")
 	// runtime flags
 	flags.StringVar(&config.Runtime.DataDir, "data-dir", constant.DefaultArhatDataDir, "pod data dir, store values from Kubernetes ConfigMap and Secret")
 	flags.StringVar(&config.Runtime.PauseImage, "pause-image", constant.DefaultPauseImage, "pause container image to claim linux namespaces")

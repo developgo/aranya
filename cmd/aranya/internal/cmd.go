@@ -146,7 +146,7 @@ func run(ctx context.Context, config *Config) error {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(kubeConfig, manager.Options{
-		Namespace:          constant.CurrentNamespace(),
+		Namespace:          constant.WatchNamespace(),
 		MetricsBindAddress: metricsAddress,
 	})
 	if err != nil {

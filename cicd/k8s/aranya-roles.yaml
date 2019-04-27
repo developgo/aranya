@@ -5,13 +5,18 @@ metadata:
   name: aranya
   namespace: edge
 rules:
-- apiGroups:
-  - ""
+- apiGroups: [""] # core resources
   resources:
+  # to expoese metric service and gRPC service
   - services
+  # to fetch configmaps required by pod for edge devices
+  # and leader election lock
   - configmaps
+  # to fetch secrets required by pods for edge devices
   - secrets
+  # to watch pods change and deliver command to edge devices
   - pods
+  # to update pods status according to edge devices messages
   - pods/status
   verbs: ["*"]
 # control aranya crds
@@ -26,14 +31,18 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
+  # to create virtual node and get node object aranya lives in
   - nodes
+  # to update virtual node status according to edge devices messages
   - nodes/status
   verbs: ["*"]
 # required to generate node certificates automatically
 - apiGroups:
   - certificates.k8s.io
   resources:
+  # to create kubernetes csr for virtual node certs
   - certificatesigningrequests
+  # To automatically approve kubernetes csrs created by aranya
   # remove the approval ability if you would like to
   # approve on you own (for security reason)
   - certificatesigningrequests/approval

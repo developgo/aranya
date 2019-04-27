@@ -8,7 +8,7 @@ spec:
   connectivity:
     method: grpc
     timers:
-      # force close session in server after
+      # force close unary session in server after
       unarySessionTimeout: 10s
       # force check device node status, reject if operation failed
       forceNodeStatusSyncInterval: 5s

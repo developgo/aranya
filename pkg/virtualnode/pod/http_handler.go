@@ -137,6 +137,11 @@ func (m *Manager) HandlePodContainerLog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if podName == m.nodeName {
+		// get arhat log
+		podUID = ""
+	}
+
 	logReader, err := m.doGetContainerLogs(podUID, opt)
 	if err != nil {
 		httpLog.Error(err, "failed to get container logs")
@@ -165,6 +170,11 @@ func (m *Manager) HandlePodExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if podName == m.nodeName {
+		// exec in host
+		podUID = ""
+	}
+
 	httpLog.Info("starting to serve exec")
 	kubeletrc.ServeExec(
 		w, r, /* http context */
@@ -190,6 +200,11 @@ func (m *Manager) HandlePodAttach(w http.ResponseWriter, r *http.Request) {
 		httpLog.Info("pod not found for attach", "podUID", podUID)
 		http.Error(w, "target pod not found", http.StatusNotFound)
 		return
+	}
+
+	if podName == m.nodeName {
+		// attach to host
+		podUID = ""
 	}
 
 	httpLog.Info("starting to serve attach")
@@ -244,6 +259,11 @@ func (m *Manager) HandlePodPortForward(w http.ResponseWriter, r *http.Request) {
 		for _, ctrPort := range ctr.Ports {
 			portProto[ctrPort.ContainerPort] = strings.ToLower(string(ctrPort.Protocol))
 		}
+	}
+
+	if podName == m.nodeName {
+		// forward to host
+		podUID = ""
 	}
 
 	httpLog.Info("starting to serve port forward")

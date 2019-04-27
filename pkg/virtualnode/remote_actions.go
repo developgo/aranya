@@ -106,22 +106,32 @@ func (vn *VirtualNode) updateNodeCache(node *connectivity.NodeStatus) error {
 	}
 
 	if capacity := node.GetCapacity(); capacity != nil {
-		nodeStatus.Capacity = translateDeviceResources(capacity)
+		nodeStatus.Capacity = translateDeviceResources(capacity, true)
 	}
 
 	if allocatable := node.GetAllocatable(); allocatable != nil {
-		nodeStatus.Allocatable = translateDeviceResources(allocatable)
+		nodeStatus.Allocatable = translateDeviceResources(allocatable, false)
 	}
 
 	vn.nodeStatusCache.Update(*nodeStatus)
 	return nil
 }
 
-func translateDeviceResources(res *connectivity.NodeResources) corev1.ResourceList {
+func translateDeviceResources(res *connectivity.NodeResources, isCapacity bool) corev1.ResourceList {
+	podCount := res.GetPodCount()
+	if podCount < 0 {
+		podCount = 0
+	}
+
+	if isCapacity {
+		// always plus 1 for virtual pod
+		podCount++
+	}
+
 	return corev1.ResourceList{
 		corev1.ResourceCPU:              *resource.NewQuantity(int64(res.GetCpuCount()), resource.DecimalSI),
 		corev1.ResourceMemory:           *resource.NewQuantity(int64(res.GetMemoryBytes()), resource.BinarySI),
-		corev1.ResourcePods:             *resource.NewQuantity(int64(res.GetPodCount()), resource.DecimalSI),
+		corev1.ResourcePods:             *resource.NewQuantity(int64(podCount), resource.DecimalSI),
 		corev1.ResourceEphemeralStorage: *resource.NewQuantity(int64(res.GetStorageBytes()), resource.BinarySI),
 	}
 }
