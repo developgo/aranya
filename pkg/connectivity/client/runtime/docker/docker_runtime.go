@@ -110,7 +110,7 @@ type dockerRuntime struct {
 }
 
 func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *connectivity.PodStatus, err *connectivity.Error) {
-	createLog := r.Log().WithValues("action", "create", "namespace", options.GetNamespace(), "name", options.GetName(), "uid", options.GetPodUid())
+	createLog := r.Log().WithValues("action", "create", "namespace", options.Namespace, "name", options.Name, "uid", options.PodUid)
 
 	// ensure pause image (infra image to claim namespaces) exists
 	_, err = r.ensureImages(map[string]*connectivity.ContainerSpec{
@@ -125,7 +125,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	}
 
 	// ensure all images exists
-	_, err = r.ensureImages(options.GetContainers(), options.GetImagePullAuthConfig())
+	_, err = r.ensureImages(options.Containers, options.ImagePullAuthConfig)
 	if err != nil {
 		createLog.Error(err, "failed to ensure container images")
 		return nil, err
@@ -143,7 +143,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 		if err != nil {
 			// delete pause container if any error happened
 			createLog.Info("delete pause container due to error")
-			e := r.deleteContainer(pauseContainerInfo.ID, 0)
+			e := r.deleteContainer(pauseContainerInfo.ID)
 			if e != nil {
 				createLog.Error(e, "failed to delete pause container after start failure")
 			}
@@ -151,7 +151,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 	}()
 
 	var containersCreated []string
-	for containerName, containerSpec := range options.GetContainers() {
+	for containerName, containerSpec := range options.Containers {
 		ctrID, err := r.createContainer(createCtx, options, containerName, ns, containerSpec, networkSettings)
 		if err != nil {
 			createLog.Error(err, "failed to create container", "container", containerName)
@@ -170,7 +170,7 @@ func (r *dockerRuntime) CreatePod(options *connectivity.CreateOptions) (pod *con
 		defer func(ctrID string) {
 			if err != nil {
 				createLog.Info("delete container due to error", "containerID", ctrID)
-				if e := r.deleteContainer(ctrID, 0); e != nil {
+				if e := r.deleteContainer(ctrID); e != nil {
 					createLog.Error(e, "failed to delete container after start failure")
 				}
 			}
@@ -201,19 +201,17 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	var plainErr error
 	containers, plainErr := r.runtimeClient.ContainerList(deleteCtx, dockertype.ContainerListOptions{
 		Quiet: true,
+		All:   true,
 		Filters: dockerfilter.NewArgs(
-			dockerfilter.Arg("label", constant.ContainerLabelPodUID+"="+options.PodUid),
+			dockerfilter.Arg("label", fmt.Sprintf("%s=%s", constant.ContainerLabelPodUID, options.PodUid)),
 		),
 	})
-	if plainErr != nil {
+	if plainErr != nil && dockerclient.IsErrNotFound(plainErr) {
 		deleteLog.Error(plainErr, "failed to list containers")
 		return nil, connectivity.NewCommonError(plainErr.Error())
 	}
 
 	// delete work containers first
-	now := time.Now()
-	timeout := time.Duration(options.GraceTime)
-
 	pauseCtrIndex := -1
 	for i, ctr := range containers {
 		// find pause container
@@ -224,22 +222,13 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	}
 	lastIndex := len(containers) - 1
 	// swap pause container to last
-	deleteLog.Info("original containers", "containers", containers)
 	if pauseCtrIndex != -1 {
 		containers[lastIndex], containers[pauseCtrIndex] = containers[pauseCtrIndex], containers[lastIndex]
 	}
-	deleteLog.Info("swapped containers", "containers", containers)
 
 	for _, ctr := range containers {
-		timeout = timeout - time.Since(now)
-		now = time.Now()
-
-		if timeout < 0 {
-			timeout = 0
-		}
-
-		deleteLog.Info("trying to delete container", "timeout", timeout)
-		err = r.deleteContainer(ctr.ID, timeout)
+		deleteLog.Info("trying to delete container", "names", ctr.Names)
+		err = r.deleteContainer(ctr.ID)
 		if err != nil {
 			deleteLog.Error(err, "failed to delete container")
 			return nil, err
@@ -252,7 +241,7 @@ func (r *dockerRuntime) DeletePod(options *connectivity.DeleteOptions) (pod *con
 	}
 
 	deleteLog.Info("pod deleted")
-	return connectivity.NewPodStatus(options.GetPodUid(), nil), nil
+	return connectivity.NewPodStatus(options.PodUid, nil), nil
 }
 
 func (r *dockerRuntime) ListPods(options *connectivity.ListOptions) ([]*connectivity.PodStatus, *connectivity.Error) {
@@ -389,8 +378,8 @@ func (r *dockerRuntime) ExecInContainer(podUID, container string, stdin io.Reade
 				}
 
 				err := r.runtimeClient.ContainerExecResize(execCtx, resp.ID, dockertype.ResizeOptions{
-					Height: uint(size.GetRows()),
-					Width:  uint(size.GetCols()),
+					Height: uint(size.Rows),
+					Width:  uint(size.Cols),
 				})
 				if err != nil {
 					// DO NOT break here
@@ -483,8 +472,8 @@ func (r *dockerRuntime) AttachContainer(podUID, container string, stdin io.Reade
 				}
 
 				err := r.runtimeClient.ContainerResize(attachCtx, ctr.ID, dockertype.ResizeOptions{
-					Height: uint(size.GetRows()),
-					Width:  uint(size.GetCols()),
+					Height: uint(size.Rows),
+					Width:  uint(size.Cols),
 				})
 				if err != nil {
 					attachLog.Error(err, "exception happened in tty resize routine")

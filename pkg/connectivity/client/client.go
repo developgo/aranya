@@ -30,6 +30,7 @@ import (
 var (
 	ErrClientAlreadyConnected = errors.New("client already connected")
 	ErrClientNotConnected     = errors.New("client not connected")
+	ErrConnectivityCmdNil     = errors.New("connectivity cmd nil")
 	ErrStreamSessionClosed    = connectivity.NewCommonError("stream session closed")
 	ErrCommandNotProvided     = connectivity.NewCommonError("command not provided for exec")
 )
@@ -148,7 +149,12 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 	case *connectivity.Cmd_CloseSession:
 		b.openedStreams.del(cm.CloseSession)
 	case *connectivity.Cmd_Node:
-		switch cm.Node.GetAction() {
+		if cm.Node == nil {
+			b.handleConnectivityError(sid, ErrConnectivityCmdNil)
+			return
+		}
+
+		switch cm.Node.Action {
 		case connectivity.GetInfoAll:
 			processInNewGoroutine(sid, "node.get.all", func() {
 				b.doGetNodeInfoAll(sid)
@@ -169,7 +175,12 @@ func (b *baseAgent) onRecvCmd(cmd *connectivity.Cmd) {
 			log.Printf("[%d] unknown node cmd: %v", sid, cm.Node)
 		}
 	case *connectivity.Cmd_Pod:
-		switch cm.Pod.GetAction() {
+		if cm.Pod == nil {
+			b.handleConnectivityError(sid, ErrConnectivityCmdNil)
+			return
+		}
+
+		switch cm.Pod.Action {
 		case connectivity.CreatePod:
 			processInNewGoroutine(sid, "pod.create", func() {
 				b.doPodCreate(sid, cm.Pod.GetCreateOptions())

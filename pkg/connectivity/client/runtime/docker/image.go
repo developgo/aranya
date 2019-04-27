@@ -40,25 +40,25 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 	defer cancelPull()
 
 	for _, ctr := range containers {
-		if ctr.GetImagePullPolicy() == connectivity.ImagePullAlways {
-			imageToPull = append(imageToPull, ctr.GetImage())
+		if ctr.ImagePullPolicy == connectivity.ImagePullAlways {
+			imageToPull = append(imageToPull, ctr.Image)
 			continue
 		}
 
 		image, err := r.getImage(pullCtx, ctr.Image)
 		if err == nil {
 			// image exists
-			switch ctr.GetImagePullPolicy() {
+			switch ctr.ImagePullPolicy {
 			case connectivity.ImagePullNever, connectivity.ImagePullIfNotPresent:
-				imageMap[ctr.GetImage()] = image
+				imageMap[ctr.Image] = image
 			}
 		} else {
 			// image does not exist
-			switch ctr.GetImagePullPolicy() {
+			switch ctr.ImagePullPolicy {
 			case connectivity.ImagePullNever:
 				return nil, connectivity.NewCommonError(err.Error())
 			case connectivity.ImagePullIfNotPresent:
-				imageToPull = append(imageToPull, ctr.GetImage())
+				imageToPull = append(imageToPull, ctr.Image)
 			}
 		}
 	}
@@ -69,11 +69,11 @@ func (r *dockerRuntime) ensureImages(containers map[string]*connectivity.Contain
 			config, hasCred := authConfig[imageName]
 			if hasCred {
 				authCfg := dockertype.AuthConfig{
-					Username:      config.GetUsername(),
-					Password:      config.GetPassword(),
-					ServerAddress: config.GetServerAddress(),
-					IdentityToken: config.GetIdentityToken(),
-					RegistryToken: config.GetRegistryToken(),
+					Username:      config.Username,
+					Password:      config.Password,
+					ServerAddress: config.ServerAddress,
+					IdentityToken: config.IdentityToken,
+					RegistryToken: config.RegistryToken,
 				}
 				encodedJSON, err := json.Marshal(authCfg)
 				if err != nil {

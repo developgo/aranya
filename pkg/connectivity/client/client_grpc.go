@@ -20,9 +20,11 @@ package client
 
 import (
 	"context"
-	"io"
+	"log"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"arhat.dev/aranya/pkg/connectivity"
 	"arhat.dev/aranya/pkg/connectivity/client/runtime"
@@ -68,8 +70,12 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 			cmd, err := c.syncClient.Recv()
 			if err != nil {
 				close(cmdCh)
-				if err != io.EOF {
-					// TODO: log error
+
+				s, _ := status.FromError(err)
+				switch s.Code() {
+				case codes.Canceled, codes.OK:
+				default:
+					log.Printf("exception happened when client recv: %v", err)
 				}
 				return
 			}
@@ -85,6 +91,7 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-c.syncClient.Context().Done():
+			log.Printf("disconnected from server, reason: %v", c.syncClient.Context().Err())
 			// disconnected from cloud controller
 			return nil
 		case <-ctx.Done():

@@ -91,7 +91,7 @@ func (r *dockerRuntime) createPauseContainer(ctx context.Context, options *conne
 
 		exposedPorts[ctrPort] = struct{}{}
 		portBindings[ctrPort] = []dockernat.PortBinding{{
-			HostPort: strconv.FormatInt(int64(port.GetHostPort()), 10),
+			HostPort: strconv.FormatInt(int64(port.HostPort), 10),
 		}}
 	}
 
@@ -109,7 +109,7 @@ func (r *dockerRuntime) createPauseContainer(ctx context.Context, options *conne
 				CPUShares:  2,
 			},
 			PortBindings:  portBindings,
-			RestartPolicy: translateRestartPolicy(options.GetRestartPolicy()),
+			RestartPolicy: translateRestartPolicy(options.RestartPolicy),
 			NetworkMode: func() dockercontainer.NetworkMode {
 				if options.HostNetwork {
 					return "host"
@@ -202,17 +202,17 @@ func (r *dockerRuntime) createContainer(
 			source = hostPath
 		}
 
-		if volData, isVolData := volumeData[volName]; isVolData && volData.GetDataMap() != nil {
-			dataMap := volData.GetDataMap()
+		if volData, isVolData := volumeData[volName]; isVolData {
+			if dataMap := volData.GetDataMap(); dataMap != nil {
+				dir := r.PodVolumeDir(options.PodUid, "native", volName)
+				if plainErr = os.MkdirAll(dir, 0755); plainErr != nil {
+					return "", connectivity.NewCommonError(plainErr.Error())
+				}
 
-			dir := r.PodVolumeDir(options.PodUid, "native", volName)
-			if plainErr = os.MkdirAll(dir, 0755); plainErr != nil {
-				return "", connectivity.NewCommonError(plainErr.Error())
-			}
-
-			source, plainErr = volMountSpec.Ensure(dir, dataMap)
-			if plainErr != nil {
-				return "", connectivity.NewCommonError(plainErr.Error())
+				source, plainErr = volMountSpec.Ensure(dir, dataMap)
+				if plainErr != nil {
+					return "", connectivity.NewCommonError(plainErr.Error())
+				}
 			}
 		}
 
@@ -273,8 +273,9 @@ func (r *dockerRuntime) createContainer(
 	return ctr.ID, nil
 }
 
-func (r *dockerRuntime) deleteContainer(containerID string, timeout time.Duration) *connectivity.Error {
+func (r *dockerRuntime) deleteContainer(containerID string) *connectivity.Error {
 	// stop with best effort
+	timeout := time.Duration(0)
 	_ = r.runtimeClient.ContainerStop(context.Background(), containerID, &timeout)
 	err := r.runtimeClient.ContainerRemove(context.Background(), containerID, dockertype.ContainerRemoveOptions{
 		RemoveVolumes: true,
