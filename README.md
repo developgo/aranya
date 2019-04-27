@@ -48,7 +48,7 @@ see [docs/Build.md](./docs/Build.md)
 
 ## Deployment Workflow
 
-1. Deploy `aranya` to your `Kubernetes` cluster for test with following commands (see [docs/Maintenance.md](./docs/Maintenance.md) for more deployment tips)
+1. Deploy `aranya` to your `Kubernetes` cluster for evaluation with following commands (see [docs/Maintenance.md](./docs/Maintenance.md) for more deployment tips)
 
    ```bash
    # set the namespace for edge devices, aranya will be deployed to this namespace
@@ -57,16 +57,17 @@ see [docs/Build.md](./docs/Build.md)
    # create the namespace
    $ kubectl create namespace ${NS}
 
-   # create custom resource definitions used by aranya
+   # create custom resource definitions (CRDs) used by aranya
    $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/crds/aranya_v1alpha1_edgedevice_crd.yaml
 
-   # create cluster role for aranya
-   $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/aranya-roles.yaml
-
-   # create service account for aranya
+   # create service account for aranya (we will bind both cluster role and namespace role to it)
    $ kubectl -n ${NS} create serviceaccount aranya
 
-   # config RBAC for aranya
+   # create cluster role and namespace role for aranya
+   $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/aranya-roles.yaml
+
+   # config role bindings for aranya
+   $ kubectl create -n ${NS} rolebinding aranya --role=aranya --serviceaccount=${NS}:aranya
    $ kubectl create clusterrolebinding aranya --clusterrole=aranya --serviceaccount=${NS}:aranya
 
    # deploy aranya to your cluster
@@ -84,6 +85,9 @@ see [docs/Build.md](./docs/Build.md)
         - `aranya` will try to talk to your mqtt broker accoding to the `spec.connectivity.mqttConfig`.
         - You need to configure your edge device's `arhat` to talk to the same mqtt broker or one broker in the same mqtt broker cluster depending on your own usecase, the config option `messageNamespace` must match to get `arhat` able to communicate with `aranya`.
    3. Deploy `arhat` with configuration to your edge devices, start and wait to get connected to `aranya`
+      - You can get `araht` by downloading from latest [releases](https://github.com/arhat-dev/aranya/releases) or build you own easily (see [docs/Build.md](./docs/Build.md)).
+      - For configuration references, please refer to [config/arhat](./config/arhat) for configuration samples.
+      - Run `/path/to/arhat -c /path/to/arhat-config.yaml`
 
 3. Create workloads with tolerations (taints for edge devices) and use label selectors or node affinity to assign to specific edge devices (see [sample-workload.yaml](./cicd/k8s/sample/sample-workload.yaml) for example)
    - Common Node Taints
