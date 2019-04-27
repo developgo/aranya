@@ -6,6 +6,8 @@
   - `go` 1.11+ (to support gomodule)
   - `git` (to clone this project)
   - `make` (to ease you life with `aranya` development)
+- Need to release
+  - `upx` (hero to shrink size of golang binary output)
 - Need to update CRDs
   - __+__ `GOPATH` configured
     - install code generators with `make install-codegen-tools`
