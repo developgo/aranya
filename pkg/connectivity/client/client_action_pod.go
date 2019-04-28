@@ -285,9 +285,12 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	remoteOutput, output := io.Pipe()
 
 	defer func() {
-		b.openedStreams.del(sid)
+		_ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil))
+
 		_, _ = remoteOutput.Close(), output.Close()
 		_ = input.Close()
+
+		b.openedStreams.del(sid)
 	}()
 
 	// read output
@@ -302,9 +305,6 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 			}
 		}
 	}()
-
-	// best effort
-	defer func() { _ = b.doPostMsg(connectivity.NewDataMsg(sid, true, connectivity.OTHER, nil)) }()
 
 	if options.Protocol == "" {
 		options.Protocol = "tcp"

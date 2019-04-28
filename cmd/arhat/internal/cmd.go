@@ -87,6 +87,10 @@ func NewArhatCmd() *cobra.Command {
 	flags.StringVar(&config.Runtime.PauseImage, "pause-image", constant.DefaultPauseImage, "pause container image to claim linux namespaces")
 	flags.StringVar(&config.Runtime.PauseCommand, "pause-command", constant.DefaultPauseCommand, "pause container command")
 	flags.StringVarP(&config.Runtime.ManagementNamespace, "management-namespace", "n", constant.DefaultManagementNamespace, "container runtime namespace for container management")
+	// connectivity flags
+	flags.Float64Var(&config.Connectivity.BackoffFactor, "backoff-factor", 1.5, "backoff factor to apply")
+	flags.DurationVar(&config.Connectivity.InitialBackoff, "initial-backoff", time.Second, "initial backoff when connectivity failure")
+	flags.DurationVar(&config.Connectivity.MaxBackoff, "max-backoff", 30*time.Second, "max backoff when connectivity failure")
 	// commandline flags are not sufficient to run arhat properly,
 	// so mark config flag as required
 	_ = cmd.MarkPersistentFlagRequired("config")
@@ -123,20 +127,42 @@ func run(ctx context.Context, config *Config) error {
 		}
 	}
 
+	wait, maxWait, factor := config.Connectivity.InitialBackoff, config.Connectivity.MaxBackoff, config.Connectivity.BackoffFactor
+	timer := time.NewTimer(0)
+	if !timer.Stop() {
+		<-timer.C
+	}
+	defer timer.Stop()
+
 	for !exiting() {
+		// connect to aranya
 		ag, err := internalclient.New(ctx, &config.Agent, &config.Connectivity, rt)
 		if err != nil {
 			log.Printf("failed to get connectivity client: %v", err)
-			return err
+		} else {
+			// start to sync
+			if err = ag.Start(ctx); err != nil {
+				log.Printf("failed to communicate with aranya: %v", err)
+			}
 		}
 
-		if err = ag.Start(ctx); err != nil {
-			log.Printf("failed to run sync loop: %v", err)
-			return err
-		}
+		if err != nil {
+			// backoff when error happened
+			timer.Reset(wait)
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-timer.C:
+			}
 
-		// TODO: backoff
-		time.Sleep(time.Second)
+			wait = time.Duration(float64(wait) * factor)
+			if wait > maxWait {
+				wait = maxWait
+			}
+		} else {
+			// reset backoff
+			wait = config.Connectivity.InitialBackoff
+		}
 	}
 
 	return nil

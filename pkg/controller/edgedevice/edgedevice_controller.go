@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -381,7 +382,10 @@ func (r *ReconcileEdgeDevice) doReconcileVirtualNode(reqLog logr.Logger, namespa
 				}
 			}()
 
-			var grpcSrvOptions []grpc.ServerOption
+			grpcSrvOptions := []grpc.ServerOption{
+				grpc.MaxRecvMsgSize(math.MaxInt32),
+				grpc.MaxSendMsgSize(math.MaxInt32),
+			}
 			if tlsRef := grpcConfig.TLSSecretRef; tlsRef != nil && tlsRef.Name != "" {
 				var grpcServerCert *tls.Certificate
 

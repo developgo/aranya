@@ -21,6 +21,7 @@ package client
 import (
 	"context"
 	"log"
+	"math"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -31,6 +32,14 @@ import (
 )
 
 var _ Interface = &GRPCAgent{}
+
+var (
+	defaultCallOptions = []grpc.CallOption{
+		grpc.WaitForReady(true),
+		grpc.MaxCallRecvMsgSize(math.MaxInt32),
+		grpc.MaxCallSendMsgSize(math.MaxInt32),
+	}
+)
 
 type GRPCAgent struct {
 	baseAgent
@@ -54,7 +63,7 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 			return ErrClientAlreadyConnected
 		}
 
-		syncClient, err := c.client.Sync(ctx)
+		syncClient, err := c.client.Sync(ctx, defaultCallOptions...)
 		if err != nil {
 			return err
 		}
@@ -91,15 +100,14 @@ func (c *GRPCAgent) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-c.syncClient.Context().Done():
-			log.Printf("disconnected from server, reason: %v", c.syncClient.Context().Err())
 			// disconnected from cloud controller
-			return nil
+			return c.syncClient.Context().Err()
 		case <-ctx.Done():
 			// leaving
 			return nil
 		case cmd, more := <-cmdCh:
 			if !more {
-				return nil
+				return ErrCmdRecvClosed
 			}
 			c.baseAgent.onRecvCmd(cmd)
 		}

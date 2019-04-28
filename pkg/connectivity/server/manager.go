@@ -87,66 +87,66 @@ func newBaseManager(config *Config) baseManager {
 	}
 }
 
-func (s *baseManager) GlobalMessages() <-chan *connectivity.Msg {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) GlobalMessages() <-chan *connectivity.Msg {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	return s.globalMsgChan
+	return m.globalMsgChan
 }
 
 // Connected
-func (s *baseManager) Connected() <-chan struct{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) Connected() <-chan struct{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	return s.connected
+	return m.connected
 }
 
 // Disconnected
-func (s *baseManager) Disconnected() <-chan struct{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) Disconnected() <-chan struct{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	return s.disconnected
+	return m.disconnected
 }
 
 // Rejected
-func (s *baseManager) Rejected() <-chan struct{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) Rejected() <-chan struct{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	return s.rejected
+	return m.rejected
 }
 
-func (s *baseManager) onReject(reject func()) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) onReject(reject func()) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	if s.alreadyRejected {
+	if m.alreadyRejected {
 		return
 	}
-	s.alreadyRejected = true
+	m.alreadyRejected = true
 
 	reject()
 
-	close(s.rejected)
+	close(m.rejected)
 }
 
-func (s *baseManager) onConnected(setConnected func() bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (m *baseManager) onConnected(setConnected func() bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	if s.stopped {
+	if m.stopped {
 		return ErrManagerClosed
 	}
 
 	if setConnected() {
 		// signal device connected
-		close(s.connected)
+		close(m.connected)
 		// refresh device disconnected signal
-		s.disconnected = make(chan struct{})
-		s.rejected = make(chan struct{})
-		s.alreadyRejected = false
+		m.disconnected = make(chan struct{})
+		m.rejected = make(chan struct{})
+		m.alreadyRejected = false
 
 		return nil
 	}
@@ -154,51 +154,50 @@ func (s *baseManager) onConnected(setConnected func() bool) error {
 	return ErrDeviceAlreadyConnected
 }
 
-func (s *baseManager) onRecvMsg(msg *connectivity.Msg) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) onRecvMsg(msg *connectivity.Msg) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	if s.stopped {
+	if m.stopped {
 		return
 	}
 
-	if ok := s.sessionManager.dispatch(msg); ok {
+	if ok := m.sessionManager.dispatch(msg); ok {
 		// close session when session is marked complete
-		if msg.GetCompleted() {
-			s.sessionManager.del(msg.GetSessionId())
+		if msg.Completed {
+			m.sessionManager.del(msg.SessionId)
 		}
-
 	} else {
-		s.globalMsgChan <- msg
+		m.globalMsgChan <- msg
 	}
 }
 
 // onDisconnected delete device connection related jobs
-func (s *baseManager) onDisconnected(setDisconnected func()) {
+func (m *baseManager) onDisconnected(setDisconnected func()) {
 	// release device connection, refresh device connection semaphore
 	// and orphaned message channel
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	setDisconnected()
 
-	s.sessionManager.cleanup()
+	m.sessionManager.cleanup()
 
 	// refresh connected signal
-	s.connected = make(chan struct{})
+	m.connected = make(chan struct{})
 	// signal device disconnected
-	close(s.disconnected)
+	close(m.disconnected)
 
 	// refresh global msg chan
-	close(s.globalMsgChan)
-	s.globalMsgChan = make(chan *connectivity.Msg, constant.DefaultConnectivityMsgChannelSize)
+	close(m.globalMsgChan)
+	m.globalMsgChan = make(chan *connectivity.Msg, constant.DefaultConnectivityMsgChannelSize)
 }
 
-func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (m *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, sendCmd func(c *connectivity.Cmd) error) (ch <-chan *connectivity.Msg, err error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	if s.stopped {
+	if m.stopped {
 		return nil, ErrManagerClosed
 	}
 
@@ -206,33 +205,36 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		sid                uint64
 		sessionMustPresent bool
 		recordSession      = true
-		timeout            = s.config.Timers.UnarySessionTimeout
+		timeout            = m.config.Timers.UnarySessionTimeout
 	)
 
 	// session id should not be empty if it's a input or resize command
 	switch c := cmd.GetCmd().(type) {
 	case *connectivity.Cmd_CloseSession:
 		recordSession = false
+		m.sessionManager.del(c.CloseSession)
 	case *connectivity.Cmd_Pod:
 		switch c.Pod.GetAction() {
-		// we don't control stream session timeout,
-		// it is controlled by pod manager
 		case connectivity.PortForward, connectivity.Exec, connectivity.Attach, connectivity.Log:
+			// we don't control stream session timeout,
+			// it is controlled by pod manager
 			timeout = 0
 		case connectivity.ResizeTty, connectivity.Input:
 			timeout = 0
 			sessionMustPresent = true
+
 			if cmd.GetSessionId() == 0 {
+				// session must present, but empty
 				return nil, ErrSessionNotValid
 			}
 		}
 	}
 
 	if recordSession {
-		sid, ch = s.sessionManager.add(ctx, cmd, timeout)
+		sid, ch = m.sessionManager.add(ctx, cmd, timeout)
 		defer func() {
 			if err != nil {
-				s.sessionManager.del(sid)
+				m.sessionManager.del(sid)
 			}
 		}()
 
@@ -244,21 +246,21 @@ func (s *baseManager) onPostCmd(ctx context.Context, cmd *connectivity.Cmd, send
 		cmd.SessionId = sid
 	}
 
-	if err := sendCmd(cmd); err != nil {
+	if err = sendCmd(cmd); err != nil {
 		return nil, err
 	}
 
 	return ch, nil
 }
 
-func (s *baseManager) onStop(closeManager func()) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (m *baseManager) onStop(closeManager func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	if s.stopped {
+	if m.stopped {
 		return
 	}
 
 	closeManager()
-	s.stopped = true
+	m.stopped = true
 }

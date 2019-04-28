@@ -31,6 +31,7 @@ var (
 	ErrClientAlreadyConnected = errors.New("client already connected")
 	ErrClientNotConnected     = errors.New("client not connected")
 	ErrConnectivityCmdNil     = errors.New("connectivity cmd nil")
+	ErrCmdRecvClosed          = errors.New("cmd recv closed")
 	ErrStreamSessionClosed    = connectivity.NewCommonError("stream session closed")
 	ErrCommandNotProvided     = connectivity.NewCommonError("command not provided for exec")
 )

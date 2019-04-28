@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -91,7 +92,7 @@ func (m *Manager) doGetContainerLogs(uid types.UID, options *corev1.PodLogOption
 func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 	return containerExecutor(func(name string, uid types.UID, container string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 		execCmd := connectivity.NewContainerExecCmd(string(uid), container, cmd, stdin != nil, stdout != nil, stderr != nil, tty)
-		err := m.doServeStream(execCmd, stdin, stdout, stderr, resize)
+		err := m.doServeTerminalStream(execCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func (m *Manager) doHandleExecInContainer() kubeletrc.Executor {
 func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 	return containerAttacher(func(name string, uid types.UID, container string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
 		attachCmd := connectivity.NewContainerAttachCmd(string(uid), container, stdin != nil, stdout != nil, stderr != nil, tty)
-		err := m.doServeStream(attachCmd, stdin, stdout, stderr, resize)
+		err := m.doServeTerminalStream(attachCmd, stdin, stdout, stderr, resize)
 		if err != nil {
 			return err
 		}
@@ -115,7 +116,7 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.PortForwarder {
 	return portForwarder(func(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
 		portForwardCmd := connectivity.NewPortForwardCmd(string(uid), port, portProto[port])
-		err := m.doServeStream(portForwardCmd, stream, stream, nil, nil)
+		err := m.doServePortForwardStream(portForwardCmd, stream, stream)
 		if err != nil {
 			return err
 		}
@@ -124,8 +125,8 @@ func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.Port
 	})
 }
 
-func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
-	log := m.log.WithValues("type", "stream")
+func (m *Manager) doServeTerminalStream(initialCmd *connectivity.Cmd, in io.Reader, out, stderr io.WriteCloser, resizeCh <-chan remotecommand.TerminalSize) (err error) {
+	log := m.log.WithValues("type", "terminal-stream")
 	streamCtx, exitStream := context.WithCancel(m.ctx)
 
 	defer func() {
@@ -237,6 +238,85 @@ func (m *Manager) doServeStream(initialCmd *connectivity.Cmd, in io.Reader, out,
 			}
 		}
 	}
+}
+
+func (m *Manager) doServePortForwardStream(portForwardCmd *connectivity.Cmd, in io.Reader, out io.WriteCloser) (err error) {
+	log := m.log.WithValues("type", "port-forward-stream")
+	streamCtx, exitStream := context.WithCancel(m.ctx)
+
+	defer func() {
+		exitStream()
+
+		// close out
+		_ = out.Close()
+		log.Info("finished stream")
+	}()
+
+	// send initial cmd to obtain a session
+	var msgCh <-chan *connectivity.Msg
+	if msgCh, err = m.connectivityManager.PostCmd(streamCtx, portForwardCmd); err != nil {
+		log.Error(err, "failed to post initial cmd")
+		return err
+	}
+
+	// session established
+	sid := portForwardCmd.SessionId
+
+	// close this session at last
+	defer func() {
+		_, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
+		if err != nil {
+			log.Error(err, "failed to post session close cmd")
+		}
+	}()
+
+	wg := &sync.WaitGroup{}
+	// read input data
+	wg.Add(1)
+	go func() {
+		defer func() {
+			wg.Done()
+			log.Info("finished port-forward-stream input")
+		}()
+
+		s := bufio.NewScanner(in)
+		s.Split(scanAnyAvail)
+
+		for s.Scan() {
+			inputCmd := connectivity.NewContainerInputCmd(sid, s.Bytes())
+			if _, err = m.connectivityManager.PostCmd(streamCtx, inputCmd); err != nil {
+				log.Error(err, "failed to post user input")
+				return
+			}
+		}
+	}()
+
+	// read output from remote device
+	wg.Add(1)
+	go func() {
+		defer func() {
+			wg.Done()
+			log.Info("finished recv from msg channel")
+		}()
+
+		for msg := range msgCh {
+			// only PodData should be received in this session
+			dataMsg := msg.GetData()
+			if dataMsg == nil {
+				log.Info("unexpected message for data", "data", msg)
+				return
+			}
+
+			if _, err := out.Write(dataMsg.Data); err != nil && err != io.EOF {
+				log.Error(err, "failed to write output")
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	return
 }
 
 // scanAnyAvail a split func to get all available bytes

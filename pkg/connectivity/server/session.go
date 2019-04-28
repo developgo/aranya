@@ -38,6 +38,10 @@ func (s *session) close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.closed {
+		return
+	}
+
 	s.closed = true
 	s.ctxExit()
 	close(s.msgCh)
@@ -47,19 +51,17 @@ func (s *session) deliver(msg *connectivity.Msg) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	if s.closed {
+		return false
+	}
+
 	select {
 	case <-s.ctx.Done():
 		return false
 	default:
-		break
-	}
-
-	if !s.closed {
 		s.msgCh <- msg
 		return true
 	}
-
-	return false
 }
 
 type sessionManager struct {
@@ -73,7 +75,7 @@ func newSessionManager() *sessionManager {
 	}
 }
 
-func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd, timeout time.Duration) (sid uint64, ch chan *connectivity.Msg) {
+func (s *sessionManager) add(parentCtx context.Context, cmd *connectivity.Cmd, timeout time.Duration) (sid uint64, ch chan *connectivity.Msg) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -87,17 +89,16 @@ func (s *sessionManager) add(ctx context.Context, cmd *connectivity.Cmd, timeout
 
 		session := &session{msgCh: ch}
 		if timeout > 0 {
-			session.ctx, session.ctxExit = context.WithTimeout(ctx, timeout)
+			session.ctx, session.ctxExit = context.WithTimeout(parentCtx, timeout)
 		} else {
-			session.ctx, session.ctxExit = context.WithCancel(ctx)
+			session.ctx, session.ctxExit = context.WithCancel(parentCtx)
 		}
 
 		go func() {
-			select {
-			case <-session.ctx.Done():
-				s.dispatch(connectivity.NewTimeoutErrorMsg(sid))
-				s.del(sid)
-			}
+			<-session.ctx.Done()
+
+			s.dispatch(connectivity.NewTimeoutErrorMsg(sid))
+			s.del(sid)
 		}()
 
 		s.m[sid] = session
@@ -110,7 +111,7 @@ func (s *sessionManager) dispatch(msg *connectivity.Msg) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	session, ok := s.m[msg.GetSessionId()]
+	session, ok := s.m[msg.SessionId]
 	if ok {
 		return session.deliver(msg)
 	}

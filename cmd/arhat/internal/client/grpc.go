@@ -41,7 +41,10 @@ func New(arhatCtx context.Context, agentConfig *client.AgentConfig, clientConfig
 	dialCtx, cancel := context.WithTimeout(arhatCtx, grpcConfig.DialTimeout)
 	defer cancel()
 
-	dialOptions := []grpc.DialOption{grpc.WithBlock(), grpc.WithAuthority(grpcConfig.ServerAddress)}
+	dialOptions := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithAuthority(grpcConfig.ServerAddress),
+	}
 
 	if tlsConfig := grpcConfig.TLS; tlsConfig != nil {
 		if tlsConfig.ServerName == "" {

@@ -86,6 +86,9 @@ type MQTTConfig struct {
 
 // ConnectivityConfig configuration for connectivity part in arhat
 type ConnectivityConfig struct {
-	MQTTConfig *MQTTConfig `json:"mqtt_config" yaml:"mqtt_config"`
-	GRPCConfig *GRPCConfig `json:"grpc_config" yaml:"grpc_config"`
+	BackoffFactor  float64       `json:"backoff_factor" yaml:"backoff_factor"`
+	InitialBackoff time.Duration `json:"initial_backoff" yaml:"initial_backoff"`
+	MaxBackoff     time.Duration `json:"max_backoff" yaml:"max_backoff"`
+	MQTTConfig     *MQTTConfig   `json:"mqtt_config" yaml:"mqtt_config"`
+	GRPCConfig     *GRPCConfig   `json:"grpc_config" yaml:"grpc_config"`
 }
