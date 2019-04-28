@@ -68,7 +68,7 @@ see [docs/Build.md](./docs/Build.md)
    $ kubectl apply -f https://raw.githubusercontent.com/arhat-dev/aranya/master/cicd/k8s/aranya-roles.yaml
 
    # config role bindings for aranya
-   $ kubectl create -n ${NS} rolebinding aranya --role=aranya --serviceaccount=${NS}:aranya
+   $ kubectl -n ${NS} create rolebinding aranya --role=aranya --serviceaccount=${NS}:aranya
    $ kubectl create clusterrolebinding aranya --clusterrole=aranya --serviceaccount=${NS}:aranya
 
    # deploy aranya to your cluster
