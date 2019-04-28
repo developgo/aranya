@@ -50,7 +50,8 @@ func NewArhatCmd() *cobra.Command {
 	config := &Config{}
 
 	cmd := &cobra.Command{
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := cmd.ParseFlags(args); err != nil {
 				return err
 			}
@@ -64,9 +65,6 @@ func NewArhatCmd() *cobra.Command {
 				return fmt.Errorf("failed to unmarshal config file %s: %v", configFile, err)
 			}
 
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(ctx, config)
 		},
 	}

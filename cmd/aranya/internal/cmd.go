@@ -65,6 +65,7 @@ func NewAranyaCmd() *cobra.Command {
 	config := &Config{}
 
 	cmd := &cobra.Command{
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configBytes, err := ioutil.ReadFile(configFile)
 			if err != nil {

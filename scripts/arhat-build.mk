@@ -27,7 +27,7 @@ ARHAT_SRC := ./cmd/arhat
 
 .PHONY: arhat-podman-grpc
 arhat-podman-grpc:
-	CGO_ENABLED=1 GOOS=linux\
+	CGO_ENABLED=1 GOOS=linux \
 	$(GOBUILD) -tags='rt_podman agent_grpc' -o $(BUILD_DIR)/$@ $(ARHAT_SRC)
 
 .PHONY: arhat-cri-grpc
@@ -49,6 +49,7 @@ arhat-containerd-grpc:
 arhat-docker-grpc:
 	CGO_ENABLED=0 \
 	$(GOBUILD) -tags='rt_docker agent_grpc' -o $(BUILD_DIR)/$@ $(ARHAT_SRC)
+	$(UPX) $(BUILD_DIR)/$@
 
 #
 # Connect via MQTT
