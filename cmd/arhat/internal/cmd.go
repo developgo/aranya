@@ -78,7 +78,7 @@ func NewArhatCmd() *cobra.Command {
 	flags.StringVar(&config.Agent.Log.Dir, "log-dir", constant.DefaultArhatLogDir, "save log files to this dir")
 	flags.IntVarP(&config.Agent.Log.Level, "log-level", "v", 0, "log level, higher level means more verbose")
 	flags.BoolVar(&config.Agent.Features.AllowHostExec, "allow-host-exec", false, "allow kubectl exec issued commands to execute in host")
-	flags.BoolVar(&config.Agent.Features.AllowHostAttach, "allow-host-exec", false, "allow kubectl attach to host tty")
+	flags.BoolVar(&config.Agent.Features.AllowHostAttach, "allow-host-attach", false, "allow kubectl attach to host tty")
 	flags.BoolVar(&config.Agent.Features.AllowHostLog, "allow-host-log", false, "allow kubectl to read arhat's log")
 	flags.BoolVar(&config.Agent.Features.AllowHostPortForward, "allow-host-port-forward", false, "allow kubectl to port-forward to host")
 	flags.DurationVar(&config.Agent.Node.Timers.StatusSyncInterval, "node-status-sync-interval", 0, "periodically sync node status")
