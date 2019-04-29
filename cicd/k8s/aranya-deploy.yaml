@@ -83,16 +83,20 @@ spec:
         imagePullPolicy: Always
         command: [ "/app" ]
         env:
-        # namespace to watch 
-        # recommend to be the same with the one aranya deployed to
+        # The namespace aranya deployed to
         # if not set, will be `default`
-        - name: WATCH_NAMESPACE
+        - name: ARANYA_NAMESPACE
+          # the value of this environment variable MUST be the
+          # namespace name aranya deployed to, or aranya won't work properly
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        # the namespace aranya deployed to
-        # if not set, will default to be the same with WATCH_NAMESPACE
-        - name: ARANYA_NAMESPACE
+        # The namespace `aranya` to watch
+        # if not set, will default to be the same with ARANYA_NAMESPACE
+        - name: WATCH_NAMESPACE
+          # in most case, this should the same with `ARANYA_NAMESPACE`
+          # but for multi-tenant edge device management in single cluster
+          # this can be set to another namespace aranya not deployed to
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
@@ -109,4 +113,5 @@ spec:
           mountPath: /etc/aranya
         resources:
           limits:
+            # "100Mi" is sufficient for about 300 edge devices (with small workloads)
             memory: "100Mi"

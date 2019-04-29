@@ -219,7 +219,7 @@ $ alias k="/path/to/kubectl --kubeconfig=/path/to/bar.kubeconfig -n foo"
 
 ### 8. Deploy `aranya` to another namespace
 
-Well, it's strongly discouraged to deploy aranya to one namespace and watch another one as stated in [Maintenance.md #Behaviors and Tips](./Maintenance.md#behaviors-and-tips), but to shift management responsibility we should make sure the user in control won't make bad decisions such as deleting the `aranya`'s deployment, so we will deploy `aranya` to another namepspace (say `foo-aranya`) to watch `EdgeDevice`s in namespace `foo`, and the user won't be able to do anything but to see logs of `aranya` (in next step, we will talk about it).
+Well, it's discouraged to deploy aranya to one namespace and watch another as stated in [Maintenance.md #Behaviors and Tips](./Maintenance.md#behaviors-and-tips), but to shift management responsibility we should make sure the user in control won't make bad decisions such as deleting the `aranya`'s deployment, so we will deploy `aranya` to another namepspace (say `foo-aranya`) to watch `EdgeDevice`s in namespace `foo`, and the user won't be able to do anything but to see logs of `aranya` (in next step, we will talk about it).
 
 Create a deployment script with all resources required for `aranya`
 

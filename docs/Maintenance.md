@@ -10,18 +10,18 @@
 
 ## Behaviors and Tips
 
-- `aranya` watches the `namespace` it has been deployed to, reconciles `EdgeDevice`s created in the same `namespace`.
-  - You can deploy `aranya` to watch some `namespace` other than the one it was deployed to, but this is strongly discouraged for maintenance reason.
+- `aranya` watches the `namespace` it has been deployed to by default, reconciles `EdgeDevice`s created in the same `namespace`.
+  - You can deploy `aranya` to watch some `namespace` other than the one it was deployed to, but is discouraged if you are not working on something stated in [docs/Multi-tenancy.md](./Multi-tenancy.md).
 
-- Only one `aranya` instance in the same `namespace` will work as leader to do the reconcile job and serve `kubelet` servers and connectivity managers.
-  - Deploy `aranya` to mutiple `namespace`s if you have quite a lot (tipically more than 500) `EdgeDevice`s to deploy and group the `EdgeDevice`s into different `namespace`s.
+- Only one `aranya` instance in the same `namespace` will work as leader to do the reconcile job, serving `kubelet` servers and connectivity managers.
+  - Deploy `aranya` to mutiple `namespace`s if you have quite a lot (tipically more than 500) `EdgeDevice`s to deploy, you should group these `EdgeDevice`s into different `namespace`s with multiple `aranya` instance.
 
 - `aranya` requires host network to work properly.
-  - Deploy multiple `aranya` in the same `namespace` to different `Node`s to avoid single point failure, you can achieve this with `anti-nodeAffinity`.
+  - Deploy multiple `aranya` in the same `namespace` to different `Node`s to avoid single point failure, you can achieve this with [`anti-affinity`](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
 
 - `aranya` will request node certifications for each one of the `EdgeDevice`s you have deployed. The node certification includes the `Node`'s address(es) and hostname(s) (Here the `Node` is the one `aranya` deployed to).
   - Use `StatefulSet` or `nodeAffinity` to avoid unexpected certification regenation when `aranya` is deployed to different nodes.
-  - Changes to `Node`'s address(es) or hostname(s) (which is the rare case) when `aranya` has been serving the `kubelet` servers and connectivity managers for edge devices would result in connectivity failure and remote management failure, you need to restart `aranya` to solve this problem.
+  - Changes to `Node`'s address(es) or hostname(s) when `aranya` has been serving the `kubelet` servers and connectivity managers (which should be the rare case) for edge devices would result in connectivity failure and remote management failure, you need to restart `aranya` to solve this problem.
 
 ## Host Management
 

@@ -33,7 +33,7 @@ func ThisPodName() string {
 func WatchNamespace() string {
 	ns := os.Getenv(EnvKeyWatchNamespace)
 	if ns == "" {
-		return "default"
+		return AranyaNamespace()
 	}
 	return ns
 }
@@ -41,7 +41,7 @@ func WatchNamespace() string {
 func AranyaNamespace() string {
 	ns := os.Getenv(EnvKeyAranyaNamespace)
 	if ns == "" {
-		return WatchNamespace()
+		return "default"
 	}
 	return ns
 }
