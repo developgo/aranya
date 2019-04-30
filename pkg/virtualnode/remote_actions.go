@@ -54,21 +54,31 @@ func (vn *VirtualNode) syncDeviceNodeStatus() error {
 }
 
 func (vn *VirtualNode) handleGlobalMsg(msg *connectivity.Msg) {
-	if msg.Err() != nil {
-		vn.log.Error(msg.Err(), "received error from remote device")
-	}
+
 	switch m := msg.GetMsg().(type) {
+	case *connectivity.Msg_Error:
+		vn.log.Info("received async device error", "err", msg.Err())
 	case *connectivity.Msg_NodeStatus:
 		vn.log.Info("received async node status update")
 		if err := vn.updateNodeCache(m.NodeStatus); err != nil {
-			vn.log.Error(err, "failed to update node cache")
+			vn.log.Info("failed to update node cache for async update", "err", err.Error())
 		}
 	case *connectivity.Msg_PodStatus:
 		vn.log.Info("received async pod status update")
 		err := vn.podManager.UpdateMirrorPod(nil, m.PodStatus)
 		if err != nil {
-			vn.log.Error(err, "failed to update pod status for async pod status update")
+			vn.log.Info("failed to update pod status for async update", "err", err.Error())
 		}
+	case *connectivity.Msg_PodStatusList:
+		vn.log.Info("received async pod status list update")
+		for _, status := range m.PodStatusList.GetPods() {
+			err := vn.podManager.UpdateMirrorPod(nil, status)
+			if err != nil {
+				vn.log.Info("failed to update pod status for async update", "err", err.Error())
+			}
+		}
+	case *connectivity.Msg_Data:
+		vn.log.Info("received async device data", "sid", msg.SessionId, "data", m.Data.GetData())
 	default:
 		// we don't know how to handle this kind of messages, discard
 	}

@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"sync"
 
 	"arhat.dev/aranya/pkg/connectivity"
 )
@@ -294,7 +295,11 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 	}()
 
 	// read output
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		s := bufio.NewScanner(remoteOutput)
 		s.Split(scanAnyAvail)
 
@@ -327,4 +332,7 @@ func (b *baseAgent) doPortForward(sid uint64, options *connectivity.PortForwardO
 			return
 		}
 	}
+
+	// wait for output
+	wg.Wait()
 }

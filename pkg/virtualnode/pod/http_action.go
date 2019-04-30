@@ -115,11 +115,81 @@ func (m *Manager) doHandleAttachContainer() kubeletrc.Attacher {
 
 func (m *Manager) doHandlePortForward(portProto map[int32]string) kubeletpf.PortForwarder {
 	return portForwarder(func(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
+		log := m.log.WithValues("type", "port-forward-stream")
+
+		streamCtx, stopStream := context.WithCancel(m.ctx)
+		defer stopStream()
+
+		// send cmd to obtain a session
 		portForwardCmd := connectivity.NewPortForwardCmd(string(uid), port, portProto[port])
-		err := m.doServePortForwardStream(portForwardCmd, stream, stream)
+		msgCh, err := m.connectivityManager.PostCmd(streamCtx, portForwardCmd)
 		if err != nil {
+			log.Info("failed to post port-forward cmd", "err", err.Error())
 			return err
 		}
+
+		// session established
+		sid := portForwardCmd.SessionId
+
+		log = log.WithValues("sid", sid)
+		log.Info("starting port-forward-stream")
+		defer func() {
+			// close this session at last (best effort)
+			_, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
+			if err != nil {
+				log.Info("failed to post session close cmd", "err", err.Error())
+			}
+
+			log.Info("finished port-forward-stream")
+		}()
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			// read input data
+
+			defer func() {
+				wg.Done()
+				log.Info("finished port-forward-stream input")
+			}()
+
+			s := bufio.NewScanner(stream)
+			s.Split(scanAnyAvail)
+
+			for s.Scan() {
+				inputCmd := connectivity.NewContainerInputCmd(sid, s.Bytes())
+				if _, err = m.connectivityManager.PostCmd(streamCtx, inputCmd); err != nil {
+					log.Info("failed to post user input", "err", err.Error())
+					return
+				}
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			// read output from remote device
+
+			defer func() {
+				wg.Done()
+				log.Info("finished recv from msg channel")
+			}()
+
+			for msg := range msgCh {
+				// only PodData should be received in this session
+				dataMsg := msg.GetData()
+				if dataMsg == nil {
+					log.Info("unexpected message for data", "m", msg)
+					return
+				}
+
+				if _, err := stream.Write(dataMsg.Data); err != nil && err != io.EOF {
+					log.Info("failed to write output", "err", err.Error())
+					return
+				}
+			}
+		}()
+
+		wg.Wait()
 
 		return nil
 	})
@@ -238,85 +308,6 @@ func (m *Manager) doServeTerminalStream(initialCmd *connectivity.Cmd, in io.Read
 			}
 		}
 	}
-}
-
-func (m *Manager) doServePortForwardStream(portForwardCmd *connectivity.Cmd, in io.Reader, out io.WriteCloser) (err error) {
-	log := m.log.WithValues("type", "port-forward-stream")
-	streamCtx, exitStream := context.WithCancel(m.ctx)
-
-	defer func() {
-		exitStream()
-
-		// close out
-		_ = out.Close()
-		log.Info("finished stream")
-	}()
-
-	// send initial cmd to obtain a session
-	var msgCh <-chan *connectivity.Msg
-	if msgCh, err = m.connectivityManager.PostCmd(streamCtx, portForwardCmd); err != nil {
-		log.Error(err, "failed to post initial cmd")
-		return err
-	}
-
-	// session established
-	sid := portForwardCmd.SessionId
-
-	// close this session at last
-	defer func() {
-		_, err := m.connectivityManager.PostCmd(m.ctx, connectivity.NewSessionCloseCmd(sid))
-		if err != nil {
-			log.Error(err, "failed to post session close cmd")
-		}
-	}()
-
-	wg := &sync.WaitGroup{}
-	// read input data
-	wg.Add(1)
-	go func() {
-		defer func() {
-			wg.Done()
-			log.Info("finished port-forward-stream input")
-		}()
-
-		s := bufio.NewScanner(in)
-		s.Split(scanAnyAvail)
-
-		for s.Scan() {
-			inputCmd := connectivity.NewContainerInputCmd(sid, s.Bytes())
-			if _, err = m.connectivityManager.PostCmd(streamCtx, inputCmd); err != nil {
-				log.Error(err, "failed to post user input")
-				return
-			}
-		}
-	}()
-
-	// read output from remote device
-	wg.Add(1)
-	go func() {
-		defer func() {
-			wg.Done()
-			log.Info("finished recv from msg channel")
-		}()
-
-		for msg := range msgCh {
-			// only PodData should be received in this session
-			dataMsg := msg.GetData()
-			if dataMsg == nil {
-				log.Info("unexpected message for data", "data", msg)
-				return
-			}
-
-			if _, err := out.Write(dataMsg.Data); err != nil && err != io.EOF {
-				log.Error(err, "failed to write output")
-				return
-			}
-		}
-	}()
-
-	wg.Wait()
-
-	return
 }
 
 // scanAnyAvail a split func to get all available bytes

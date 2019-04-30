@@ -587,7 +587,7 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 		defer pfLog.Info("finished write routine")
 
 		if _, err := io.Copy(conn, in); err != nil && err != io.EOF {
-			pfLog.Error(err, "exception happened in write routine")
+			pfLog.Info("exception happened in write routine", "err", err)
 		}
 	}()
 
@@ -595,7 +595,7 @@ func (r *dockerRuntime) PortForward(podUID string, protocol string, port int32, 
 	defer pfLog.Info("finished read routine")
 
 	if _, err := io.Copy(out, conn); err != nil && err != io.EOF {
-		pfLog.Error(err, "exception happened in read routine")
+		pfLog.Info("exception happened in read routine", "err", err)
 	}
 
 	return nil
