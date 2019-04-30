@@ -30,7 +30,7 @@ import (
 	cfsslhelpers "github.com/cloudflare/cfssl/helpers"
 	certapi "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
 
@@ -77,7 +77,7 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 	pkSecret, err := secretClient.Get(secretObjName, metav1.GetOptions{})
 	if err != nil {
 		// create secret object if not found, add tls.csr
-		if k8serrors.IsNotFound(err) {
+		if kubeerrors.IsNotFound(err) {
 			needToCreateCSR = true
 		} else {
 			log.Error(err, "failed to get csr and private key secret")
@@ -134,7 +134,6 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 		certBytes, ok = pkSecret.Data[corev1.TLSCertKey]
 		if ok && len(certBytes) > 0 {
 			needToGetKubeCSR = false
-			// TODO: check if certificate is valid for this node
 		}
 
 		csrBytes, ok = pkSecret.Data["tls.csr"]
@@ -198,7 +197,7 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 		kubeCSRNotFound := false
 		csrReq, err := certClient.Get(csrObjName, metav1.GetOptions{})
 		if err != nil {
-			if k8serrors.IsNotFound(err) {
+			if kubeerrors.IsNotFound(err) {
 				kubeCSRNotFound = true
 				needToCreateKubeCSR = true
 			} else {
@@ -208,6 +207,12 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 		}
 
 		if needToCreateKubeCSR {
+			// delete first to make sure no invalid data exists
+			err := certClient.Delete(csrObjName, metav1.NewDeleteOptions(0))
+			if err != nil && !kubeerrors.IsNotFound(err) {
+				return nil, err
+			}
+
 			csrObj := &certapi.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					// not namespaced
@@ -283,7 +288,11 @@ func getKubeletServerCert(client kubeclient.Interface, hostNodeName, virtualNode
 
 	cert, err := tls.X509KeyPair(certBytes, privateKeyBytes)
 	if err != nil {
-		log.Error(err, "failed to load certificate")
+		log.Info("failed to load certificate", "err", err.Error())
+		if err := secretClient.Delete(secretObjName, metav1.NewDeleteOptions(0)); err != nil {
+			log.Info("failed to delete bad certificate")
+		}
+
 		return nil, err
 	}
 	return &cert, nil
